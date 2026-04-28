@@ -50,7 +50,7 @@ export default function AuditPage() {
   useEffect(() => { load(); }, [load]);
 
   if (status === "loading") return null;
-  if (status === "authenticated" && session.user.role !== "sales") {
+  if (status === "authenticated" && session.user.role !== "sales" && session.user.role !== "superadmin") {
     router.replace("/");
     return null;
   }

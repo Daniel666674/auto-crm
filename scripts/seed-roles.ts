@@ -19,8 +19,8 @@ import fs from "fs";
 const DB_PATH = path.join(process.cwd(), "data", "crm.db");
 
 const TEAM = [
-  { email: "daniel@blackscale.consulting", role: "sales" },
-  { email: "julian@blackscale.consulting", role: "marketing" },
+  { email: "daniel.acosta@blackscale.consulting", role: "superadmin" },
+  { email: "julian.vallejo@blackscale.consulting", role: "marketing" },
 ];
 
 function main() {

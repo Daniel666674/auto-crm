@@ -40,6 +40,9 @@ export async function middleware(req: NextRequest) {
 
   const role = token.role as string;
 
+  // superadmin bypasses all role restrictions
+  if (role === "superadmin") return NextResponse.next();
+
   if (pathname.startsWith("/marketing") && role !== "marketing") {
     return NextResponse.redirect(new URL("/", req.url));
   }

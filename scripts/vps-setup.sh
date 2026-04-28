@@ -98,7 +98,7 @@ nginx -t
 systemctl reload nginx
 
 # ─── 9. SSL certificate via Certbot ─────────────────────────────────────────
-certbot --nginx -d crm.blackscale.consulting --non-interactive --agree-tos -m daniel@blackscale.consulting
+certbot --nginx -d crm.blackscale.consulting --non-interactive --agree-tos -m daniel.acosta@blackscale.consulting
 # Certbot auto-configures nginx and sets up renewal via systemd timer
 
 # ─── 10. Verify encryption ──────────────────────────────────────────────────

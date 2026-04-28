@@ -10,7 +10,7 @@ const PAGE_SIZE = 50;
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (session.user.role !== "sales") return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+  if (session.user.role !== "sales" && session.user.role !== "superadmin") return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
 
   const { searchParams } = req.nextUrl;
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));

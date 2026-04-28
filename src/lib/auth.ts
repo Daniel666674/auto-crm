@@ -6,8 +6,8 @@ const ALLOWED_DOMAIN = "blackscale.consulting";
 
 // Role assignments — DB value takes priority; this is the fallback for first login
 const DEFAULT_ROLES: Record<string, string> = {
-  "daniel@blackscale.consulting": "sales",
-  "julian@blackscale.consulting": "marketing",
+  "daniel.acosta@blackscale.consulting": "superadmin",
+  "julian.vallejo@blackscale.consulting": "marketing",
 };
 
 export const authOptions: NextAuthOptions = {

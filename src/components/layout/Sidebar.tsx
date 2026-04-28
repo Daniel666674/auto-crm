@@ -17,14 +17,14 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["sales", "marketing"] },
-  { href: "/pipeline", label: "Pipeline", icon: Kanban, roles: ["sales"] },
-  { href: "/contacts", label: "Contactos", icon: Users, roles: ["sales", "marketing"] },
-  { href: "/deals", label: "Deals", icon: Briefcase, roles: ["sales"] },
-  { href: "/activities", label: "Actividades", icon: Activity, roles: ["sales", "marketing"] },
-  { href: "/marketing", label: "Marketing", icon: Megaphone, roles: ["marketing"] },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, roles: ["sales", "marketing"] },
-  { href: "/settings", label: "Configuracion", icon: Settings, roles: ["sales", "marketing"] },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["sales", "marketing", "superadmin"] },
+  { href: "/pipeline", label: "Pipeline", icon: Kanban, roles: ["sales", "superadmin"] },
+  { href: "/contacts", label: "Contactos", icon: Users, roles: ["sales", "marketing", "superadmin"] },
+  { href: "/deals", label: "Deals", icon: Briefcase, roles: ["sales", "superadmin"] },
+  { href: "/activities", label: "Actividades", icon: Activity, roles: ["sales", "marketing", "superadmin"] },
+  { href: "/marketing", label: "Marketing", icon: Megaphone, roles: ["marketing", "superadmin"] },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, roles: ["sales", "marketing", "superadmin"] },
+  { href: "/settings", label: "Configuracion", icon: Settings, roles: ["sales", "marketing", "superadmin"] },
 ];
 
 export function Sidebar() {

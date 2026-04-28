@@ -32,10 +32,10 @@ async function main() {
   `);
 
   const now = Date.now();
-  upsert.run(crypto.randomUUID(), "daniel@blackscale.consulting", danielHash, "sales", now);
-  upsert.run(crypto.randomUUID(), "julian@blackscale.consulting", julianHash, "marketing", now);
+  upsert.run(crypto.randomUUID(), "daniel.acosta@blackscale.consulting", danielHash, "superadmin", now);
+  upsert.run(crypto.randomUUID(), "julian.vallejo@blackscale.consulting", julianHash, "marketing", now);
 
-  console.log("Users seeded: daniel@blackscale.consulting (sales), julian@blackscale.consulting (marketing)");
+  console.log("Users seeded: daniel.acosta@blackscale.consulting (superadmin), julian.vallejo@blackscale.consulting (marketing)");
   db.close();
 }
 

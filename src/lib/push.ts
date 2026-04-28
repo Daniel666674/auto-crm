@@ -6,7 +6,7 @@ import { eq, and, gt, sql } from "drizzle-orm";
 function configureWebPush() {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
-  const email = process.env.VAPID_EMAIL ?? "mailto:daniel@blackscale.consulting";
+  const email = process.env.VAPID_EMAIL ?? "mailto:daniel.acosta@blackscale.consulting";
   if (!pub || !priv) return false;
   webpush.setVapidDetails(email, pub, priv);
   return true;

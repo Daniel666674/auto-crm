@@ -6,10 +6,15 @@ import { PipelineChart } from "@/components/dashboard/PipelineChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { NotificationBanner } from "@/components/dashboard/NotificationBanner";
 import type { DashboardStats } from "@/types";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role === "marketing") redirect("/marketing");
   const allContacts = db.select().from(contacts).all();
   const allDeals = db.select().from(deals).all();
   const stages = db
