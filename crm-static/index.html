@@ -138,28 +138,21 @@ function LoginScreen({ onLogin, appName = "BlackScale Nexus", role = "Sales" }) 
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    const tryInit = () => {
-      if (window.google && window.google.accounts) { initGSI(); return; }
-      setTimeout(tryInit, 200);
-    };
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
     s.async = true;
-    s.onload = () => setTimeout(initGSI, 100);
+    s.onload = () => setTimeout(initGSI, 150);
     document.head.appendChild(s);
   }, []);
 
   function initGSI() {
+    if (!window.google?.accounts) { setTimeout(initGSI, 200); return; }
     window.google.accounts.id.initialize({
       client_id: "302408583182-itlfhs7eu6unejhm3u28jm6u2dk861b6.apps.googleusercontent.com",
       callback: handleCredential,
     });
     const btn = document.getElementById("g-signin-btn");
-    if (btn) {
-      window.google.accounts.id.renderButton(btn, {
-        theme: "filled_black", size: "large", text: "signin_with", shape: "rectangular", width: 280
-      });
-    }
+    if (btn) window.google.accounts.id.renderButton(btn, { theme:"filled_black", size:"large", text:"signin_with", shape:"rectangular", width:280 });
   }
 
   function parseJwt(token) {
@@ -177,32 +170,35 @@ function LoginScreen({ onLogin, appName = "BlackScale Nexus", role = "Sales" }) 
     }
     sessionStorage.setItem("bs-auth", "1");
     sessionStorage.setItem("bs-user", JSON.stringify({ name: payload.name, email, picture: payload.picture }));
-    onLogin();
+    // Role-based routing
+    if (email === "julian.vallejo@blackscale.consulting") {
+      window.location.href = "/app/marketing.html";
+    } else {
+      window.location.href = "/app/index.html";
+    }
   }
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#0a0a09", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", zIndex:9999, fontFamily:"'Poppins',sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0a0a09", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, fontFamily:"'Poppins',sans-serif" }}>
       <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(209,156,21,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(209,156,21,0.025) 1px,transparent 1px)", backgroundSize:"44px 44px", pointerEvents:"none" }} />
       <div style={{ position:"absolute", top:"30%", left:"50%", transform:"translateX(-50%)", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(209,156,21,0.06) 0%,transparent 70%)", pointerEvents:"none" }} />
       <div style={{ position:"relative", width:360, zIndex:1 }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
-          <div style={{ width:52, height:52, borderRadius:14, background:"#D19C15", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:24, fontWeight:800, color:"#0a0a09", marginBottom:14, fontFamily:"Georgia,serif" }}>N</div>
-          <div style={{ fontSize:22, fontWeight:700, color:"#D7D2CB", letterSpacing:"-0.02em" }}>{appName}</div>
-          <div style={{ fontSize:12, color:"#7a756e", marginTop:4 }}>Acceso {role} · Solo @blackscale.consulting</div>
+          <div style={{ width:56, height:56, borderRadius:14, background:"#D19C15", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:26, fontWeight:800, color:"#0a0a09", marginBottom:16, fontFamily:"Georgia,serif" }}>N</div>
+          <div style={{ fontSize:22, fontWeight:700, color:"#D7D2CB", letterSpacing:"-0.02em" }}>BlackScale Nexus</div>
+          <div style={{ fontSize:12, color:"#7a756e", marginTop:4 }}>Sistema CRM · Acceso restringido</div>
         </div>
         <div style={{ background:"#11110F", border:"1px solid rgba(215,210,203,0.08)", borderRadius:14, padding:"28px", display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
-          {error && (
-            <div style={{ width:"100%", padding:"10px 14px", borderRadius:8, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", color:"#fca5a5", fontSize:12, textAlign:"center" }}>
-              {error}
-            </div>
-          )}
+          {error && <div style={{ width:"100%", padding:"10px 14px", borderRadius:8, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", color:"#fca5a5", fontSize:12, textAlign:"center" }}>{error}</div>}
           <div id="g-signin-btn" />
-          {loading && <div style={{ fontSize:12, color:"#7a756e" }}>Verificando acceso...</div>}
+          {loading && <div style={{ fontSize:12, color:"#7a756e" }}>Redirigiendo...</div>}
+          <div style={{ fontSize:11, color:"#7a756e", textAlign:"center" }}>Solo <strong style={{color:"#D19C15"}}>@blackscale.consulting</strong> tiene acceso</div>
         </div>
       </div>
     </div>
   );
 }
+
 
 // ── Page transition overlay ───────────────────────────────────────────────────
 function NavigatingOverlay() {

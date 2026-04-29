@@ -118,6 +118,17 @@ function MarketingLayout({ children, currentSection, onNavigate, onSwitchToSales
           ))}
         </nav>
 
+        {/* Logout */}
+        <div style={{ padding:"8px", flexShrink:0 }}>
+        <button onClick={() => { sessionStorage.clear(); localStorage.clear(); window.location.reload(); }}
+          style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 12px", width:"100%", borderRadius:8,
+            border:"1px solid var(--mkt-border)", background:"transparent", color:"var(--mkt-text-muted)",
+            fontSize:12, cursor:"pointer", textAlign:"left", marginBottom:4 }}
+          className="mkt-nav-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          Cerrar sesión
+        </button>
+        </div>
         {/* Switch to CRM */}
         <div style={{ padding: "8px", borderTop: "1px solid var(--mkt-border)", flexShrink: 0 }}>
           <button onClick={onSwitchToSales} className="mkt-nav-item"
