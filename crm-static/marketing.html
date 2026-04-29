@@ -178,6 +178,15 @@ function LoginScreen({ onLogin, appName = "BlackScale Nexus", role = "Sales" }) 
 }
 
 
+
+function NavigatingOverlay() {
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(10,10,9,0.55)", backdropFilter:"blur(2px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <BSSpinner size="lg" />
+    </div>
+  );
+}
+
 function MarketingApp() {
   const [authed, setAuthed] = React.useState(!!sessionStorage.getItem("bs-auth"));
   const [navigating, setNavigating] = React.useState(false);
