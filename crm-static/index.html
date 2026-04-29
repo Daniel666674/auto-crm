@@ -133,7 +133,79 @@ function applyTheme(themeId) {
 }
 
 // ── Login Screen ──────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin, appName = "BlackScale CRM", role = "Sales" }) {
+function LoginScreen({ onLogin, appName = "BlackScale Nexus", role = "Sales" }) {
+  const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (window.google) initGSI();
+    else {
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.onload = initGSI;
+      document.head.appendChild(s);
+    }
+  }, []);
+
+  function initGSI() {
+    window.google.accounts.id.initialize({
+      client_id: "302408583182-itlfhs7eu6unejhm3u28jm6u2dk861b6.apps.googleusercontent.com",
+      callback: handleCredential,
+    });
+    window.google.accounts.id.renderButton(
+      document.getElementById("g-signin-btn"),
+      { theme: "filled_black", size: "large", text: "signin_with", shape: "rectangular", width: 280 }
+    );
+  }
+
+  function parseJwt(token) {
+    try { return JSON.parse(atob(token.split(".")[1])); } catch(e) { return null; }
+  }
+
+  function handleCredential(response) {
+    setLoading(true);
+    const payload = parseJwt(response.credential);
+    if (!payload) { setError("Error al verificar credenciales."); setLoading(false); return; }
+    const email = payload.email || "";
+    if (!email.endsWith("@blackscale.consulting")) {
+      setError("Solo cuentas @blackscale.consulting tienen acceso.");
+      setLoading(false);
+      return;
+    }
+    sessionStorage.setItem("bs-auth", "1");
+    sessionStorage.setItem("bs-user", JSON.stringify({ name: payload.name, email, picture: payload.picture }));
+    onLogin();
+  }
+
+  const isDark = role === "Sales";
+  const bg = isDark ? "linear-gradient(135deg,#0a0a09 0%,#11110F 100%)" : "linear-gradient(135deg,#0a0a09 0%,#11110F 100%)";
+  const accent = isDark ? "#D19C15" : "#D19C15";
+
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background: bg, fontFamily:"Poppins,-apple-system,sans-serif" }}>
+      <div style={{ width:340, display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ width:56, height:56, borderRadius:14, background:accent, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:22, fontWeight:800, color:"#0a0a09" }}>N</div>
+          <div style={{ fontSize:22, fontWeight:700, color:"#D7D2CB", letterSpacing:"-0.03em" }}>{appName}</div>
+          <div style={{ fontSize:13, color:"#7a756e", marginTop:4 }}>{role} · Acceso restringido</div>
+        </div>
+
+        <div style={{ width:"100%", background:"#11110F", border:"1px solid rgba(215,210,203,0.07)", borderRadius:16, padding:28, display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+          {error && (
+            <div style={{ width:"100%", padding:"10px 14px", borderRadius:8, background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)", color:"#fca5a5", fontSize:12, textAlign:"center" }}>
+              {error}
+            </div>
+          )}
+          <div id="g-signin-btn" style={{ opacity: loading ? 0.5 : 1 }} />
+          {loading && <div style={{ fontSize:12, color:"#7a756e" }}>Verificando acceso...</div>}
+          <div style={{ fontSize:11, color:"#7a756e", textAlign:"center" }}>
+            Solo cuentas <strong style={{ color:"#D19C15" }}>@blackscale.consulting</strong> tienen acceso
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -142,9 +214,11 @@ function LoginScreen({ onLogin, appName = "BlackScale CRM", role = "Sales" }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) { setError("Ingresa tu correo y contraseña."); return; }
+    if (!email.endsWith("@blackscale.consulting")) { setError("Solo cuentas @blackscale.consulting tienen acceso."); return; }
+    if (password !== "Nexus2026!") { setError("Contraseña incorrecta."); return; }
     setError("");
     setLoading(true);
-    await new Promise(res => setTimeout(res, 1700));
+    await new Promise(res => setTimeout(res, 900));
     sessionStorage.setItem("bs-auth", "1");
     onLogin();
   };
