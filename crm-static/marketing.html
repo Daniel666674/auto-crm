@@ -52,6 +52,20 @@
 </style>
 </head>
 <body>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  document.body.innerHTML = '<div style="background:#0a0a09;color:#ef4444;padding:40px;font-family:monospace;min-height:100vh">' +
+    '<div style="font-size:20px;font-weight:700;margin-bottom:20px">BlackScale Nexus — Error de carga</div>' +
+    '<div style="background:#1a0a0a;padding:20px;border-radius:8px;border:1px solid #ef4444;margin-bottom:16px">' +
+    '<div style="margin-bottom:8px"><b>Error:</b> ' + msg + '</div>' +
+    '<div style="margin-bottom:8px"><b>Archivo:</b> ' + src + '</div>' +
+    '<div><b>Línea:</b> ' + line + ' Col: ' + col + '</div>' +
+    '</div>' +
+    (err ? '<pre style="color:#fca5a5;font-size:12px;overflow:auto">' + (err.stack||err) + '</pre>' : '') +
+    '</div>';
+  return false;
+};
+</script>
 <div id="root"></div>
 
 <!-- Shared helpers from CRM data -->
