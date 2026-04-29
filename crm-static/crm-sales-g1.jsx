@@ -296,16 +296,7 @@ function DealIntelligenceScreen() {
 
 // ── WIN / LOSS ────────────────────────────────────────────────────────────────
 
-const WL_SEED = [
-  { id: "wl1", title: "Automatización - Retail CO", value: 12000000, won: false, reason: "Precio", industry: "E-commerce", source: "referido", stage: "Propuesta", days: 18 },
-  { id: "wl2", title: "CRM Inmobiliaria Norte", value: 35000000, won: true, reason: "", industry: "Inmobiliaria", source: "website", stage: "Ganado", days: 22 },
-  { id: "wl3", title: "Suite Completa - Fintech", value: 58000000, won: false, reason: "Competencia", industry: "Finanzas", source: "evento", stage: "Negociación", days: 35 },
-  { id: "wl4", title: "Plan Básico - Dental Plus", value: 8500000, won: true, reason: "", industry: "Salud", source: "referido", stage: "Ganado", days: 12 },
-  { id: "wl5", title: "Consultoría Tech - Startup", value: 22000000, won: false, reason: "Timing", industry: "Tecnología", source: "redes_sociales", stage: "Propuesta", days: 9 },
-  { id: "wl6", title: "Enterprise - LogiCo", value: 90000000, won: false, reason: "Sin presupuesto", industry: "Logística", source: "llamada_fria", stage: "Negociación", days: 41 },
-  { id: "wl7", title: "Marketing Analytics - Agencia", value: 19000000, won: true, reason: "", industry: "Marketing", source: "evento", stage: "Ganado", days: 14 },
-  { id: "wl8", title: "Outbound CRM - Construcción", value: 28000000, won: false, reason: "ICP incorrecto", industry: "Construcción", source: "formulario", stage: "Contactado", days: 6 },
-];
+const WL_SEED = [];
 
 const REASONS = ["Precio", "Timing", "Competencia", "Sin presupuesto", "ICP incorrecto"];
 

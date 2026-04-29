@@ -39,49 +39,15 @@ function MktStatCard({ label, value, sub, accent }) {
 
 // ── Seed extras ───────────────────────────────────────────────────────────────
 
-const BREVO_LISTS_SEED = [
-  { id: "bl1", name: "Tier 1 — Premium", contactCount: 34, lastSync: "15/04/2026", healthRate: 94, cadenceName: "Onboarding Premium Q1" },
-  { id: "bl2", name: "Tier 2 — B2B Nurturing", contactCount: 156, lastSync: "22/04/2026", healthRate: 87, cadenceName: "Nurturing B2B - Inmobiliarias" },
-  { id: "bl3", name: "Cold — Welcome Series", contactCount: 412, lastSync: "23/04/2026", healthRate: 62, cadenceName: "Cold Welcome Series" },
-  { id: "bl4", name: "Eventos — Bogotá 2026", contactCount: 23, lastSync: "10/04/2026", healthRate: 100, cadenceName: "Event Follow-up Bogotá" },
-  { id: "bl5", name: "Re-engagement Q1", contactCount: 230, lastSync: "21/04/2026", healthRate: 71, cadenceName: "Re-engagement Q1" },
-];
+const BREVO_LISTS_SEED = []; // loaded from API
 
-const CALENDAR_SEED = [
-  { id: "cal1", title: "Newsletter Mayo", channel: "Email", status: "Planeado", publishDate: new Date(2026,4,5).getTime(), campaign: "Nurturing B2B", notes: "" },
-  { id: "cal2", title: "Post LinkedIn — Caso de éxito", channel: "LinkedIn", status: "Publicado", publishDate: new Date(2026,3,18).getTime(), campaign: "LinkedIn Outreach", notes: "Alcanzó 3.2K impresiones" },
-  { id: "cal3", title: "Anuncio Meta — Webinar Mayo", channel: "Meta", status: "En progreso", publishDate: new Date(2026,4,1).getTime(), campaign: "Webinar Marzo", notes: "Revisar copy con Julian" },
-  { id: "cal4", title: "Blog: 5 señales de compra", channel: "Blog", status: "Planeado", publishDate: new Date(2026,4,12).getTime(), campaign: "", notes: "" },
-  { id: "cal5", title: "Campaña Brevo — Re-engage", channel: "Email", status: "Planeado", publishDate: new Date(2026,4,8).getTime(), campaign: "Re-engagement Q1", notes: "" },
-  { id: "cal6", title: "Carrusel LinkedIn — Features", channel: "LinkedIn", status: "Planeado", publishDate: new Date(2026,4,15).getTime(), campaign: "LinkedIn Outreach", notes: "" },
-];
+const CALENDAR_SEED = [];
 
-const ABM_SEED = [
-  { id: "abm1", company: "Bancolombia Digital", contact: "Valentina Torres", tier: 1, status: "Comprometido", lastTouch: Date.now() - 2*86400000, nextTouch: Date.now() + 5*86400000, notes: "Demo agendada para el martes" },
-  { id: "abm2", company: "Rappi Latam", contact: "Andrés Mejía", tier: 1, status: "Calentando", lastTouch: Date.now() - 8*86400000, nextTouch: Date.now() + 3*86400000, notes: "Respondió al LinkedIn DM. Interés bajo-medio." },
-  { id: "abm3", company: "Grupo Éxito", contact: "Felipe Castillo", tier: 1, status: "Identificando", lastTouch: Date.now() - 15*86400000, nextTouch: Date.now() + 1*86400000, notes: "Empresa clave. Aún no hay contacto directo." },
-  { id: "abm4", company: "Nutresa", contact: "Isabella Vargas", tier: 2, status: "Entregado", lastTouch: Date.now() - 1*86400000, nextTouch: null, notes: "Pasado a ventas. Deal abierto." },
-];
+const ABM_SEED = [];
 
-const LEAD_VELOCITY = [
-  { label: "S-7", total: 12, website: 4, linkedin: 3, email: 5, events: 0 },
-  { label: "S-6", total: 18, website: 6, linkedin: 5, email: 5, events: 2 },
-  { label: "S-5", total: 9, website: 2, linkedin: 4, email: 3, events: 0 },
-  { label: "S-4", total: 22, website: 7, linkedin: 8, email: 4, events: 3 },
-  { label: "S-3", total: 15, website: 5, linkedin: 4, email: 6, events: 0 },
-  { label: "S-2", total: 28, website: 10, linkedin: 9, email: 5, events: 4 },
-  { label: "S-1", total: 19, website: 6, linkedin: 7, email: 4, events: 2 },
-  { label: "Esta", total: 24, website: 8, linkedin: 8, email: 5, events: 3 },
-];
+const LEAD_VELOCITY = [];
 
-const ROI_DATA = [
-  { id: "r1", campaign: "Onboarding Premium Q1", contacts: 34, handoffs: 8, deals: 5, revenue: 147000000, costPerLead: 120000 },
-  { id: "r2", campaign: "LinkedIn Outreach - Latam", contacts: 87, handoffs: 12, deals: 8, revenue: 96000000, costPerLead: 85000 },
-  { id: "r3", campaign: "Event Follow-up Bogotá", contacts: 23, handoffs: 9, deals: 7, revenue: 124000000, costPerLead: 200000 },
-  { id: "r4", campaign: "Nurturing B2B - Inmobiliarias", contacts: 156, handoffs: 5, deals: 3, revenue: 54000000, costPerLead: 60000 },
-  { id: "r5", campaign: "Cold Welcome Series", contacts: 412, handoffs: 3, deals: 2, revenue: 26000000, costPerLead: 15000 },
-  { id: "r6", campaign: "Webinar Marzo - Automación", contacts: 67, handoffs: 11, deals: 9, revenue: 213000000, costPerLead: 180000 },
-];
+const ROI_DATA = [];
 
 const CHANNEL_COLORS = { LinkedIn: "#0A66C2", Email: "var(--mkt-accent)", Meta: "#1877F2", Blog: "#22c55e" };
 
@@ -199,7 +165,16 @@ function MktIcpInsights() {
 }
 
 function MktLists() {
-  const [lists, setLists] = React.useState(BREVO_LISTS_SEED);
+  const [lists, setLists] = React.useState([]);
+  const [loadingLists, setLoadingLists] = React.useState(true);
+  React.useEffect(() => {
+    fetch("/api/brevo/lists").then(r=>r.json()).then(d => {
+      if (d.lists) setLists(d.lists.map((l,i) => ({
+        id: `bl${l.id||i}`, name: l.name, contactCount: l.totalSubscribers || 0,
+        lastSync: new Date().toLocaleDateString("es-CO"), healthRate: 85, cadenceName: l.name,
+      })));
+    }).catch(()=>{}).finally(()=>setLoadingLists(false));
+  }, []);
   const [editing, setEditing] = React.useState(null);
   const [showAdd, setShowAdd] = React.useState(false);
   const [form, setForm] = React.useState({ name: "", contactCount: "", lastSync: "", healthRate: "", cadenceName: "" });

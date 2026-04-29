@@ -51,11 +51,12 @@ function detectChannel(campaign) {
 
 function mapBrevoToCampaign(c, i) {
   const gs   = c.statistics?.globalStats || {};
-  const sent = parseInt(gs.sent || gs.recipients || "0") || 0;
-  const opens   = parseInt(gs.uniqueOpens || gs.opens || "0") || 0;
-  const clicks  = parseInt(gs.uniqueClicks || gs.clicks || "0") || 0;
-  const replied = parseInt(gs.replied || "0") || 0;
-  const unsubscribed = parseInt(gs.unsubscribed || "0") || 0;
+  // Brevo uses "uniqueViews" for unique opens, "viewed" for total opens
+  const sent        = parseInt(gs.sent || gs.delivered || gs.recipients || "0") || 0;
+  const opens       = parseInt(gs.uniqueViews || gs.uniqueOpens || gs.opens || "0") || 0;
+  const clicks      = parseInt(gs.uniqueClicks || gs.clickers || "0") || 0;
+  const replied     = parseInt(gs.replied || "0") || 0;
+  const unsubscribed = parseInt(gs.unsubscriptions || gs.unsubscribed || "0") || 0;
 
   return {
     id:            `camp${c.id || i}`,
