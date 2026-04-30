@@ -261,13 +261,43 @@ function CampaignFormModal({ onClose, onCreated }) {
         {/* Step 2: Content */}
         {step === 2 && (
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <div style={{ padding:12, borderRadius:8, background:"rgba(209,156,21,0.06)", border:"1px solid rgba(209,156,21,0.15)", fontSize:12, color:"var(--mkt-text-muted)" }}>
-              Escribe el HTML de tu email. Usa <code style={{color:"var(--mkt-accent)"}}>{`{{contact.FIRSTNAME}}`}</code> para personalizar con el nombre del contacto.
+            <div style={{ padding:12, borderRadius:8, background:"rgba(209,156,21,0.06)", border:"1px solid rgba(209,156,21,0.15)" }}>
+              <div style={{ fontSize:11, fontWeight:600, color:"var(--mkt-accent)", marginBottom:8 }}>CAMPOS DINÁMICOS — clic para insertar</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                {[
+                  ["Nombre",          "{{ contact.FIRSTNAME }}"],
+                  ["Apellido",        "{{ contact.LASTNAME }}"],
+                  ["Email",           "{{ contact.EMAIL }}"],
+                  ["Empresa",         "{{ contact.COMPANY }}"],
+                  ["Teléfono",        "{{ contact.SMS }}"],
+                  ["Ciudad",          "{{ contact.CITY }}"],
+                  ["País",            "{{ contact.COUNTRY }}"],
+                  ["Cargo",           "{{ contact.JOB_TITLE }}"],
+                  ["Industria",       "{{ contact.INDUSTRY }}"],
+                  ["Tier",            "{{ contact.TIER }}"],
+                  ["Link baja",       "{{ unsubscribe }}"],
+                  ["Link web",        "{{ mirror }}"],
+                  ["Fecha hoy",       "{{ today }}"],
+                ].map(([label, tag]) => (
+                  <button key={tag} onClick={() => {
+                    const ta = document.getElementById("html-editor");
+                    if (!ta) { setForm(p=>({...p,htmlContent:p.htmlContent+tag})); return; }
+                    const start = ta.selectionStart, end = ta.selectionEnd;
+                    const val = ta.value;
+                    const newVal = val.substring(0,start) + tag + val.substring(end);
+                    setForm(p=>({...p,htmlContent:newVal}));
+                    setTimeout(()=>{ ta.focus(); ta.setSelectionRange(start+tag.length,start+tag.length); },0);
+                  }} style={{ fontSize:10, padding:"3px 8px", borderRadius:4, border:"1px solid rgba(209,156,21,0.25)",
+                    background:"rgba(209,156,21,0.04)", color:"var(--mkt-accent)", cursor:"pointer", fontFamily:"monospace" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label style={lStyle}>Contenido HTML *</label>
               <textarea value={form.htmlContent} onChange={e=>setForm(p=>({...p,htmlContent:e.target.value}))}
-                style={{...fStyle, height:320, resize:"vertical", fontFamily:"monospace", fontSize:12, lineHeight:1.6}}
+                id="html-editor" style={{...fStyle, height:320, resize:"vertical", fontFamily:"monospace", fontSize:12, lineHeight:1.6}}
                 placeholder={`<html>
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
   <h2>Hola {{contact.FIRSTNAME}},</h2>
