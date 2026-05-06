@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="es" className={`${inter.variable} h-full antialiased dark`} suppressHydrationWarning>
       <body className="min-h-full flex" suppressHydrationWarning>
         <SessionProvider>
           <TooltipProvider>

@@ -96,7 +96,7 @@ export function Sidebar() {
   const [apolloSyncing] = useState(false);
 
   return (
-    <aside className="hidden md:flex md:w-60 md:flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] min-h-screen overflow-y-auto">
+    <aside className="hidden md:flex md:w-60 md:flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] h-screen sticky top-0 overflow-y-auto">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-5 border-b border-[var(--sidebar-border)] shrink-0">
         <div className="w-8 h-8 rounded-lg bg-[var(--sidebar-primary)] flex items-center justify-center text-[var(--sidebar-primary-foreground)] font-bold text-sm">B</div>
