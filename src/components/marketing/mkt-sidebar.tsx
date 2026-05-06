@@ -39,6 +39,8 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
   const { data: session } = useSession();
   const readyCount = contacts.filter(c => c.readyForSales && !c.passedToSalesAt).length;
   const [syncMsg, setSyncMsg] = useState("");
+  const [apolloSyncing, setApolloSyncing] = useState(false);
+  const [apolloMsg, setApolloMsg] = useState("");
 
   const NAV_GROUPS: NavGroup[] = [
     {
@@ -176,8 +178,40 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
         ))}
       </nav>
 
-      {/* Brevo Sync */}
+      {/* Apollo CSV Sync */}
       <div style={{ padding: "8px 8px 0", borderTop: "1px solid var(--mkt-border)" }}>
+        <button
+          onClick={async () => {
+            setApolloSyncing(true);
+            setApolloMsg("");
+            try {
+              const res = await fetch("/api/import-apollo", { method: "POST" });
+              const data = await res.json();
+              if (data.error) { setApolloMsg(`Error`); return; }
+              setApolloMsg(`✓ ${data.inserted} importados`);
+              setTimeout(() => setApolloMsg(""), 4000);
+            } catch {
+              setApolloMsg("Error");
+            } finally {
+              setApolloSyncing(false);
+            }
+          }}
+          disabled={apolloSyncing}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+            width: "100%", borderRadius: 8, border: "1px solid var(--mkt-border)",
+            background: "transparent", cursor: apolloSyncing ? "wait" : "pointer",
+            color: apolloSyncing ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
+            fontSize: 12, textAlign: "left" as const, transition: "color 0.15s",
+          }}
+        >
+          <SvgIcon path="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" size={14} />
+          {apolloSyncing ? "Importando…" : apolloMsg || "Sincronizar Apollo CSV"}
+        </button>
+      </div>
+
+      {/* Brevo Sync */}
+      <div style={{ padding: "8px 8px 0" }}>
         <button
           onClick={handleSync}
           disabled={syncing}

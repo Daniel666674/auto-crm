@@ -93,7 +93,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role ?? "";
-  const [apolloSyncing] = useState(false);
+  const [apolloSyncing, setApolloSyncing] = useState(false);
+  const [apolloMsg, setApolloMsg] = useState("");
 
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] h-screen sticky top-0 overflow-y-auto">
@@ -141,15 +142,29 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Apollo CSV Sync — disabled until API route is wired */}
+      {/* Apollo CSV Sync */}
       <div className="px-2 pt-1 border-t border-[var(--sidebar-border)]">
         <button
           disabled={apolloSyncing}
-          title="Próximamente: sincronizar contactos desde Apollo CSV"
-          className="flex items-center gap-2 w-full rounded-md px-3 py-2.5 text-[11px] border border-[var(--sidebar-border)] bg-transparent text-[var(--sidebar-foreground)]/30 cursor-not-allowed"
+          onClick={async () => {
+            setApolloSyncing(true);
+            setApolloMsg("");
+            try {
+              const res = await fetch("/api/import-apollo", { method: "POST" });
+              const data = await res.json();
+              if (data.error) { setApolloMsg(`Error: ${data.error}`); return; }
+              setApolloMsg(`✓ ${data.inserted} importados`);
+              setTimeout(() => setApolloMsg(""), 4000);
+            } catch {
+              setApolloMsg("Error al importar");
+            } finally {
+              setApolloSyncing(false);
+            }
+          }}
+          className="flex items-center gap-2 w-full rounded-md px-3 py-2.5 text-[11px] border border-[var(--sidebar-border)] bg-transparent hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] text-[var(--sidebar-foreground)]/50 transition-colors cursor-pointer disabled:cursor-wait"
         >
           <SvgIcon path="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" size={13} />
-          Sincronizar Apollo CSV
+          {apolloSyncing ? "Importando…" : apolloMsg || "Sincronizar Apollo CSV"}
         </button>
       </div>
 

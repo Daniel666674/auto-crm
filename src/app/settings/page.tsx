@@ -31,6 +31,11 @@ export default function SettingsPage() {
   const [savingApollo, setSavingApollo] = useState(false);
   const [apolloStatus, setApolloStatus] = useState<"idle" | "ok" | "error">("idle");
 
+  // Apollo CSV sync state
+  const [apolloSyncing, setApolloSyncing] = useState(false);
+  const [apolloSyncResult, setApolloSyncResult] = useState<null | { inserted: number; skipped: number; total: number }>(null);
+  const [apolloLastSync, setApolloLastSync] = useState<string | null>(null);
+
   // Brevo sync state
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<null | { synced: number; total: number }>(null);
@@ -46,6 +51,9 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
     fetch("/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
+    fetch("/api/import-apollo").then(r => r.json()).then(d => {
+      if (d.lastSync) setApolloLastSync(d.lastSync);
+    }).catch(() => {});
   }, []);
 
   const handleSaveApollo = async () => {
@@ -318,11 +326,43 @@ export default function SettingsPage() {
               Para activar en producción, actualiza <code className="bg-muted px-1 rounded">APOLLO_API_KEY</code> en <code className="bg-muted px-1 rounded">.env.local</code> y reinicia PM2.
             </p>
             <Separator />
-            <div>
-              <h4 className="text-sm font-semibold mb-1">Apollo CSV Sync</h4>
-              <p className="text-xs text-muted-foreground mb-2">
-                El botón de sincronización Apollo CSV está disponible en la barra lateral izquierda del CRM. Sube el archivo <code className="bg-muted px-1 rounded">apollo-contacts-export.csv</code> para importar contactos al pipeline de Brevo.
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">Apollo CSV Sync</h4>
+              <p className="text-xs text-muted-foreground">
+                Importa los 2,000+ contactos del archivo Apollo CSV al CRM. Cada contacto recibe un score ICP automático basado en cargo, tamaño de empresa e industria. Brevo sumará puntos de engagement encima de este score.
               </p>
+              {apolloLastSync && (
+                <p className="text-xs text-muted-foreground">Última sincronización: {new Date(apolloLastSync).toLocaleString("es-CO")}</p>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={apolloSyncing}
+                onClick={async () => {
+                  setApolloSyncing(true);
+                  setApolloSyncResult(null);
+                  try {
+                    const res = await fetch("/api/import-apollo", { method: "POST" });
+                    const data = await res.json();
+                    if (data.error) { toast.error(data.error); return; }
+                    setApolloSyncResult(data);
+                    setApolloLastSync(data.lastSync);
+                    toast.success(`Apollo sync: ${data.inserted} contactos importados`);
+                  } catch {
+                    toast.error("Error al importar Apollo CSV");
+                  } finally {
+                    setApolloSyncing(false);
+                  }
+                }}
+              >
+                {apolloSyncing ? <><RefreshCw className="w-3 h-3 mr-2 animate-spin" />Importando…</> : "Sincronizar Apollo CSV"}
+              </Button>
+              {apolloSyncResult && (
+                <p className="text-xs text-green-600">
+                  ✓ {apolloSyncResult.inserted} nuevos · {apolloSyncResult.skipped} omitidos · {apolloSyncResult.total} total en CSV
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -365,11 +405,11 @@ export default function SettingsPage() {
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs bg-muted p-2 rounded font-mono truncate">
-                POST {typeof window !== "undefined" ? window.location.origin : "https://nexus.blackscale.consulting"}/app/api/webhook
+                POST {typeof window !== "undefined" ? window.location.origin : "https://nexus.blackscale.consulting"}/api/webhook
               </code>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/app/api/webhook`);
+                  navigator.clipboard.writeText(`${window.location.origin}/api/webhook`);
                   toast.success("URL copiada");
                 }}
                 className="p-2 rounded hover:bg-muted cursor-pointer"
