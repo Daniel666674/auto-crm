@@ -2,22 +2,30 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Search, Users, Download } from "lucide-react";
+import { Users, Download } from "lucide-react";
 import { formatDate } from "@/lib/constants";
 import { SOURCE_LABELS } from "@/lib/constants";
 import type { Contact, Temperature, LeadSource } from "@/types";
+
+const TEMP_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  hot:  { label: "Caliente", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+  warm: { label: "Tibio",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  cold: { label: "Frío",     color: "var(--muted-foreground)", bg: "rgba(255,255,255,0.06)" },
+};
+
+function Avatar({ name }: { name: string }) {
+  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <div style={{
+      width: 32, height: 32, borderRadius: "50%", background: "var(--primary)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "var(--primary-foreground)", fontSize: 11, fontWeight: 700, flexShrink: 0,
+    }}>
+      {initials}
+    </div>
+  );
+}
 
 interface ContactsTableProps {
   contacts: Contact[];
@@ -34,9 +42,7 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email?.toLowerCase().includes(search.toLowerCase()) ||
       c.company?.toLowerCase().includes(search.toLowerCase());
-
     const matchesTemp = !filterTemp || c.temperature === filterTemp;
-
     return matchesSearch && matchesTemp;
   });
 
@@ -52,101 +58,152 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
     );
   }
 
+  const filters: Array<{ value: Temperature | ""; label: string }> = [
+    { value: "", label: "Todos" },
+    { value: "hot", label: "Caliente" },
+    { value: "warm", label: "Tibio" },
+    { value: "cold", label: "Frío" },
+  ];
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        {/* Search */}
+        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+          <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "var(--muted-foreground)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
             placeholder="Buscar por nombre, email o empresa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            style={{
+              width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
+              background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8,
+              fontSize: 13, color: "var(--foreground)", outline: "none",
+            }}
           />
         </div>
-        <div className="flex gap-2">
-          {(["", "hot", "warm", "cold"] as const).map((temp) => (
-            <Button
-              key={temp}
-              variant={filterTemp === temp ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterTemp(temp)}
-              className="cursor-pointer"
+
+        {/* Temp filters */}
+        <div style={{ display: "flex", gap: 6 }}>
+          {filters.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setFilterTemp(f.value)}
+              style={{
+                padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer",
+                border: `1px solid ${filterTemp === f.value ? "var(--primary)" : "var(--border)"}`,
+                background: filterTemp === f.value ? "rgba(209,156,21,0.12)" : "var(--card)",
+                color: filterTemp === f.value ? "var(--primary)" : "var(--muted-foreground)",
+                transition: "all 0.15s",
+              }}
             >
-              {temp === "" ? "Todos" : temp === "hot" ? "Caliente" : temp === "warm" ? "Tibio" : "Frio"}
-            </Button>
+              {f.label}
+            </button>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open("/api/export?type=contacts")}
-            className="cursor-pointer"
-          >
-            <Download className="h-4 w-4 mr-1" />
-            Exportar
-          </Button>
         </div>
+
+        {/* Export */}
+        <button
+          onClick={() => window.open("/api/export?type=contacts")}
+          style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+            border: "1px solid var(--border)", borderRadius: 6, background: "var(--card)",
+            fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer",
+          }}
+        >
+          <Download size={13} />
+          Exportar
+        </button>
       </div>
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead className="hidden sm:table-cell">Empresa</TableHead>
-              <TableHead className="hidden md:table-cell">Fuente</TableHead>
-              <TableHead>Temperatura</TableHead>
-              <TableHead className="hidden md:table-cell">Score</TableHead>
-              <TableHead className="hidden lg:table-cell">Fecha</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((contact) => (
-              <TableRow
+      {/* Table */}
+      <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 90px",
+          padding: "10px 16px", borderBottom: "1px solid var(--border)",
+          background: "var(--card)",
+        }}>
+          {["Nombre", "Empresa", "Fuente", "Temperatura", "Score", "Fecha"].map(h => (
+            <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
+          ))}
+        </div>
+
+        {/* Rows */}
+        {filtered.length === 0 ? (
+          <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
+            Sin resultados para &ldquo;{search}&rdquo;
+          </div>
+        ) : (
+          filtered.map((contact, i) => {
+            const temp = TEMP_CONFIG[contact.temperature] ?? TEMP_CONFIG.cold;
+            return (
+              <div
                 key={contact.id}
-                className="cursor-pointer hover:bg-muted/50"
                 onClick={() => router.push(`/contacts/${contact.id}`)}
+                style={{
+                  display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 90px",
+                  padding: "12px 16px", cursor: "pointer", alignItems: "center",
+                  borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                  background: "var(--card)", transition: "background 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "var(--card)")}
               >
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{contact.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {contact.email || "Sin email"}
-                    </p>
+                {/* Name + avatar */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Avatar name={contact.name} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contact.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contact.email || "—"}</div>
                   </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {contact.company || "-"}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-sm">
+                </div>
+
+                {/* Company */}
+                <span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {contact.company || "—"}
+                </span>
+
+                {/* Source */}
+                <span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {SOURCE_LABELS[contact.source as LeadSource] || contact.source}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge temperature={contact.temperature as Temperature} size="sm" />
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-16 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${contact.score}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {contact.score}
-                    </span>
+                </span>
+
+                {/* Temperature badge */}
+                <div>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "3px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                    background: temp.bg, color: temp.color,
+                  }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: temp.color, display: "inline-block" }} />
+                    {temp.label}
+                  </span>
+                </div>
+
+                {/* Score bar */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ height: 4, width: 40, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${contact.score ?? 0}%`, borderRadius: 2, background: "var(--primary)" }} />
                   </div>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{contact.score ?? 0}</span>
+                </div>
+
+                {/* Date */}
+                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                   {formatDate(contact.createdAt)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </span>
+              </div>
+            );
+          })
+        )}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center" }}>
         {filtered.length} de {contacts.length} contactos
       </p>
     </div>
