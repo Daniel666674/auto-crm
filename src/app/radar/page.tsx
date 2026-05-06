@@ -23,7 +23,7 @@ function Badge({ text, color }: { text: string; color: string }) {
 const emptyForm = { name: "", company: "", tier: 2, reason: "", trigger: "", reengageDate: "" };
 
 export default function RadarPage() {
-  const [items, setItems] = useState<RadarItem[]>(SEED);
+  const [items, setItems] = useState<RadarItem[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm);
 
