@@ -1,11 +1,14 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency } from "@/lib/constants";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Temperature } from "@/types";
+
+const TEMP_COLOR: Record<string, string> = {
+  hot: "#ef4444",
+  warm: "#f59e0b",
+  cold: "var(--muted-foreground)",
+};
 
 interface DealCardProps {
   id: string;
@@ -14,57 +17,46 @@ interface DealCardProps {
   contactName: string | null;
   contactTemperature: string | null;
   probability: number;
+  stageColor: string;
 }
 
-export function DealCard({
-  id,
-  title,
-  value,
-  contactName,
-  contactTemperature,
-  probability,
-}: DealCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+export function DealCard({ id, title, value, contactName, contactTemperature, probability, stageColor }: DealCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   return (
-    <Card
+    <div
       ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
-      className="p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        padding: 12,
+        borderRadius: 8,
+        background: "var(--background)",
+        border: "1px solid var(--border)",
+        cursor: "grab",
+      }}
     >
-      <div className="space-y-2">
-        <p className="text-sm font-medium leading-tight">{title}</p>
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-primary">
-            {formatCurrency(value)}
-          </span>
-          {contactTemperature && (
-            <StatusBadge
-              temperature={contactTemperature as Temperature}
-              size="sm"
-            />
-          )}
-        </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{contactName || "Sin contacto"}</span>
-          <span>{probability}%</span>
-        </div>
+      <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, lineHeight: 1.3 }}>{title}</p>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--primary)" }}>{formatCurrency(value)}</span>
+        <div style={{
+          width: 6, height: 6, borderRadius: 3,
+          background: TEMP_COLOR[contactTemperature ?? "cold"] ?? TEMP_COLOR.cold,
+        }} />
       </div>
-    </Card>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{contactName || "—"}</span>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{probability}%</span>
+      </div>
+
+      <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+        <div style={{ width: `${probability}%`, height: "100%", borderRadius: 2, background: stageColor, transition: "width 0.3s" }} />
+      </div>
+    </div>
   );
 }

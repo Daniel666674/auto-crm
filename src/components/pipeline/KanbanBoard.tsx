@@ -119,6 +119,10 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
     [columns]
   );
 
+  const TempDot = ({ color }: { color: string }) => (
+    <div style={{ width: 6, height: 6, borderRadius: 3, background: color, display: "inline-block" }} />
+  );
+
   return (
     <DndContext
       sensors={sensors}
@@ -127,7 +131,14 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      {/* Temperature legend */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#ef4444" /> Caliente</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#f59e0b" /> Tibio</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="var(--muted-foreground)" /> Frío</span>
+      </div>
+
+      <div className="flex gap-3 overflow-x-auto pb-4">
         {columns.map((column) => (
           <KanbanColumn
             key={column.id}
