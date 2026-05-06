@@ -45,7 +45,7 @@ function fDate(ts: number) {
 const emptyForm = { title: "", clientName: "Agencia Creativa", status: "Pendiente", dueDate: "", owner: "Daniel" };
 
 export default function DeliverablesPage() {
-  const [items, setItems] = useState<Deliverable[]>(SEED);
+  const [items, setItems] = useState<Deliverable[]>([]);
   const [clientFilter, setClientFilter] = useState("Todos");
   const [ownerFilter, setOwnerFilter] = useState("Todos");
   const [showAdd, setShowAdd] = useState(false);

@@ -31,7 +31,7 @@ function fmt(cents: number) {
 }
 
 export default function RenewalsPage() {
-  const [clients, setClients] = useState<Client[]>(CLIENTS_SEED);
+  const [clients, setClients] = useState<Client[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
 

@@ -47,7 +47,7 @@ function hColor(score: number) {
 }
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>(CLIENTS_SEED);
+  const [clients, setClients] = useState<Client[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const saveHealth = (id: string, raw: number) => {
