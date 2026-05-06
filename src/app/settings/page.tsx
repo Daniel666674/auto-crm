@@ -365,7 +365,7 @@ export default function SettingsPage() {
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs bg-muted p-2 rounded font-mono truncate">
-                POST {typeof window !== "undefined" ? window.location.origin : "https://crm.blackscale.consulting"}/app/api/webhook
+                POST {typeof window !== "undefined" ? window.location.origin : "https://nexus.blackscale.consulting"}/app/api/webhook
               </code>
               <button
                 onClick={() => {

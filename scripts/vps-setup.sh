@@ -98,7 +98,7 @@ nginx -t
 systemctl reload nginx
 
 # ─── 9. SSL certificate via Certbot ─────────────────────────────────────────
-certbot --nginx -d crm.blackscale.consulting --non-interactive --agree-tos -m daniel.acosta@blackscale.consulting
+certbot --nginx -d nexus.blackscale.consulting --non-interactive --agree-tos -m daniel.acosta@blackscale.consulting
 # Certbot auto-configures nginx and sets up renewal via systemd timer
 
 # ─── 10. Verify encryption ──────────────────────────────────────────────────
@@ -140,5 +140,5 @@ mkdir -p /var/backups/nexus/daily
 echo ""
 echo "==================================================================="
 echo " BlackScale Nexus VPS setup complete."
-echo " Visit: https://crm.blackscale.consulting/app/"
+echo " Visit: https://nexus.blackscale.consulting/app/"
 echo "==================================================================="
