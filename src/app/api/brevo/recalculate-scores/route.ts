@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { mktDb } from "@/db/mkt-db";
+import { db } from "@/db";
+import { contacts } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const BREVO_KEY = process.env.BREVO_API_KEY || "";
 const H = { "api-key": BREVO_KEY, "Content-Type": "application/json" };
@@ -135,17 +138,30 @@ export async function POST(req: Request) {
     const tempMap: Record<string, string> = { 1: "hot", 2: "warm", 3: "cold", 4: "cold" };
     const brevoUpdates: Array<{ brevoId: string; score: number; tier: number }> = [];
 
+    const scoredRows: Array<{ email: string; score: number; tier: number }> = [];
+
     const run = mktDb.transaction(() => {
       for (const row of rows) {
         const { score, tier } = scoreContact(row);
         const temperature = tempMap[tier] || "cold";
         update.run(score, tier, temperature, row.id);
+        if (row.email) scoredRows.push({ email: row.email, score, tier });
         if (pushToBrevo && row.brevo_id) {
           brevoUpdates.push({ brevoId: row.brevo_id, score, tier });
         }
       }
     });
     run();
+
+    // Write engagementScore back to main CRM contacts table (matched by email)
+    for (const { email, score } of scoredRows) {
+      try {
+        db.update(contacts)
+          .set({ engagementScore: score })
+          .where(eq(contacts.email, email))
+          .run();
+      } catch { /* non-fatal — contact may not exist in CRM yet */ }
+    }
 
     // Push to Brevo in background (non-blocking for the response)
     if (pushToBrevo && brevoUpdates.length > 0) {

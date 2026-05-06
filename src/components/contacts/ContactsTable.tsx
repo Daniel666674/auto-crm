@@ -124,11 +124,11 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
       <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
         {/* Header */}
         <div style={{
-          display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 90px",
+          display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 80px 90px",
           padding: "10px 16px", borderBottom: "1px solid var(--border)",
           background: "var(--card)",
         }}>
-          {["Nombre", "Empresa", "Fuente", "Temperatura", "Score", "Fecha"].map(h => (
+          {["Nombre", "Empresa", "Fuente", "Temperatura", "ICP Fit", "Engagement", "Fecha"].map(h => (
             <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
           ))}
         </div>
@@ -146,7 +146,7 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                 key={contact.id}
                 onClick={() => router.push(`/contacts/${contact.id}`)}
                 style={{
-                  display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 90px",
+                  display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 80px 90px",
                   padding: "12px 16px", cursor: "pointer", alignItems: "center",
                   borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                   background: "var(--card)", transition: "background 0.15s",
@@ -185,12 +185,26 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                   </span>
                 </div>
 
-                {/* Score bar */}
+                {/* ICP Fit bar (Apollo score) */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ height: 4, width: 40, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                  <div style={{ height: 4, width: 36, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${contact.score ?? 0}%`, borderRadius: 2, background: "var(--primary)" }} />
                   </div>
                   <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{contact.score ?? 0}</span>
+                </div>
+
+                {/* Engagement bar (Brevo score, nullable) */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {contact.engagementScore != null ? (
+                    <>
+                      <div style={{ height: 4, width: 36, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${contact.engagementScore}%`, borderRadius: 2, background: "#2dd4bf" }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: "#2dd4bf" }}>{contact.engagementScore}</span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 10, color: "var(--muted-foreground)", opacity: 0.4 }}>—</span>
+                  )}
                 </div>
 
                 {/* Date */}

@@ -157,6 +157,7 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE contacts ADD COLUMN retention_review_date INTEGER`,
     `CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action)`,
+    `ALTER TABLE contacts ADD COLUMN engagement_score INTEGER`,
   ];
 
   for (const sql of migrations) {

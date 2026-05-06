@@ -45,6 +45,7 @@ interface ContactDetailClientProps {
     consentGiven?: boolean | null;
     consentSource?: string | null;
     engagementStatus?: string | null;
+    engagementScore?: number | null;
   };
   deals: Array<{
     id: string;
@@ -348,7 +349,7 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
           {/* Score tab */}
           {activeTab === "score" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Circular score */}
+              {/* ICP Fit score (Apollo) */}
               <div style={{ display: "flex", alignItems: "center", gap: 24, padding: 20, borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)" }}>
                 <div style={{ position: "relative", width: 100, height: 100, flexShrink: 0 }}>
                   <svg width="100" height="100" style={{ transform: "rotate(-90deg)" }}>
@@ -365,16 +366,42 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Score del Contacto</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>ICP Fit (Apollo)</div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-                    El score refleja la calidad del lead basado en temperatura, actividad y datos del perfil.
+                    Calidad del perfil: cargo, tamaño de empresa, industria e intención. Calculado a partir del CSV de Apollo.
                   </div>
                 </div>
               </div>
 
+              {/* Engagement score (Brevo) — only shown if present */}
+              {contact.engagementScore != null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 24, padding: 20, borderRadius: 10, border: "1px solid rgba(45,212,191,0.25)", background: "rgba(45,212,191,0.06)" }}>
+                  <div style={{ position: "relative", width: 100, height: 100, flexShrink: 0 }}>
+                    <svg width="100" height="100" style={{ transform: "rotate(-90deg)" }}>
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" strokeWidth="8" />
+                      <circle cx="50" cy="50" r="40" fill="none" stroke="#2dd4bf" strokeWidth="8"
+                        strokeDasharray={`${2 * Math.PI * 40}`}
+                        strokeDashoffset={`${2 * Math.PI * 40 * (1 - contact.engagementScore / 100)}`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 22, fontWeight: 700, color: "#2dd4bf" }}>{contact.engagementScore}</span>
+                      <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>/100</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Engagement (Brevo)</div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
+                      Nivel de engagement en campañas de email. Solo disponible para contactos activos en Brevo.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Breakdown */}
               <div style={{ padding: 16, borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Desglose</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Desglose ICP Fit</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {scoreBreakdown.map(item => (
                     <div key={item.label}>

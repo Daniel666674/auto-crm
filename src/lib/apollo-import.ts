@@ -42,58 +42,49 @@ function parseRow(line: string): string[] {
 function scoreApollo(row: Record<string, string>): { score: number; temperature: "cold" | "warm" | "hot" } {
   let score = 0;
 
-  // ── Block 1: Profile Fit (40 pts max) ───────────────────────────────────────
+  // ── Block 1: Role / Seniority (25 pts max) ──────────────────────────────────
   const title = (row["Title"] || "").toLowerCase();
   const seniority = (row["Seniority"] || "").toLowerCase();
   const titleOrSen = title + " " + seniority;
 
-  if (/ceo|founder|fundador|gerente general|co-founder|owner|president|c-suite|c_suite/.test(titleOrSen)) score += 15;
-  else if (/vp |vice president|director|chief/.test(titleOrSen)) score += 15;
-  else if (/gerente|manager|head of|lead/.test(titleOrSen)) score += 10;
-  else if (/coordinator|coordinador|analyst|analista|specialist/.test(titleOrSen)) score += 3;
+  if (/ceo|founder|fundador|gerente general|co-founder|owner|president|c-suite|c_suite/.test(titleOrSen)) score += 25;
+  else if (/vp |vice president|director|chief/.test(titleOrSen)) score += 20;
+  else if (/gerente|manager|head of|lead/.test(titleOrSen)) score += 12;
+  else if (/coordinator|coordinador|analyst|analista|specialist/.test(titleOrSen)) score += 4;
   else score += 1;
 
+  // ── Block 2: Company Size (20 pts max) ──────────────────────────────────────
   const empStr = row["# Employees"] || row["Number of Employees"] || "";
   const emp = parseInt(empStr.replace(/[^0-9]/g, "")) || 0;
-  if (emp >= 10 && emp <= 50) score += 15;
-  else if (emp >= 51 && emp <= 150) score += 10;
-  else if (emp >= 5 && emp <= 9) score += 5;
-  else if (emp > 150) score += 2;
+  if (emp >= 10 && emp <= 200) score += 20;
+  else if (emp >= 201 && emp <= 500) score += 12;
+  else if (emp >= 5 && emp <= 9) score += 7;
+  else if (emp > 500) score += 3;
   else score += 1;
 
+  // ── Block 3: Industry Fit (15 pts max) ──────────────────────────────────────
   const industry = (row["Industry"] || "").toLowerCase();
-  if (/insurance|fintech|financ|seguros|banking|bank/.test(industry)) score += 10;
+  if (/insurance|fintech|financ|seguros|banking|bank/.test(industry)) score += 15;
   else if (/saas|software|tech|it |information|servicios profesional|consulting/.test(industry)) score += 10;
   else if (/logistic|manufactur|supply|transport/.test(industry)) score += 8;
-  else if (/real estate|inmob|construction|legal|health|medical/.test(industry)) score += 6;
-  else score += 3;
+  else if (/real estate|inmob|construction|legal|health|medical/.test(industry)) score += 5;
+  else score += 2;
 
-  // ── Block 2: Engagement Signals (35 pts max) ────────────────────────────────
-  // Apollo tracks sequence engagement — used until Brevo overwrites with campaign data
-  const replied = /true|yes|1/.test((row["Replied"] || "").toLowerCase());
-  const demoed  = /true|yes|1/.test((row["Demoed"]  || "").toLowerCase());
-  const emailOpen = parseInt(row["Email Open"] || "0") || 0;
-  const bounced = /true|yes|1/.test((row["Email Bounced"] || "").toLowerCase());
-
-  if (replied) score += 25;          // responded — strongest signal
-  else if (demoed) score += 20;      // took a demo
-  else if (emailOpen >= 3) score += 15; // opened 3+ emails
-  else if (emailOpen >= 1) score += 5;  // opened at least one
-
-  if (bounced) score -= 20;          // bad email — penalise
-
-  // ── Block 3: Intent Signals (25 pts max) ────────────────────────────────────
+  // ── Block 4: Qualification & Intent (40 pts max) ────────────────────────────
   const qualify = (row["Qualify Contact"] || "").toLowerCase();
   if (qualify === "yes") score += 15;
 
   const intentPrimary   = parseInt(row["Primary Intent Score"]   || "0") || 0;
   const intentSecondary = parseInt(row["Secondary Intent Score"] || "0") || 0;
-  const intentBonus = Math.min(10, Math.floor((intentPrimary + intentSecondary) / 10));
+  // Map combined intent score to up to 17 pts (combined max ~200 → scale down)
+  const intentBonus = Math.min(17, Math.floor((intentPrimary + intentSecondary) / 10));
   score += intentBonus;
 
-  // ── Funding / growth signal (bonus up to 5 pts) ─────────────────────────────
+  // Data completeness signals (up to 8 pts)
+  if (row["LinkedIn Url"]) score += 3;
+  if (row["Work Direct Phone"] || row["Mobile Phone"]) score += 3;
   const funding = (row["Latest Funding"] || row["Total Funding"] || "").replace(/[^0-9]/g, "");
-  if (funding && parseInt(funding) > 0) score += 5;
+  if (funding && parseInt(funding) > 0) score += 2;
 
   score = Math.min(100, Math.max(0, score));
 

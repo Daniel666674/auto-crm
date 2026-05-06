@@ -24,6 +24,7 @@ export interface Contact {
   source: LeadSource;
   temperature: Temperature;
   score: number;
+  engagementScore?: number | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;

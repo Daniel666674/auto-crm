@@ -28,6 +28,7 @@ export const contacts = sqliteTable("contacts", {
   consentSource: text("consent_source").default("unknown"),
   retentionReviewNeeded: integer("retention_review_needed", { mode: "boolean" }).notNull().default(false),
   retentionReviewDate: integer("retention_review_date", { mode: "timestamp" }),
+  engagementScore: integer("engagement_score"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
