@@ -17,7 +17,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "BlackScale Nexus CRM",
   description: "Sistema CRM de BlackScale Consulting",
-  manifest: "/app/manifest.json",
+  manifest: "/manifest.json",
   themeColor: "#1e293b",
 };
 

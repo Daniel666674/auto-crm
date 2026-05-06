@@ -36,7 +36,7 @@ export default function DealsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/app/api/deals")
+    fetch("/api/deals")
       .then((res) => res.json())
       .then((data) => {
         setDeals(data);
@@ -56,7 +56,7 @@ export default function DealsPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => window.open("/app/api/export?type=deals")}
+            onClick={() => window.open("/api/export?type=deals")}
             className="cursor-pointer"
           >
             <Download className="h-4 w-4 mr-2" />

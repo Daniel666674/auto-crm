@@ -44,8 +44,8 @@ export default function SettingsPage() {
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
 
   useEffect(() => {
-    fetch("/app/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
-    fetch("/app/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
+    fetch("/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
+    fetch("/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
   }, []);
 
   const handleSaveApollo = async () => {
@@ -99,7 +99,7 @@ export default function SettingsPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch("/app/api/brevo/sync", { method: "POST" });
+      const res = await fetch("/api/brevo/sync", { method: "POST" });
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
       setSyncResult({ synced: data.synced, total: data.total });
@@ -115,7 +115,7 @@ export default function SettingsPage() {
     setRecalculating(true);
     setRecalcResult(null);
     try {
-      const res = await fetch("/app/api/brevo/recalculate-scores", {
+      const res = await fetch("/api/brevo/recalculate-scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pushToBrevo: true }),
@@ -170,7 +170,7 @@ export default function SettingsPage() {
               variant="destructive"
               size="sm"
               className="w-full"
-              onClick={() => signOut({ callbackUrl: "/app/login" })}
+              onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar sesión

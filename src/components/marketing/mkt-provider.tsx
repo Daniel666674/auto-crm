@@ -36,8 +36,8 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
-      fetch("/app/api/marketing/contacts").then(r => r.json()),
-      fetch("/app/api/marketing/campaigns").then(r => r.json()),
+      fetch("/api/marketing/contacts").then(r => r.json()),
+      fetch("/api/marketing/campaigns").then(r => r.json()),
     ]).then(([c, camp]) => {
       setContacts(Array.isArray(c) ? c : []);
       setCampaigns(Array.isArray(camp) ? camp : []);
@@ -78,7 +78,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Create real deal in sales pipeline
-    fetch("/app/api/handoff", {
+    fetch("/api/handoff", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -96,7 +96,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   }, [contacts]);
 
   const addContact = useCallback((data: Partial<MktContact>) => {
-    fetch("/app/api/marketing/contacts", {
+    fetch("/api/marketing/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -106,7 +106,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCampaign = useCallback((data: Partial<MktCampaign>) => {
-    fetch("/app/api/marketing/campaigns", {
+    fetch("/api/marketing/campaigns", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -118,13 +118,13 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const recalculateScores = useCallback(async () => {
     setSyncing(true);
     try {
-      await fetch("/app/api/brevo/recalculate-scores", {
+      await fetch("/api/brevo/recalculate-scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pushToBrevo: true }),
       });
       // Reload contacts with new scores
-      const updated = await fetch("/app/api/marketing/contacts").then(r => r.json());
+      const updated = await fetch("/api/marketing/contacts").then(r => r.json());
       setContacts(Array.isArray(updated) ? updated : []);
     } finally {
       setSyncing(false);
@@ -134,10 +134,10 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const syncFromBrevo = useCallback(async () => {
     setSyncing(true);
     try {
-      const res = await fetch("/app/api/brevo/sync", { method: "POST" });
+      const res = await fetch("/api/brevo/sync", { method: "POST" });
       const data = await res.json();
       // Reload after sync
-      const updated = await fetch("/app/api/marketing/contacts").then(r => r.json());
+      const updated = await fetch("/api/marketing/contacts").then(r => r.json());
       setContacts(Array.isArray(updated) ? updated : []);
       return { synced: data.synced || 0, total: data.total || 0 };
     } finally {

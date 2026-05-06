@@ -69,7 +69,7 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
     try {
       const url = isEditing
         ? `/app/api/contacts/${initialData!.id}`
-        : "/app/api/contacts";
+        : "/api/contacts";
       const method = isEditing ? "PUT" : "POST";
 
       const res = await fetch(url, {

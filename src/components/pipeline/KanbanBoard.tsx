@@ -99,7 +99,7 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
 
       // Update the deal's stage via API
       try {
-        const res = await fetch("/app/api/pipeline", {
+        const res = await fetch("/api/pipeline", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

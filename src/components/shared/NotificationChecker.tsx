@@ -10,14 +10,14 @@ export function NotificationChecker() {
     if (Notification.permission !== "granted") return;
 
     try {
-      const res = await fetch("/app/api/followups");
+      const res = await fetch("/api/followups");
       const data = await res.json();
       const overdueCount = data.overdue?.length || 0;
 
       if (overdueCount > 0) {
         new Notification("Auto-CRM", {
           body: `Tienes ${overdueCount} seguimiento${overdueCount > 1 ? "s" : ""} vencido${overdueCount > 1 ? "s" : ""}`,
-          icon: "/app/favicon.ico",
+          icon: "/favicon.ico",
           tag: "crm-followup", // Prevents duplicate notifications
         });
       }

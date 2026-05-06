@@ -15,7 +15,7 @@ export function NotificationBanner() {
   const [data, setData] = useState<FollowUpData | null>(null);
 
   useEffect(() => {
-    fetch("/app/api/followups")
+    fetch("/api/followups")
       .then((r) => r.json())
       .then(setData)
       .catch(() => {});

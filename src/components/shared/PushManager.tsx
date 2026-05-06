@@ -11,7 +11,7 @@ export function PushManager() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
     navigator.serviceWorker
-      .register("/app/sw.js")
+      .register("/sw.js")
       .then(async (reg) => {
         // Check if already subscribed
         const existing = await reg.pushManager.getSubscription();
@@ -29,7 +29,7 @@ export function PushManager() {
           applicationServerKey: vapidKey,
         });
 
-        await fetch("/app/api/push/subscribe", {
+        await fetch("/api/push/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(sub.toJSON()),
