@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   Briefcase, Kanban, Webhook, Bell, Copy, User, Key, LogOut,
-  RefreshCw, CheckCircle, AlertCircle,
+  RefreshCw, CheckCircle, AlertCircle, Database,
 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificationToggle } from "@/components/shared/NotificationToggle";
@@ -26,6 +26,11 @@ export default function SettingsPage() {
   const [savingBrevo, setSavingBrevo] = useState(false);
   const [brevoStatus, setBrevoStatus] = useState<"idle" | "ok" | "error">("idle");
 
+  // Apollo API key state
+  const [apolloKey, setApolloKey] = useState("");
+  const [savingApollo, setSavingApollo] = useState(false);
+  const [apolloStatus, setApolloStatus] = useState<"idle" | "ok" | "error">("idle");
+
   // Brevo sync state
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<null | { synced: number; total: number }>(null);
@@ -42,6 +47,29 @@ export default function SettingsPage() {
     fetch("/app/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
     fetch("/app/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
   }, []);
+
+  const handleSaveApollo = async () => {
+    if (!apolloKey.trim()) return;
+    setSavingApollo(true);
+    try {
+      const res = await fetch("https://api.apollo.io/v1/auth/health", {
+        method: "GET",
+        headers: { "X-Api-Key": apolloKey, "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        setApolloStatus("ok");
+        toast.success("Apollo API key válida. Actualiza APOLLO_API_KEY en el .env de tu servidor.");
+      } else {
+        setApolloStatus("error");
+        toast.error("Apollo API key inválida.");
+      }
+    } catch {
+      setApolloStatus("error");
+      toast.error("No se pudo verificar la key de Apollo.");
+    } finally {
+      setSavingApollo(false);
+    }
+  };
 
   const handleSaveBrevo = async () => {
     if (!brevoKey.trim()) return;
@@ -256,6 +284,45 @@ export default function SettingsPage() {
                   </p>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Apollo Integration */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Integración Apollo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Apollo es la fuente primaria de scoring. Configura tu API key para habilitar la sincronización de contactos y el enriquecimiento de datos.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                placeholder="Apollo API key…"
+                value={apolloKey}
+                onChange={e => setApolloKey(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm rounded-md border bg-muted/50 outline-none focus:ring-1 ring-primary"
+              />
+              <Button size="sm" onClick={handleSaveApollo} disabled={savingApollo || !apolloKey.trim()}>
+                {savingApollo ? <RefreshCw className="w-3 h-3 animate-spin" /> : "Verificar"}
+              </Button>
+              {apolloStatus === "ok" && <CheckCircle className="w-5 h-5 text-green-500 self-center" />}
+              {apolloStatus === "error" && <AlertCircle className="w-5 h-5 text-red-500 self-center" />}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Para activar en producción, actualiza <code className="bg-muted px-1 rounded">APOLLO_API_KEY</code> en <code className="bg-muted px-1 rounded">.env.local</code> y reinicia PM2.
+            </p>
+            <Separator />
+            <div>
+              <h4 className="text-sm font-semibold mb-1">Apollo CSV Sync</h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                El botón de sincronización Apollo CSV está disponible en la barra lateral izquierda del CRM. Sube el archivo <code className="bg-muted px-1 rounded">apollo-contacts-export.csv</code> para importar contactos al pipeline de Brevo.
+              </p>
             </div>
           </CardContent>
         </Card>

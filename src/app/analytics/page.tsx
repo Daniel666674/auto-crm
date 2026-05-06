@@ -1,40 +1,86 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, RefreshCw, TrendingUp, Eye, Globe, FileText } from "lucide-react";
+import { BarChart3, RefreshCw, Send, MousePointerClick, Eye, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-interface GA4Report {
-  sessions: number;
-  pageviews: number;
-  topPages: Array<{ page: string; views: number }>;
-  trafficSources: Array<{ source: string; sessions: number }>;
-  fetchedAt: string;
+interface BrevoCampaign {
+  id: number;
+  name: string;
+  status: string;
+  statistics?: {
+    globalStats?: {
+      sent?: number;
+      delivered?: number;
+      uniqueOpens?: number;
+      uniqueClicks?: number;
+      hardBounces?: number;
+      softBounces?: number;
+      unsubscriptions?: number;
+    };
+  };
 }
 
-const COLORS = ["#2563eb", "#8b5cf6", "#16a34a", "#ea580c", "#64748b", "#06b6d4", "#f59e0b", "#ec4899"];
+function safeN(v: unknown): number {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
+
+function pct(num: number, den: number): string {
+  if (den === 0) return "—";
+  return ((num / den) * 100).toFixed(1) + "%";
+}
 
 export default function AnalyticsPage() {
-  const [report, setReport] = useState<GA4Report | null>(null);
+  const [campaigns, setCampaigns] = useState<BrevoCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
 
   const load = () => {
     setLoading(true);
     setError("");
-    fetch("/app/api/google/analytics")
-      .then((r) => r.json())
-      .then((d) => {
+    fetch("/app/api/brevo/campaigns")
+      .then(r => r.json())
+      .then(d => {
         if (d.error) { setError(d.error); return; }
-        setReport(d);
+        setCampaigns(d.campaigns || []);
+        setFetchedAt(new Date());
       })
-      .catch(() => setError("Error de red"))
+      .catch(() => setError("Error de red al conectar con Brevo"))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
+
+  const totals = campaigns.reduce(
+    (acc, c) => {
+      const gs = c.statistics?.globalStats ?? {};
+      return {
+        sent: acc.sent + safeN(gs.sent),
+        delivered: acc.delivered + safeN(gs.delivered),
+        opens: acc.opens + safeN(gs.uniqueOpens),
+        clicks: acc.clicks + safeN(gs.uniqueClicks),
+        bounces: acc.bounces + safeN(gs.hardBounces) + safeN(gs.softBounces),
+        unsubs: acc.unsubs + safeN(gs.unsubscriptions),
+      };
+    },
+    { sent: 0, delivered: 0, opens: 0, clicks: 0, bounces: 0, unsubs: 0 }
+  );
+
+  const kpis = [
+    { label: "Campañas", value: campaigns.length, icon: Mail, color: "blue" },
+    { label: "Total enviados", value: totals.sent.toLocaleString("es-CO"), icon: Send, color: "purple" },
+    { label: "Open Rate", value: pct(totals.opens, totals.sent), icon: Eye, color: "green" },
+    { label: "Click Rate", value: pct(totals.clicks, totals.sent), icon: MousePointerClick, color: "amber" },
+  ];
+
+  const disabledChannels = [
+    { label: "Google Analytics 4", note: "Configura GA4_PROPERTY_ID y GA4_CREDENTIALS para habilitar" },
+    { label: "Meta Ads", note: "API no conectada" },
+    { label: "LinkedIn Ads", note: "API no conectada" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -43,11 +89,11 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <BarChart3 className="w-6 h-6" /> Analytics
           </h1>
-          <p className="text-muted-foreground">
-            Google Analytics 4 · Últimos 30 días
-            {report?.fetchedAt && (
-              <span className="ml-2 text-xs">
-                (actualizado {new Date(report.fetchedAt).toLocaleString("es-CO")})
+          <p className="text-muted-foreground text-sm">
+            Brevo Email Marketing
+            {fetchedAt && (
+              <span className="ml-2 text-xs opacity-60">
+                · actualizado {fetchedAt.toLocaleTimeString("es-CO")}
               </span>
             )}
           </p>
@@ -59,99 +105,125 @@ export default function AnalyticsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
-          {error.includes("GA4") && (
-            <div className="mt-1 text-xs">
-              Configura <code>GA4_PROPERTY_ID</code> y <code>GA4_CREDENTIALS</code> en tus variables de entorno.
-            </div>
-          )}
         </div>
       )}
 
-      {loading && !report ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-muted rounded-xl animate-pulse" />
+            <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
-      ) : report ? (
+      ) : (
         <>
-          {/* KPI row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-blue-100 p-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {kpis.map(k => (
+              <Card key={k.label}>
+                <CardContent className="pt-5">
+                  <div className="flex items-center gap-3">
+                    <div className={`rounded-lg p-2 bg-${k.color}-100`}>
+                      <k.icon className={`w-4 h-4 text-${k.color}-600`} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{k.label}</p>
+                      <p className="text-xl font-bold">{k.value}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Sesiones</p>
-                    <p className="text-2xl font-bold">{report.sessions.toLocaleString("es-CO")}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-purple-100 p-2">
-                    <Eye className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pageviews</p>
-                    <p className="text-2xl font-bold">{report.pageviews.toLocaleString("es-CO")}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top pages */}
+          {/* Aggregate totals */}
+          {totals.sent > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Páginas más visitadas
-                </CardTitle>
+                <CardTitle className="text-sm">Totales acumulados — todas las campañas</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={report.topPages} layout="vertical" margin={{ left: 8, right: 16 }}>
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="page" width={120} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => [v, "Vistas"]} />
-                    <Bar dataKey="views" radius={[0, 4, 4, 0]}>
-                      {report.topPages.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 text-center">
+                  {[
+                    { label: "Enviados", v: totals.sent },
+                    { label: "Entregados", v: totals.delivered },
+                    { label: "Abiertos únicos", v: totals.opens },
+                    { label: "Clicks únicos", v: totals.clicks },
+                    { label: "Rebotes", v: totals.bounces },
+                    { label: "Desuscritos", v: totals.unsubs },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <div className="text-lg font-bold">{s.v.toLocaleString("es-CO")}</div>
+                      <div className="text-xs text-muted-foreground">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Traffic sources */}
+          {/* Per-campaign table */}
+          {campaigns.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> Fuentes de tráfico
-                </CardTitle>
+                <CardTitle className="text-sm">Detalle por campaña</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={report.trafficSources} layout="vertical" margin={{ left: 8, right: 16 }}>
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="source" width={100} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => [v, "Sesiones"]} />
-                    <Bar dataKey="sessions" radius={[0, 4, 4, 0]}>
-                      {report.trafficSources.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-muted-foreground text-xs">
+                        {["Nombre", "Estado", "Enviados", "Abiertos", "Clicks", "Open%", "Click%"].map(h => (
+                          <th key={h} className="px-4 py-2 text-left font-semibold">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaigns.map(c => {
+                        const gs = c.statistics?.globalStats ?? {};
+                        const sent = safeN(gs.sent);
+                        const opens = safeN(gs.uniqueOpens);
+                        const clicks = safeN(gs.uniqueClicks);
+                        return (
+                          <tr key={c.id} className="border-b hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-2 font-medium max-w-[220px] truncate">{c.name}</td>
+                            <td className="px-4 py-2 text-muted-foreground capitalize">{c.status}</td>
+                            <td className="px-4 py-2">{sent.toLocaleString("es-CO")}</td>
+                            <td className="px-4 py-2">{opens.toLocaleString("es-CO")}</td>
+                            <td className="px-4 py-2">{clicks.toLocaleString("es-CO")}</td>
+                            <td className="px-4 py-2">{pct(opens, sent)}</td>
+                            <td className="px-4 py-2">{pct(clicks, sent)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
+          )}
+
+          {campaigns.length === 0 && !error && (
+            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground text-sm">
+              No se encontraron campañas en Brevo. Verifica que{" "}
+              <code className="bg-muted px-1 rounded">BREVO_API_KEY</code> esté configurada.
+            </div>
+          )}
+
+          {/* Disabled channels */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {disabledChannels.map(ch => (
+              <Card key={ch.label} className="opacity-40">
+                <CardContent className="pt-5">
+                  <p className="text-sm font-semibold">{ch.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{ch.note}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
 }

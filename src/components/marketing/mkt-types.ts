@@ -45,7 +45,15 @@ export interface MktCampaign {
   lastSent: number | null;
 }
 
-export type MktSection = "engagement" | "icp" | "campaigns" | "segments" | "attribution" | "handoff";
+export type MktSection =
+  | "engagement" | "campaigns" | "attribution" | "handoff"
+  | "segment-health" | "icp-insights" | "lists"
+  | "pipeline-view" | "lead-velocity"
+  | "mkt-analytics"
+  | "calendar" | "abm"
+  | "digest" | "roi" | "export"
+  | "integrations"
+  | "icp" | "segments"; // legacy aliases kept for backward compat
 
 export const MKT_SOURCES = ["website", "referido", "redes_sociales", "formulario", "evento", "llamada_fria", "whatsapp"] as const;
 export type MktSource = typeof MKT_SOURCES[number];

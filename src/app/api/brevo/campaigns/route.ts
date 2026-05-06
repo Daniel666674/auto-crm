@@ -14,7 +14,20 @@ async function getCampaignDetail(id: number) {
   return r.json();
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+
+  // Single-campaign fast path — used by LiveStatsPanel to avoid fetching all campaigns
+  if (id) {
+    try {
+      const campaign = await getCampaignDetail(Number(id));
+      return NextResponse.json({ campaigns: [campaign] });
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
+
   try {
     const [sent, scheduled, draft] = await Promise.all([
       listCampaigns('sent'),
