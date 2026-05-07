@@ -95,7 +95,7 @@ export default function RevenuePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/app/api/deals")
+    fetch("/api/deals")
       .then(r => r.json())
       .then(setDeals)
       .catch(() => {})

@@ -105,8 +105,8 @@ export default function PipelineHealthPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/app/api/deals").then(r => r.json()),
-      fetch("/app/api/activities").then(r => r.json()),
+      fetch("/api/deals").then(r => r.json()),
+      fetch("/api/activities").then(r => r.json()),
     ])
       .then(([d, a]) => { setDeals(d); setActivities(a); })
       .catch(() => {})

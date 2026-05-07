@@ -70,7 +70,7 @@ export default function MetricsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/app/api/activities")
+    fetch("/api/activities")
       .then(r => r.json())
       .then(setActivities)
       .catch(() => {})

@@ -59,7 +59,7 @@ function EditPricingModal({ config, onClose, onSave }: EditPricingModalProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/app/api/pricing", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) });
+      const res = await fetch("/api/pricing", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) });
       if (!res.ok) throw new Error();
       onSave(draft);
       toast.success("Precios guardados");
@@ -187,7 +187,7 @@ export default function CalculatorPage() {
   const [customBase, setCustomBase] = useState("");
 
   useEffect(() => {
-    fetch("/app/api/pricing")
+    fetch("/api/pricing")
       .then(r => r.json())
       .then(setConfig)
       .catch(() => {});
