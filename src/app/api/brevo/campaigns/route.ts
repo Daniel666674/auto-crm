@@ -5,16 +5,31 @@ const H = { 'api-key': KEY, 'Content-Type': 'application/json' };
 
 async function listCampaigns(status: string) {
   const r = await fetch(`https://api.brevo.com/v3/emailCampaigns?limit=50&offset=0&status=${status}`, { headers: H });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`Brevo API error ${r.status}: ${text.substring(0, 100)}`);
+  }
   const d = await r.json();
   return (d.campaigns || []) as any[];
 }
 
 async function getCampaignDetail(id: number) {
   const r = await fetch(`https://api.brevo.com/v3/emailCampaigns/${id}`, { headers: H });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`Brevo API error ${r.status}: ${text.substring(0, 100)}`);
+  }
   return r.json();
 }
 
 export async function GET(req: Request) {
+  if (!KEY) {
+    return NextResponse.json(
+      { error: 'BREVO_API_KEY not configured. Configure it in environment variables.' },
+      { status: 500 }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 

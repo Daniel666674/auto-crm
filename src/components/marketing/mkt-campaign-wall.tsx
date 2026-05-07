@@ -560,9 +560,15 @@ export function MktCampaignWall() {
             <div style={{ textAlign: "center", padding: 32, color: "var(--mkt-text-muted)", fontSize: 13 }}>Cargando campañas desde Brevo…</div>
           )}
           {brevoError && !loadingBrevo && (
-            <div style={{ padding: "12px 16px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", fontSize: 12, color: "#ef4444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>Error al cargar campañas: {brevoError}</span>
-              <button onClick={fetchBrevo} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Reintentar</button>
+            <div style={{ padding: 16, borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>❌ Error al cargar campañas</div>
+              <div style={{ fontSize: 12, color: "#fca5a5", marginBottom: 12, fontFamily: "monospace" }}>{brevoError}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={fetchBrevo} style={{ background: "#ef4444", color: "white", border: "none", padding: "6px 12px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Reintentar</button>
+                <div style={{ fontSize: 11, color: "#fca5a5", alignSelf: "center" }}>
+                  {brevoError.includes('not configured') ? '→ Configura BREVO_API_KEY en las variables de entorno' : ''}
+                </div>
+              </div>
             </div>
           )}
           {!loadingBrevo && !brevoError && brevoCampaigns.length === 0 && (
