@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
   const load = () => {
     setLoading(true);
     setError("");
-    fetch("/app/api/brevo/campaigns")
+    fetch("/api/brevo/campaigns")
       .then(r => r.json())
       .then(d => {
         if (d.error) { setError(d.error); return; }

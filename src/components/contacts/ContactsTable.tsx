@@ -79,7 +79,7 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open("/app/api/export?type=contacts")}
+            onClick={() => window.open("/api/export?type=contacts")}
             className="cursor-pointer"
           >
             <Download className="h-4 w-4 mr-1" />

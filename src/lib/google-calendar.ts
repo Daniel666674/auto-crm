@@ -36,7 +36,7 @@ export function getOAuthClient() {
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_CALENDAR_REDIRECT_URI ??
-      "https://nexus.blackscale.consulting/app/api/auth/callback/google-calendar"
+      "https://nexus.blackscale.consulting/api/auth/callback/google-calendar"
   );
 }
 

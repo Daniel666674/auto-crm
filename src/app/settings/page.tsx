@@ -45,7 +45,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch("/app/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
-    fetch("/app/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
+    fetch("/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
   }, []);
 
   const handleSaveApollo = async () => {
@@ -99,7 +99,7 @@ export default function SettingsPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch("/app/api/brevo/sync", { method: "POST" });
+      const res = await fetch("/api/brevo/sync", { method: "POST" });
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
       setSyncResult({ synced: data.synced, total: data.total });
@@ -115,7 +115,7 @@ export default function SettingsPage() {
     setRecalculating(true);
     setRecalcResult(null);
     try {
-      const res = await fetch("/app/api/brevo/recalculate-scores", {
+      const res = await fetch("/api/brevo/recalculate-scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pushToBrevo: true }),
@@ -365,11 +365,11 @@ export default function SettingsPage() {
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-xs bg-muted p-2 rounded font-mono truncate">
-                POST {typeof window !== "undefined" ? window.location.origin : "https://nexus.blackscale.consulting"}/app/api/webhook
+                POST {typeof window !== "undefined" ? window.location.origin : "https://nexus.blackscale.consulting"}/api/webhook
               </code>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/app/api/webhook`);
+                  navigator.clipboard.writeText(`${window.location.origin}/api/webhook`);
                   toast.success("URL copiada");
                 }}
                 className="p-2 rounded hover:bg-muted cursor-pointer"

@@ -41,7 +41,7 @@ export default function AuditPage() {
     if (action) params.set("action", action);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
-    fetch(`/app/api/audit?${params}`)
+    fetch(`/api/audit?${params}`)
       .then((r) => r.json())
       .then((d) => { setRows(d.rows ?? []); setTotal(d.total ?? 0); })
       .finally(() => setLoading(false));

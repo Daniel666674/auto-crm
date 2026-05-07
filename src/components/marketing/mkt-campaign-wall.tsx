@@ -129,7 +129,7 @@ function CampaignFormModal({ onClose, onCreated }: { onClose: () => void; onCrea
   useEffect(() => {
     if (form.channel === "brevo_email" || form.channel === "outbound") {
       setLoadingLists(true);
-      fetch("/app/api/brevo/lists")
+      fetch("/api/brevo/lists")
         .then(r => r.json())
         .then(d => setBrevoLists(d.lists || []))
         .catch(() => {})
@@ -144,7 +144,7 @@ function CampaignFormModal({ onClose, onCreated }: { onClose: () => void; onCrea
     try {
       let brevoCampaignId = "";
       if (form.channel === "brevo_email" && form.subject && form.htmlContent && form.listIds.length > 0) {
-        const res = await fetch("/app/api/brevo/campaigns/create", {
+        const res = await fetch("/api/brevo/campaigns/create", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: form.name, subject: form.subject, htmlContent: form.htmlContent,
@@ -492,7 +492,7 @@ export function MktCampaignWall() {
   const fetchBrevo = useCallback(() => {
     setLoadingBrevo(true);
     setBrevoError("");
-    fetch("/app/api/brevo/campaigns")
+    fetch("/api/brevo/campaigns")
       .then(r => r.json())
       .then(d => {
         if (d.error) { setBrevoError(d.error); return; }

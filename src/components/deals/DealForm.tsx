@@ -48,8 +48,8 @@ export function DealForm({ open, onClose }: DealFormProps) {
 
   useEffect(() => {
     if (open) {
-      fetch("/app/api/contacts").then((r) => r.json()).then(setContacts);
-      fetch("/app/api/pipeline").then((r) => r.json()).then(setStages);
+      fetch("/api/contacts").then((r) => r.json()).then(setContacts);
+      fetch("/api/pipeline").then((r) => r.json()).then(setStages);
     }
   }, [open]);
 
@@ -75,7 +75,7 @@ export function DealForm({ open, onClose }: DealFormProps) {
 
   const onSubmit = async (data: DealFormData) => {
     try {
-      const res = await fetch("/app/api/deals", {
+      const res = await fetch("/api/deals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

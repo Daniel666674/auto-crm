@@ -29,7 +29,7 @@ export function PushManager() {
           applicationServerKey: vapidKey,
         });
 
-        await fetch("/app/api/push/subscribe", {
+        await fetch("/api/push/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(sub.toJSON()),
