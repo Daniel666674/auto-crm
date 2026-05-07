@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackScale Nexus CRM — Guía de Marketing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid rgba(209, 156, 21, 0.3);
+        }
+        header h1 {
+            font-size: 2.5em;
+            color: #d19c15;
+            margin-bottom: 10px;
+        }
+        header p {
+            font-size: 1.1em;
+            color: #94a3b8;
+        }
+        section {
+            margin-bottom: 50px;
+            background: rgba(30, 41, 59, 0.7);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(209, 156, 21, 0.2);
+        }
+        h2 {
+            color: #d19c15;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h3 {
+            color: #cbd5e1;
+            font-size: 1.3em;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .badge.implemented {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+        .badge.coming {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .feature-box {
+            background: rgba(50, 65, 92, 0.5);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #d19c15;
+        }
+        .feature-box h4 {
+            color: #cbd5e1;
+            margin-bottom: 10px;
+        }
+        .feature-box p {
+            color: #cbd5e1;
+            font-size: 0.95em;
+        }
+        .feature-box ul, .feature-box ol {
+            margin-left: 20px;
+            color: #cbd5e1;
+        }
+        .feature-box li {
+            margin-bottom: 8px;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #f1f5f9;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .workflow {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .workflow h4 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+        }
+        .step {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        .step-number {
+            background: #3b82f6;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-weight: 600;
+        }
+        .step p {
+            margin: 0;
+            color: #cbd5e1;
+        }
+        .icon { font-size: 1.2em; }
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(209, 156, 21, 0.2);
+            color: #64748b;
+            font-size: 0.95em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(209, 156, 21, 0.2);
+        }
+        table th {
+            background: rgba(209, 156, 21, 0.1);
+            color: #d19c15;
+            font-weight: 600;
+        }
+        table td {
+            color: #cbd5e1;
+        }
+        .tip {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .warning {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 BlackScale Nexus CRM</h1>
+            <p>Guía Completa del Módulo de Marketing</p>
+            <p style="margin-top: 15px; font-size: 0.95em; color: #94a3b8;">
+                Última actualización: Mayo 2026 | v2.1 (Campaign Wall + Brevo Live Stats)
+            </p>
+        </header>
+
+        <!-- ========== OVERVIEW ========== -->
+        <section>
+            <h2>🎯 Descripción General</h2>
+            <p>El módulo de Marketing en BlackScale Nexus es tu centro de comando para ejecutar, rastrear y optimizar campañas de generación de leads a través de múltiples canales. Está diseñado para ser completamente local — sin dependencias de servicios externos — mientras se integra perfectamente con Brevo para email marketing.</p>
+            <div class="feature-box">
+                <h4>Características Principales</h4>
+                <ul>
+                    <li><strong>Campaign Wall:</strong> Visualiza todas tus campañas en una interfaz tipo kanban con estadísticas en vivo desde Brevo</li>
+                    <li><strong>Contact Management:</strong> Gestiona leads de marketing con scoring automático, engagement tracking, y handoff a ventas</li>
+                    <li><strong>Multi-Channel:</strong> Soporte para Email (Brevo), LinkedIn Ads, Meta Ads, Google Ads y Outbound</li>
+                    <li><strong>Brevo Sync:</strong> Sincroniza automáticamente contactos y estadísticas de campañas desde Brevo</li>
+                    <li><strong>Pipeline Handoff:</strong> Pasa leads calientes directamente al pipeline de ventas con un clic</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== CAMPAIGN WALL ========== -->
+        <section>
+            <h2>
+                <span class="icon">📋</span> Campaign Wall (Muro de Campañas)
+                <span class="badge implemented">✓ Implementado</span>
+            </h2>
+            <p>Visualiza todas tus campañas de marketing con estadísticas en vivo desde Brevo. Las campañas se agrupan por canal y muestran métricas de rendimiento en tiempo real.</p>
+
+            <h3>Características Actuales</h3>
+            <div class="feature-box">
+                <h4>📧 Brevo Email (Pestaña Activa)</h4>
+                <ul>
+                    <li>Muestra todas las campañas enviadas en Brevo (estado: Enviada, Programada, Borrador, etc.)</li>
+                    <li><strong>Card Grid:</strong> Cada tarjeta muestra:
+                        <ul style="margin-top: 8px;">
+                            <li>Nombre y línea de asunto de la campaña</li>
+                            <li>Badge de estado (Enviada, Programada, Borrador, Suspendida, Archivada)</li>
+                            <li>Open Rate, Click Rate, Reply Rate con indicadores de color (verde ✓, ámbar ⚠, rojo ✗)</li>
+                            <li>Total de contactos enviados</li>
+                            <li>Conversiones al pipeline (en dorado)</li>
+                            <li>Fecha del último envío</li>
+                        </ul>
+                    </li>
+                    <li><strong>Expand Card:</strong> Haz clic para ver detalles completos:
+                        <ul style="margin-top: 8px;">
+                            <li>Estadísticas completas desde Brevo: Entregados, Abiertos, Clicks, Rebotes, Desuscritos</li>
+                            <li>Enlace directo a Brevo dashboard</li>
+                        </ul>
+                    </li>
+                    <li><strong>Botón "Ver en Brevo":</strong> Abre Brevo campaign manager en una nueva pestaña</li>
+                    <li><strong>Botón "+ Nueva Campaña":</strong> Crea una nueva campaña con formulario integrado</li>
+                </ul>
+            </div>
+
+            <h3>Crear una Campaña Nueva</h3>
+            <div class="workflow">
+                <h4>Workflow: Nueva Campaña de Brevo Email</h4>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div><p><strong>Haz clic en "+ Nueva Campaña"</strong> en la esquina superior derecha</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div><p><strong>Llena los datos básicos:</strong> Nombre, Fecha de inicio, Tipo de campaña (Outreach, Nurturing, Onboarding, etc.)</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div><p><strong>Selecciona el canal:</strong> Elige "Brevo Email" para crear una campaña de email en Brevo</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div><p><strong>Selecciona listas de Brevo:</strong> Se cargarán automáticamente tus listas. Marca las que deseas incluir</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div><p><strong>Completa el email:</strong> Asunto, contenido HTML (con soporte para variables como {{contact.FIRSTNAME}}), remitente, y opcionalmente programar para enviar más tarde</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <div><p><strong>Haz clic en "Crear Campaña"</strong> — se crea en Brevo y aparece en el Campaign Wall en segundos</p></div>
+                </div>
+            </div>
+
+            <h3>Estadísticas y Métricas</h3>
+            <table>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Definición</th>
+                    <th>Umbral Bueno</th>
+                </tr>
+                <tr>
+                    <td><strong>Open Rate</strong></td>
+                    <td>% de emails abiertos / total enviados</td>
+                    <td>≥ 30% (verde), 15-30% (ámbar), &lt; 15% (rojo)</td>
+                </tr>
+                <tr>
+                    <td><strong>Click Rate</strong></td>
+                    <td>% de emails con clicks / total enviados</td>
+                    <td>≥ 10% (verde), 5-10% (ámbar), &lt; 5% (rojo)</td>
+                </tr>
+                <tr>
+                    <td><strong>Reply Rate</strong></td>
+                    <td>% de leads que respondieron a tus secuencias de outbound</td>
+                    <td>≥ 5% (verde), 2-5% (ámbar), &lt; 2% (rojo)</td>
+                </tr>
+                <tr>
+                    <td><strong>Conversiones</strong></td>
+                    <td># de leads pasados al pipeline de ventas desde esta campaña</td>
+                    <td>Depende de tu volumen</td>
+                </tr>
+            </table>
+
+            <div class="tip">
+                <strong>💡 Tip:</strong> Las estadísticas se actualizan en tiempo real desde Brevo. Para obtener datos más completos, haz clic en <code>Sincronizar Brevo</code> en la barra lateral izquierda bajo Configuración.
+            </div>
+        </section>
+
+        <!-- ========== CONTACTS ========== -->
+        <section>
+            <h2>
+                <span class="icon">👥</span> Marketing Contacts (Contactos de Marketing)
+                <span class="badge implemented">✓ Implementado</span>
+            </h2>
+            <p>Gestiona todos tus leads de marketing con scoring automático, engagement tracking, y capacidad de pasar contactos calientes a ventas.</p>
+
+            <h3>Características</h3>
+            <div class="feature-box">
+                <h4>Lead Scoring & Engagement</h4>
+                <ul>
+                    <li><strong>Score Automático:</strong> Cada lead recibe un score de 0-100 basado en interacciones (opens, clicks, replies)</li>
+                    <li><strong>Engagement Status:</strong>
+                        <ul style="margin-top: 8px;">
+                            <li>🔥 <strong>Hot:</strong> Score ≥ 70 + actividad reciente (open/click en últimos 7 días)</li>
+                            <li>🟠 <strong>Warm:</strong> Score 45-70 + actividad reciente</li>
+                            <li>❄️ <strong>Cold:</strong> Score &lt; 45 o sin actividad reciente</li>
+                            <li>💀 <strong>Dead:</strong> Email bloqueado, desuscrito, o rebotado</li>
+                        </ul>
+                    </li>
+                    <li><strong>Sincronización con Brevo:</strong> Los scores se calculan desde la actividad en Brevo (opens, clicks)</li>
+                </ul>
+            </div>
+
+            <h3>Pasar Lead a Ventas (Handoff)</h3>
+            <div class="workflow">
+                <h4>Workflow: Promover Lead Caliente al Pipeline de Ventas</h4>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div><p><strong>Identifica un lead caliente</strong> en la tabla de contactos (estatus "Hot")</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div><p><strong>Haz clic en el botón "Pass to Sales"</strong> (papelera con flecha hacia arriba)</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div><p><strong>Automáticamente:</strong>
+                        <ul style="margin-top: 8px;">
+                            <li>Se crea un Deal en el pipeline de Ventas</li>
+                            <li>El lead se marca como "Ready for Sales" con timestamp</li>
+                            <li>El score y engagement status se sincronizan</li>
+                        </ul>
+                    </p></div>
+                </div>
+            </div>
+
+            <h3>Sincronizar Contactos desde Brevo</h3>
+            <p>Para actualizar todos tus contactos de marketing con datos frescos desde Brevo:</p>
+            <ol>
+                <li>Ve a la sección de Marketing</li>
+                <li>En la barra lateral izquierda, bajo "CONFIGURACIÓN", busca <code>Sincronizar Brevo</code></li>
+                <li>Haz clic en el botón azul</li>
+                <li>El sistema:
+                    <ul style="margin-top: 8px;">
+                        <li>Descarga todos tus contactos de Brevo</li>
+                        <li>Actualiza scores basados en actividad reciente</li>
+                        <li>Sincroniza estadísticas de campañas (open rates, click rates)</li>
+                        <li>Reasigna engagement status (Hot/Warm/Cold/Dead)</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <div class="tip">
+                <strong>💡 Tip:</strong> Sincroniza al menos una vez al día (o después de enviar campañas) para mantener datos frescos. La sincronización toma 10-30 segundos dependiendo de cuántos contactos tengas en Brevo.
+            </div>
+        </section>
+
+        <!-- ========== COMING SOON ========== -->
+        <section>
+            <h2>
+                <span class="icon">🚀</span> Coming Soon (Próximamente)
+                <span class="badge coming">En Desarrollo</span>
+            </h2>
+            <p>Estas características están planificadas para futuras versiones del CRM:</p>
+
+            <h3>📱 LinkedIn Ads Integration</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li>Crear y lanzar campañas de LinkedIn Ads directamente desde el CRM</li>
+                    <li>Rastrear metrics de LinkedIn (impressions, clicks, conversions)</li>
+                    <li>Sincronizar leads generados en LinkedIn automáticamente</li>
+                    <li>Pestaña dedicada en Campaign Wall para campañas de LinkedIn</li>
+                    <li>A/B testing integrado con segmentación por título, industria, ubicación</li>
+                </ul>
+            </div>
+
+            <h3>🎨 Meta (Facebook/Instagram) Ads Integration</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li>Gestionar campañas en Facebook, Instagram y Audience Network desde un lugar</li>
+                    <li>Sincronización automática de leads y conversiones desde Meta Pixel</li>
+                    <li>Dashboard de ROI por campaña de Meta</li>
+                    <li>Integración con Brevo para email remarketing de visitantes que no convirtieron</li>
+                </ul>
+            </div>
+
+            <h3>🔍 Google Ads Integration</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li>Crear y optimizar campañas de Google Ads (Search, Display, Shopping)</li>
+                    <li>Importar leads de Google Ads Lead Forms automáticamente</li>
+                    <li>Rastrear ROAS (Return on Ad Spend) por campaña</li>
+                    <li>Atribución de deals cerrados a campañas de Google Ads</li>
+                </ul>
+            </div>
+
+            <h3>📊 Advanced Analytics & Reporting</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li><strong>Campaign Performance Dashboard:</strong> Compara todas las campañas en múltiples canales lado a lado</li>
+                    <li><strong>Cohort Analysis:</strong> Agrupa leads por mes/campaña/fuente y compara conversion rates</li>
+                    <li><strong>ROI Calculation:</strong> Calcula automáticamente ROI incluyendo: costo de campaña, leads generados, deals cerrados, valor de ARR</li>
+                    <li><strong>Custom Reports:</strong> Crea reportes personalizados por período, canal, equipo</li>
+                    <li><strong>Export to PDF:</strong> Descarga reportes ejecutivos en PDF</li>
+                </ul>
+            </div>
+
+            <h3>🎯 Lead Scoring Enhancements</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li><strong>Predictive Scoring:</strong> ML-based scoring que aprende de tus deals ganados históricos</li>
+                    <li><strong>Custom Scoring Rules:</strong> Define tus propias reglas: "Si trabaja en Tech + abrió 3+ emails = +15 puntos"</li>
+                    <li><strong>Behavioral Scoring:</strong> Rastrear páginas visitadas, tiempo en sitio, descargas, etc.</li>
+                    <li><strong>Intent Signals:</strong> Detecta cuando un lead está en modo de "buying intent"</li>
+                </ul>
+            </div>
+
+            <h3>📋 Segment Management & Automation</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li><strong>Smart Segments:</strong> Crea segmentos dinámicos: "Leads en Tech + score &gt; 50 + no contacted"</li>
+                    <li><strong>Drip Campaigns:</strong> Secuencias automáticas de email basadas en comportamiento</li>
+                    <li><strong>Lead Nurturing Workflows:</strong> Cadenas de acciones: Email → SMS → LinkedIn message → Call reminder</li>
+                    <li><strong>Scheduling:</strong> Programa secuencias para ejecutar en horas óptimas según zona horaria</li>
+                </ul>
+            </div>
+
+            <h3>🎪 ABM (Account-Based Marketing)</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li><strong>Account Mapping:</strong> Vincula múltiples contactos a una misma empresa</li>
+                    <li><strong>Account Health Score:</strong> Calcula el score de toda la cuenta (no solo leads individuales)</li>
+                    <li><strong>Coordinated Campaigns:</strong> Lanza campañas dirigidas a múltiples personas en la misma empresa</li>
+                    <li><strong>Account Activity Timeline:</strong> Ve todas las interacciones de la cuenta en un timeline</li>
+                </ul>
+            </div>
+
+            <h3>📲 Mobile App</h3>
+            <div class="feature-box">
+                <h4>¿Qué permitirá?</h4>
+                <ul>
+                    <li>Acceder al CRM desde tu teléfono en cualquier lugar</li>
+                    <li>Recibir notificaciones push para leads calientes nuevos</li>
+                    <li>Log rápido de llamadas/emails desde el teléfono</li>
+                    <li>Offline mode: ver datos guardados sin conexión</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ========== BEST PRACTICES ========== -->
+        <section>
+            <h2>
+                <span class="icon">✨</span> Best Practices & Tips
+            </h2>
+
+            <h3>1. Sincronización Regular</h3>
+            <div class="tip">
+                Sincroniza con Brevo al menos <strong>una vez al día</strong>, preferiblemente después de enviar campañas. Esto asegura que:
+                <ul style="margin-top: 10px;">
+                    <li>Los scores de leads se actualizen basados en opens/clicks</li>
+                    <li>Las estadísticas de campañas reflejen datos en vivo</li>
+                    <li>Los engagement status cambien automáticamente (Cold → Warm, etc.)</li>
+                </ul>
+            </div>
+
+            <h3>2. Naming Convention para Campañas</h3>
+            <div class="feature-box">
+                <p><strong>Usa un formato consistente:</strong></p>
+                <code>[Tipo] - [Segmento] - [Fecha]</code>
+                <p style="margin-top: 10px;">Ejemplos:</p>
+                <ul>
+                    <li>OUTREACH - Tier1 Seguros - May2026</li>
+                    <li>NURTURING - SaaS Prospects - Q2-Phase2</li>
+                    <li>WELCOME - New Signups - Weekly</li>
+                </ul>
+            </div>
+
+            <h3>3. Pasando Leads a Ventas</h3>
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> Solo pasa leads con status "Hot" (score ≥ 70 + actividad reciente). Pasando leads fríos despierta a tu equipo de ventas 😅
+            </div>
+
+            <h3>4. Email Template Variables</h3>
+            <div class="feature-box">
+                <p><strong>En tus templates de Brevo, usa estas variables:</strong></p>
+                <ul>
+                    <li><code>{{contact.FIRSTNAME}}</code> - Primer nombre</li>
+                    <li><code>{{contact.LASTNAME}}</code> - Apellido</li>
+                    <li><code>{{contact.EMAIL}}</code> - Email</li>
+                    <li><code>{{contact.COMPANY}}</code> - Empresa</li>
+                    <li><code>{{contact.JOB_TITLE}}</code> - Puesto</li>
+                    <li><code>{{contact.INDUSTRY}}</code> - Industria</li>
+                </ul>
+                <p style="margin-top: 10px; color: #94a3b8; font-size: 0.95em;">Brevo reemplaza automáticamente estas variables al enviar. ¡Personalización al escala!</p>
+            </div>
+
+            <h3>5. Monitoring Campaign Performance</h3>
+            <div class="workflow">
+                <h4>Checklist Semanal</h4>
+                <div class="step">
+                    <div class="step-number">✓</div>
+                    <div><p>Abre Campaign Wall y revisa el open rate de tus últimas campañas</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">✓</div>
+                    <div><p>Si open rate &lt; 15%, ajusta el subject line en futuras campañas</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">✓</div>
+                    <div><p>Si click rate &lt; 5%, revisa el CTA (call-to-action) de tu email</p></div>
+                </div>
+                <div class="step">
+                    <div class="step-number">✓</div>
+                    <div><p>Identifica las campañas con más conversiones — repite ese formato</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== FAQ ========== -->
+        <section>
+            <h2>
+                <span class="icon">❓</span> Preguntas Frecuentes
+            </h2>
+
+            <h3>¿Qué sucede cuando paso un lead a Ventas?</h3>
+            <div class="feature-box">
+                <p>Se crea automáticamente un <strong>Deal</strong> en el pipeline de Ventas con:</p>
+                <ul>
+                    <li>Nombre = nombre del contacto</li>
+                    <li>Etapa inicial = "Prospecto"</li>
+                    <li>Score y engagement status sincronizados</li>
+                    <li>Asociación automática con el contacto</li>
+                </ul>
+                <p style="margin-top: 15px; color: #94a3b8;">El equipo de Ventas verá el deal en el Kanban pipeline y puede trabajar desde ahí.</p>
+            </div>
+
+            <h3>¿Puedo ver qué contacto abrió mi email?</h3>
+            <p>En Brevo sí (haz clic en "Ver en Brevo" en la tarjeta de campaña). En el CRM, ves estadísticas agregadas (% total), pero si expandes una campaña ves el desglose.</p>
+
+            <h3>¿Qué pasa si no tengo sincronización automática? ¿Tengo que sincronizar manualmente?</h3>
+            <p>Sí, por ahora es manual. Haz clic en <code>Sincronizar Brevo</code> cuando lo necesites. <strong>Futuras versiones</strong> ofrecerán sincronización automática cada X horas.</p>
+
+            <h3>¿Puedo usar el CRM sin Brevo?</h3>
+            <p>Sí, puedes crear campañas de LinkedIn, Meta, Google Ads directamente. Pero <strong>Brevo Email requiere una cuenta de Brevo</strong> (hay plan gratuito para ≤ 300 contactos).</p>
+
+            <h3>¿Dónde veo mis leads fríos para hacer re-engagement?</h3>
+            <p>En la tabla de Contactos de Marketing, filtra por engagement_status = "Cold". <strong>Próximamente</strong> habrá una sección de "Re-engagement Campaigns" con automatización.</p>
+
+            <h3>¿Qué es ICP y cómo lo uso?</h3>
+            <p><strong>ICP</strong> = Ideal Customer Profile. En <code>Configurar CRM</code> (en la página de inicio), define tu ICP: industria, tamaño de empresa, ubicación, puesto. Usa esta info para segmentar tus campañas.</p>
+        </section>
+
+        <!-- ========== ROADMAP ========== -->
+        <section>
+            <h2>
+                <span class="icon">🗓️</span> Roadmap (Próximas Versiones)
+            </h2>
+            <table>
+                <tr>
+                    <th>Cuándo</th>
+                    <th>Qué Viene</th>
+                    <th>Impacto</th>
+                </tr>
+                <tr>
+                    <td><strong>Jun 2026</strong></td>
+                    <td>LinkedIn Ads integration + Advanced Analytics</td>
+                    <td>Multi-channel campaigns + ROI dashboard</td>
+                </tr>
+                <tr>
+                    <td><strong>Jul 2026</strong></td>
+                    <td>Meta Ads + Google Ads integration</td>
+                    <td>Gestión centralized de paid ads</td>
+                </tr>
+                <tr>
+                    <td><strong>Aug 2026</strong></td>
+                    <td>Lead Scoring ML + Automation workflows</td>
+                    <td>Predictive scoring + drip campaigns</td>
+                </tr>
+                <tr>
+                    <td><strong>Sep 2026</strong></td>
+                    <td>ABM tools + Mobile app</td>
+                    <td>Account-based marketing + access on-the-go</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- ========== FOOTER ========== -->
+        <footer>
+            <p>BlackScale Nexus CRM — Marketing Module Docs</p>
+            <p>Para soporte o reportar bugs, contacta a tu administrador</p>
+            <p style="margin-top: 20px; color: #475569;">© 2026 BlackScale Consulting. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+</body>
+</html>
