@@ -11,7 +11,7 @@ export function PushManager() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
     navigator.serviceWorker
-      .register("/app/sw.js")
+      .register("/sw.js")
       .then(async (reg) => {
         // Check if already subscribed
         const existing = await reg.pushManager.getSubscription();

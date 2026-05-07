@@ -17,7 +17,7 @@ export function NotificationChecker() {
       if (overdueCount > 0) {
         new Notification("Auto-CRM", {
           body: `Tienes ${overdueCount} seguimiento${overdueCount > 1 ? "s" : ""} vencido${overdueCount > 1 ? "s" : ""}`,
-          icon: "/app/favicon.ico",
+          icon: "/favicon.ico",
           tag: "crm-followup", // Prevents duplicate notifications
         });
       }

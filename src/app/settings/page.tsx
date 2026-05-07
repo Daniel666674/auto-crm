@@ -44,7 +44,7 @@ export default function SettingsPage() {
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
 
   useEffect(() => {
-    fetch("/app/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
+    fetch("/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
     fetch("/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
   }, []);
 
@@ -170,7 +170,7 @@ export default function SettingsPage() {
               variant="destructive"
               size="sm"
               className="w-full"
-              onClick={() => signOut({ callbackUrl: "/app/login" })}
+              onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar sesión
