@@ -107,6 +107,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
     listIds: [] as number[],
     scheduledAt: "",
     senderEmail: "daniel.acosta@blackscale.consulting",
+    splitSend: false,
   });
 
   const [brevoLists, setBrevoLists] = useState<BrevoList[]>([]);
@@ -146,6 +147,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
             listIds: form.listIds,
             scheduledAt: form.scheduledAt || null,
             senderEmail: form.senderEmail,
+            splitSend: form.splitSend,
           }),
         });
         const data = await res.json();
@@ -325,24 +327,45 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
                     />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                        Remitente
-                      </label>
-                      <select style={selectFieldStyle} value={form.senderEmail}
-                        onChange={e => setForm({ ...form, senderEmail: e.target.value })}>
-                        <option value="daniel.acosta@blackscale.consulting">Daniel — BlackScale</option>
-                        <option value="julian.vallejo@blackscale.consulting">Julian — BlackScale</option>
-                      </select>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>
+                      Remitente
+                    </label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                      {[
+                        { label: "Daniel", value: "daniel.acosta@blackscale.consulting", split: false },
+                        { label: "Julian", value: "julian.vallejo@blackscale.consulting", split: false },
+                        { label: "Split 50/50", value: "daniel.acosta@blackscale.consulting", split: true },
+                      ].map(opt => {
+                        const active = opt.split ? form.splitSend : (!form.splitSend && form.senderEmail === opt.value);
+                        return (
+                          <button key={opt.label} type="button"
+                            onClick={() => setForm({ ...form, senderEmail: opt.value, splitSend: opt.split })}
+                            style={{
+                              padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: active ? 600 : 400,
+                              border: `1px solid ${active ? "var(--mkt-accent)" : "var(--mkt-border)"}`,
+                              background: active ? "rgba(209,156,21,0.1)" : "transparent",
+                              color: active ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
+                              transition: "all 0.12s",
+                            }}>
+                            {opt.label}
+                          </button>
+                        );
+                      })}
                     </div>
-                    <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                        Programar para (opcional)
-                      </label>
-                      <input type="datetime-local" style={fieldStyle} value={form.scheduledAt}
-                        onChange={e => setForm({ ...form, scheduledAt: e.target.value })} />
-                    </div>
+                    {form.splitSend && form.listIds.length < 2 && (
+                      <p style={{ fontSize: 10, color: "#f59e0b", marginTop: 4 }}>
+                        Split requiere 2+ listas. Con 1 lista se enviará solo con Daniel.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
+                      Programar para (opcional)
+                    </label>
+                    <input type="datetime-local" style={fieldStyle} value={form.scheduledAt}
+                      onChange={e => setForm({ ...form, scheduledAt: e.target.value })} />
                   </div>
                 </>
               )}
@@ -390,7 +413,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
 
   useEffect(() => {
     if (!brevoCampaignId) return;
-    fetch(`/app/api/brevo/campaigns?id=${brevoCampaignId}`)
+    fetch(`/api/brevo/campaigns?id=${brevoCampaignId}`)
       .then(r => r.json())
       .then(d => {
         const campaign = d.campaigns?.find((c: Record<string, unknown>) => String(c.id) === brevoCampaignId);

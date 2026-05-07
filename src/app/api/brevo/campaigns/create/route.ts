@@ -36,18 +36,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, id: result.id });
     }
 
-    // Split: two campaigns, 50/50
+    // Split: two campaigns — requires at least 2 lists; fall back if only 1
+    if (listIds.length < 2) {
+      const sender = SENDERS['daniel.acosta@blackscale.consulting'];
+      const result = await createCampaign({ name, subject, htmlContent, sender, recipients: { listIds }, ...(scheduled ? { scheduledAt: scheduled } : {}) });
+      if (result.code) return NextResponse.json({ error: result.message }, { status: 400 });
+      return NextResponse.json({ success: true, id: result.id });
+    }
+    const mid = Math.ceil(listIds.length / 2);
     const [c1, c2] = await Promise.all([
       createCampaign({
         name: `${name} — Daniel (50%)`, subject, htmlContent,
         sender: SENDERS['daniel.acosta@blackscale.consulting'],
-        recipients: { listIds: [listIds[0]] }, // first half of lists
+        recipients: { listIds: listIds.slice(0, mid) },
         ...(scheduled ? { scheduledAt: scheduled } : {}),
       }),
       createCampaign({
         name: `${name} — Julian (50%)`, subject, htmlContent,
         sender: SENDERS['julian.vallejo@blackscale.consulting'],
-        recipients: { listIds: listIds.slice(1).length ? listIds.slice(1) : listIds },
+        recipients: { listIds: listIds.slice(mid) },
         ...(scheduled ? { scheduledAt: scheduled } : {}),
       }),
     ]);

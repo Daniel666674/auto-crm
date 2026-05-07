@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MktProvider, useMkt } from "@/components/marketing/mkt-provider";
+import type { MktNotification } from "@/components/marketing/mkt-provider";
 import { MktSidebar } from "@/components/marketing/mkt-sidebar";
 import { MktEngagementBoard } from "@/components/marketing/mkt-engagement-board";
 import { MktIcpScorer } from "@/components/marketing/mkt-icp-scorer";
@@ -194,6 +195,86 @@ function MktBrevoAnalytics() {
   );
 }
 
+// ── Notification Bell ────────────────────────────────────────────────────────
+const TYPE_ICON: Record<string, string> = { deal: "💼", delivery: "📋", handoff: "🤝" };
+
+function NotificationBell({ notifications }: { notifications: MktNotification[] }) {
+  const [open, setOpen] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const ref = useRef<HTMLDivElement>(null);
+  const unread = notifications.filter(n => !readIds.has(n.id)).length;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggleOpen = () => {
+    setOpen(prev => {
+      if (!prev) setReadIds(new Set(notifications.map(n => n.id)));
+      return !prev;
+    });
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button onClick={toggleOpen} style={{
+        position: "relative", width: 36, height: 36, borderRadius: 8,
+        border: "1px solid var(--mkt-border)", background: "transparent",
+        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+        color: "var(--mkt-text-muted)",
+      }}>
+        <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        {unread > 0 && (
+          <span style={{
+            position: "absolute", top: 4, right: 4, width: 8, height: 8,
+            borderRadius: "50%", background: "var(--mkt-accent)",
+          }} />
+        )}
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0, width: 320, zIndex: 100,
+          background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)",
+          borderRadius: 12, boxShadow: "0 16px 40px rgba(0,0,0,0.4)", overflow: "hidden",
+        }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--mkt-border)", fontSize: 12, fontWeight: 600, color: "var(--mkt-text)" }}>
+            Notificaciones
+          </div>
+          {notifications.length === 0 ? (
+            <div style={{ padding: 20, fontSize: 12, color: "var(--mkt-text-muted)", textAlign: "center" }}>
+              Sin notificaciones recientes
+            </div>
+          ) : (
+            <div style={{ maxHeight: 340, overflowY: "auto" }}>
+              {notifications.map(n => (
+                <div key={n.id} style={{
+                  padding: "10px 16px", borderBottom: "1px solid var(--mkt-border)",
+                  display: "flex", gap: 10, alignItems: "flex-start",
+                }}>
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{TYPE_ICON[n.type] ?? "🔔"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: "var(--mkt-text)", lineHeight: 1.4 }}>{n.msg}</div>
+                    <div style={{ fontSize: 10, color: "var(--mkt-text-muted)", marginTop: 3 }}>
+                      {new Date(n.time).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Generic placeholder ──────────────────────────────────────────────────────
 function MktPlaceholder({ label }: { label: string }) {
   return (
@@ -212,7 +293,6 @@ function MktPlaceholder({ label }: { label: string }) {
 function MarketingContent() {
   const [section, setSection] = useState<MktSection>("engagement");
   const { notifications, loading, contacts } = useMkt();
-  const lastNotification = notifications[notifications.length - 1];
 
   const renderSection = () => {
     if (loading) {
@@ -276,12 +356,7 @@ function MarketingContent() {
               </span>
             )}
           </div>
-          {lastNotification && (
-            <div style={{ fontSize: 12, color: "var(--mkt-accent)", display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: 3, background: "var(--mkt-accent)" }} />
-              {lastNotification.text}
-            </div>
-          )}
+          <NotificationBell notifications={notifications} />
         </header>
 
         {/* Empty state */}

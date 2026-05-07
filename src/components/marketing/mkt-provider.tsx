@@ -3,9 +3,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { MktContact, MktCampaign } from "./mkt-types";
 
-interface MktNotification {
+export interface MktNotification {
   id: string;
-  text: string;
+  type: "handoff" | "deal" | "delivery";
+  msg: string;
   time: number;
 }
 
@@ -47,6 +48,19 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Poll notifications every 60s
+  useEffect(() => {
+    const fetchNotifications = () => {
+      fetch("/api/notifications")
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setNotifications(data); })
+        .catch(() => {});
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const updateEngagement = useCallback((id: string, status: MktContact["engagementStatus"]) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, engagementStatus: status } : c));
     fetch(`/api/marketing/contacts/${id}`, {
@@ -67,7 +81,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     ));
 
     setNotifications(prev => [...prev, {
-      id: `n${ts}`, text: `${contact.name} enviado a pipeline de ventas`, time: ts,
+      id: `n${ts}`, type: "handoff" as const, msg: `${contact.name} (${contact.company}) enviado a pipeline de ventas`, time: ts,
     }]);
 
     // Mark in marketing DB
