@@ -84,7 +84,7 @@ function LocalStatusBadge({ status }: { status: MktCampaign["status"] }) {
 interface BrevoGlobalStats {
   sent: number;
   delivered: number;
-  uniqueOpens: number;
+  uniqueViews: number;   // Brevo's field name for unique opens
   uniqueClicks: number;
   hardBounces: number;
   softBounces: number;
@@ -312,8 +312,9 @@ function CampaignFormModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
 // ── Brevo card ────────────────────────────────────────────────────────────────
 
-function BrevoCard({ camp, replyRate, conversions, expanded, onToggle }: {
+function BrevoCard({ camp, local, replyRate, conversions, expanded, onToggle }: {
   camp: BrevoCampaign;
+  local?: { openRate: number; clickRate: number; totalContacts: number };
   replyRate: number;
   conversions: number;
   expanded: boolean;
@@ -321,8 +322,12 @@ function BrevoCard({ camp, replyRate, conversions, expanded, onToggle }: {
 }) {
   const gs = camp.statistics?.globalStats;
   const sent = gs?.sent ?? 0;
-  const openRate = sent > 0 ? safeRate((gs!.uniqueOpens / sent) * 100) : 0;
-  const clickRate = sent > 0 ? safeRate((gs!.uniqueClicks / sent) * 100) : 0;
+  // Brevo uses uniqueViews for unique opens; fall back to synced local data when live stats are 0
+  const liveOpen = sent > 0 ? safeRate((gs!.uniqueViews / sent) * 100) : 0;
+  const liveClick = sent > 0 ? safeRate((gs!.uniqueClicks / sent) * 100) : 0;
+  const openRate = liveOpen > 0 ? liveOpen : safeRate(local?.openRate ?? 0);
+  const clickRate = liveClick > 0 ? liveClick : safeRate(local?.clickRate ?? 0);
+  const displaySent = sent > 0 ? sent : (local?.totalContacts ?? 0);
   const rr = safeRate(replyRate);
 
   return (
@@ -367,7 +372,7 @@ function BrevoCard({ camp, replyRate, conversions, expanded, onToggle }: {
 
       {/* Footer */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "var(--mkt-text-muted)", paddingTop: 10, borderTop: "1px solid var(--mkt-border)" }}>
-        <span>{sent.toLocaleString("es-CO")} enviados</span>
+        <span>{displaySent.toLocaleString("es-CO")} enviados</span>
         <span style={{ color: conversions > 0 ? "var(--mkt-accent)" : "var(--mkt-text-muted)", fontWeight: conversions > 0 ? 600 : 400 }}>
           {conversions} al pipeline
         </span>
@@ -382,7 +387,7 @@ function BrevoCard({ camp, replyRate, conversions, expanded, onToggle }: {
             {[
               { label: "Enviados", v: gs.sent },
               { label: "Entregados", v: gs.delivered },
-              { label: "Abiertos únicos", v: gs.uniqueOpens },
+              { label: "Abiertos únicos", v: gs.uniqueViews },
               { label: "Clicks únicos", v: gs.uniqueClicks },
               { label: "Rebotes", v: gs.hardBounces },
               { label: "Desuscritos", v: gs.unsubscriptions },
@@ -573,6 +578,7 @@ export function MktCampaignWall() {
                   <BrevoCard
                     key={camp.id}
                     camp={camp}
+                    local={local}
                     replyRate={local?.replyRate ?? 0}
                     conversions={local?.conversions ?? 0}
                     expanded={expandedId === String(camp.id)}

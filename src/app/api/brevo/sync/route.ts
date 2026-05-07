@@ -169,7 +169,59 @@ export async function POST() {
 
     run();
 
-    return NextResponse.json({ success: true, synced, skipped, total: contacts.length });
+    // Sync campaign stats from Brevo into local mkt_campaigns
+    let campaignsSynced = 0;
+    try {
+      const campRes = await fetch(
+        `https://api.brevo.com/v3/emailCampaigns?limit=50&offset=0&status=sent`,
+        { headers: H }
+      );
+      if (campRes.ok) {
+        const campData = await campRes.json();
+        const campaigns: Array<{ id: number }> = campData.campaigns || [];
+        for (const camp of campaigns) {
+          try {
+            const dr = await fetch(`https://api.brevo.com/v3/emailCampaigns/${camp.id}`, { headers: H });
+            if (!dr.ok) continue;
+            const d = await dr.json();
+            const gs = d.statistics?.globalStats;
+            if (!gs) continue;
+            const sent = Number(gs.sent) || 0;
+            const opens = Number(gs.uniqueViews) || Number(gs.uniqueOpens) || 0;
+            const clicks = Number(gs.uniqueClicks) || 0;
+            const openRate = sent > 0 ? Math.round((opens / sent) * 10000) / 100 : 0;
+            const clickRate = sent > 0 ? Math.round((clicks / sent) * 10000) / 100 : 0;
+            const lastSent = d.sendTime ? new Date(d.sendTime).getTime() : null;
+            const brevoId = String(camp.id);
+            const existing = mktDb.prepare(
+              "SELECT id FROM mkt_campaigns WHERE brevo_campaign_id = ?"
+            ).get(brevoId) as { id: string } | undefined;
+            if (existing) {
+              mktDb.prepare(`
+                UPDATE mkt_campaigns
+                SET open_rate=?, click_rate=?, total_contacts=?, last_sent=?, name=?
+                WHERE brevo_campaign_id=?
+              `).run(openRate, clickRate, sent, lastSent, d.name, brevoId);
+            } else {
+              mktDb.prepare(`
+                INSERT OR IGNORE INTO mkt_campaigns
+                  (id, name, status, start_date, target_segment, cadence_type,
+                   open_rate, click_rate, reply_rate, total_contacts, conversions,
+                   last_sent, channel, brevo_campaign_id)
+                VALUES (?,?,?,?,?,?,?,?,0,?,0,?,?,?)
+              `).run(
+                `brevo_${brevoId}`, d.name, "completed",
+                lastSent || Date.now(), "", "outreach",
+                openRate, clickRate, sent, lastSent, "brevo_email", brevoId
+              );
+            }
+            campaignsSynced++;
+          } catch { /* skip individual campaign errors */ }
+        }
+      }
+    } catch { /* campaign sync is non-fatal */ }
+
+    return NextResponse.json({ success: true, synced, skipped, total: contacts.length, campaignsSynced });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
