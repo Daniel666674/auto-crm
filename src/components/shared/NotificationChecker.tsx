@@ -10,7 +10,7 @@ export function NotificationChecker() {
     if (Notification.permission !== "granted") return;
 
     try {
-      const res = await fetch("/app/api/followups");
+      const res = await fetch("/api/followups");
       const data = await res.json();
       const overdueCount = data.overdue?.length || 0;
 

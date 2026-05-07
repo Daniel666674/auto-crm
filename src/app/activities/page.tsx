@@ -55,8 +55,8 @@ export default function ActivitiesPage() {
 
   const loadData = () => {
     Promise.all([
-      fetch("/app/api/activities").then((r) => r.json()),
-      fetch("/app/api/followups").then((r) => r.json()),
+      fetch("/api/activities").then((r) => r.json()),
+      fetch("/api/followups").then((r) => r.json()),
     ]).then(([acts, fups]) => {
       setActivities(acts);
       setFollowUps(fups);

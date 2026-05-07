@@ -13,7 +13,7 @@ export function PrivacyPolicyModal() {
   useEffect(() => {
     if (status !== "authenticated" || !session?.user?.id) return;
     // Check if policy has been acknowledged via API (client-side check)
-    fetch("/app/api/policy-status")
+    fetch("/api/policy-status")
       .then((r) => r.json())
       .then((d) => {
         if (!d.acknowledged) setOpen(true);
@@ -22,7 +22,7 @@ export function PrivacyPolicyModal() {
   }, [status, session]);
 
   const handleAcknowledge = async () => {
-    await fetch("/app/api/policy-acknowledge", { method: "POST" });
+    await fetch("/api/policy-acknowledge", { method: "POST" });
     setOpen(false);
   };
 

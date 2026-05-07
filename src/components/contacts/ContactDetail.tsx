@@ -89,13 +89,13 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
   };
 
   const handleExport = () => {
-    window.location.href = `/app/api/contacts/${contact.id}/export-data`;
+    window.location.href = `/api/contacts/${contact.id}/export-data`;
   };
 
   const handleSaveConsent = async () => {
     setSavingConsent(true);
     try {
-      const res = await fetch(`/app/api/contacts/${contact.id}`, {
+      const res = await fetch(`/api/contacts/${contact.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,7 +115,7 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
 
   const handleCompleteActivity = async (activityId: string) => {
     try {
-      const res = await fetch(`/app/api/activities/${activityId}`, {
+      const res = await fetch(`/api/activities/${activityId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completedAt: new Date().toISOString() }),

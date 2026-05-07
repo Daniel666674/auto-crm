@@ -54,7 +54,7 @@ function MktBrevoLists() {
   const today = new Date().toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   useEffect(() => {
-    fetch("/app/api/brevo/lists")
+    fetch("/api/brevo/lists")
       .then(r => r.json())
       .then(d => {
         if (d.error) { setError(d.error); return; }
@@ -171,7 +171,7 @@ function MktBrevoAnalytics() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/app/api/brevo/campaigns")
+    fetch("/api/brevo/campaigns")
       .then(r => r.json())
       .then(d => {
         if (d.error) { setError(d.error); return; }

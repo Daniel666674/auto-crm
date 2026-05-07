@@ -22,7 +22,7 @@ export default function RetentionPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch("/app/api/retention")
+    fetch("/api/retention")
       .then((r) => r.json())
       .then((d) => { setContacts(d.contacts ?? []); setCount(d.count ?? 0); })
       .finally(() => setLoading(false));
@@ -33,7 +33,7 @@ export default function RetentionPage() {
   const handle = async (contactId: string, action: "conservar" | "eliminar") => {
     setProcessing(contactId);
     try {
-      const res = await fetch("/app/api/retention", {
+      const res = await fetch("/api/retention", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contactId, action }),
