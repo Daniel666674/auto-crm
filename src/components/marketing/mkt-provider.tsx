@@ -49,7 +49,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
 
   const updateEngagement = useCallback((id: string, status: MktContact["engagementStatus"]) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, engagementStatus: status } : c));
-    fetch(`/app/api/marketing/contacts/${id}`, {
+    fetch(`/api/marketing/contacts/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ engagement_status: status }),
@@ -71,7 +71,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     }]);
 
     // Mark in marketing DB
-    fetch(`/app/api/marketing/contacts/${id}`, {
+    fetch(`/api/marketing/contacts/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ready_for_sales: 1, passed_to_sales_at: ts }),

@@ -74,6 +74,8 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
   const [consentGiven, setConsentGiven] = useState(contact.consentGiven ?? false);
   const [consentSource, setConsentSource] = useState(contact.consentSource ?? "unknown");
   const [savingConsent, setSavingConsent] = useState(false);
+  const [returningToMkt, setReturningToMkt] = useState(false);
+  const [returnedToMkt, setReturnedToMkt] = useState(false);
 
   const temp = TEMP_CONFIG[contact.temperature] ?? TEMP_CONFIG.cold;
   const initials = contact.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -90,6 +92,28 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
       router.refresh();
     } catch {
       toast.error("Error al completar la actividad");
+    }
+  };
+
+  const handleReturnToMarketing = async () => {
+    setReturningToMkt(true);
+    try {
+      const res = await fetch("/api/return-to-marketing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: contact.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Error al devolver a marketing");
+        return;
+      }
+      setReturnedToMkt(true);
+      toast.success("Contacto devuelto al pipeline de marketing");
+    } catch {
+      toast.error("Error al devolver a marketing");
+    } finally {
+      setReturningToMkt(false);
     }
   };
 
@@ -305,6 +329,26 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
           {/* Stage tab */}
           {activeTab === "stage" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {contact.source === "marketing_handoff" && !returnedToMkt && (
+                <button
+                  onClick={handleReturnToMarketing}
+                  disabled={returningToMkt}
+                  style={{
+                    alignSelf: "flex-start", padding: "6px 14px", borderRadius: 8, fontSize: 12,
+                    fontWeight: 600, cursor: returningToMkt ? "not-allowed" : "pointer",
+                    border: "1px solid #D19C15", color: "#D19C15",
+                    background: returningToMkt ? "rgba(209,156,21,0.06)" : "transparent",
+                    opacity: returningToMkt ? 0.7 : 1, transition: "background 0.15s",
+                  }}
+                >
+                  {returningToMkt ? "Devolviendo…" : "↩ Devolver a Marketing"}
+                </button>
+              )}
+              {returnedToMkt && (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "6px 0" }}>
+                  Contacto devuelto al pipeline de marketing.
+                </div>
+              )}
               {deals.length === 0 ? (
                 <div style={{ padding: 32, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13, borderRadius: 10, border: "1px dashed var(--border)" }}>
                   Sin deals asociados
