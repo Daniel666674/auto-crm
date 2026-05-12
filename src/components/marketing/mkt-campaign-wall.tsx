@@ -118,7 +118,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (form.channel === "brevo_email" || form.channel === "outbound") {
       setLoadingLists(true);
-      fetch("/api/brevo/lists")
+      fetch("/app/api/brevo/lists")
         .then(r => r.json())
         .then(d => setBrevoLists(d.lists || []))
         .catch(() => {})
@@ -136,7 +136,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
       // If Brevo email: actually create the campaign in Brevo
       let brevoCampaignId = "";
       if (form.channel === "brevo_email" && form.subject && form.htmlContent && form.listIds.length > 0) {
-        const res = await fetch("/api/brevo/campaigns/create", {
+        const res = await fetch("/app/api/brevo/campaigns/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -390,7 +390,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
 
   useEffect(() => {
     if (!brevoCampaignId) return;
-    fetch(`/api/brevo/campaigns?id=${brevoCampaignId}`)
+    fetch(`/app/api/brevo/campaigns?id=${brevoCampaignId}`)
       .then(r => r.json())
       .then(d => {
         const campaign = d.campaigns?.find((c: Record<string, unknown>) => String(c.id) === brevoCampaignId);
@@ -447,7 +447,7 @@ export function MktCampaignWall() {
   const [brevoLive, setBrevoLive] = useState<Record<string, { openRate: number; clickRate: number }>>({});
 
   useEffect(() => {
-    fetch('/api/brevo/campaigns')
+    fetch('/app/api/brevo/campaigns')
       .then(r => r.json())
       .then(d => {
         if (!d.campaigns) return;

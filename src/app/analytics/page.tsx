@@ -13,8 +13,8 @@ interface BrevoCampaign {
     globalStats?: {
       sent?: number;
       delivered?: number;
-      uniqueViews?: number;
-      clickers?: number;
+      uniqueOpens?: number;
+      uniqueClicks?: number;
       hardBounces?: number;
       softBounces?: number;
       unsubscriptions?: number;
@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
   const load = () => {
     setLoading(true);
     setError("");
-    fetch("/api/brevo/campaigns")
+    fetch("/app/api/brevo/campaigns")
       .then(r => r.json())
       .then(d => {
         if (d.error) { setError(d.error); return; }
@@ -60,8 +60,8 @@ export default function AnalyticsPage() {
       return {
         sent: acc.sent + safeN(gs.sent),
         delivered: acc.delivered + safeN(gs.delivered),
-        opens: acc.opens + safeN(gs.uniqueViews),
-        clicks: acc.clicks + safeN(gs.clickers),
+        opens: acc.opens + safeN(gs.uniqueOpens),
+        clicks: acc.clicks + safeN(gs.uniqueClicks),
         bounces: acc.bounces + safeN(gs.hardBounces) + safeN(gs.softBounces),
         unsubs: acc.unsubs + safeN(gs.unsubscriptions),
       };
@@ -183,8 +183,8 @@ export default function AnalyticsPage() {
                       {campaigns.map(c => {
                         const gs = c.statistics?.globalStats ?? {};
                         const sent = safeN(gs.sent);
-                        const opens = safeN(gs.uniqueViews);
-                        const clicks = safeN(gs.clickers);
+                        const opens = safeN(gs.uniqueOpens);
+                        const clicks = safeN(gs.uniqueClicks);
                         return (
                           <tr key={c.id} className="border-b hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-2 font-medium max-w-[220px] truncate">{c.name}</td>
