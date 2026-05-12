@@ -98,11 +98,12 @@ function MktBrevoAnalytics() {
   const safeN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
 
   const totals = campaigns.reduce((acc, c) => {
-    const gs = (c.statistics as Record<string, unknown>)?.globalStats as Record<string, unknown> | undefined;
+    const raw = c.statistics as any;
+    const gs = raw?.globalStats ?? raw ?? {};
     return {
-      sent: acc.sent + safeN(gs?.sent ?? c.statistics),
-      opens: acc.opens + safeN(gs?.uniqueViews),
-      clicks: acc.clicks + safeN(gs?.uniqueClicks),
+      sent:   acc.sent   + safeN(gs.sent   ?? gs.delivered),
+      opens:  acc.opens  + safeN(gs.uniqueViews ?? gs.opened ?? gs.viewed),
+      clicks: acc.clicks + safeN(gs.uniqueClicks ?? gs.clickers ?? gs.clicks),
     };
   }, { sent: 0, opens: 0, clicks: 0 });
 
@@ -154,10 +155,11 @@ function MktBrevoAnalytics() {
               </thead>
               <tbody>
                 {campaigns.map((c, i) => {
-                  const gs = (c.statistics as Record<string, unknown>)?.globalStats as Record<string, unknown> | undefined;
-                  const sent = safeN(gs?.sent);
-                  const opens = safeN(gs?.uniqueViews);
-                  const clicks = safeN(gs?.uniqueClicks);
+                  const raw = c.statistics as any;
+                  const gs = raw?.globalStats ?? raw ?? {};
+                  const sent = safeN(gs.sent ?? gs.delivered);
+                  const opens = safeN(gs.uniqueViews ?? gs.opened ?? gs.viewed);
+                  const clicks = safeN(gs.uniqueClicks ?? gs.clickers ?? gs.clicks);
                   const openPct = sent > 0 ? ((opens / sent) * 100).toFixed(1) : "—";
                   const clickPct = sent > 0 ? ((clicks / sent) * 100).toFixed(1) : "—";
                   return (
