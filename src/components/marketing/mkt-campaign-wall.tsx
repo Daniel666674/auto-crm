@@ -390,7 +390,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
 
   useEffect(() => {
     if (!brevoCampaignId) return;
-    fetch(`/app/api/brevo/campaigns?id=${brevoCampaignId}`)
+    fetch(`/api/brevo/campaigns?id=${brevoCampaignId}`)
       .then(r => r.json())
       .then(d => {
         const campaign = d.campaigns?.find((c: Record<string, unknown>) => String(c.id) === brevoCampaignId);
@@ -440,16 +440,72 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
   );
 }
 
+interface BrevoCampaign {
+  id: number;
+  name: string;
+  status: string;
+  statistics?: {
+    globalStats?: {
+      sent?: number;
+      uniqueOpens?: number;
+      uniqueClicks?: number;
+    };
+  };
+}
+
 export function MktCampaignWall() {
   const { campaigns } = useMkt();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [brevoLive, setBrevoLive] = useState<BrevoCampaign[]>([]);
+  const [brevoLoading, setBrevoLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/brevo/campaigns")
+      .then(r => r.json())
+      .then(d => setBrevoLive(d.campaigns || []))
+      .catch(() => {})
+      .finally(() => setBrevoLoading(false));
+  }, []);
+
+  // Build display list: Brevo live campaigns take priority, fall back to local DB
+  const displayCampaigns: MktCampaign[] = brevoLive.length > 0
+    ? brevoLive.map(b => {
+        const gs = b.statistics?.globalStats ?? {};
+        const sent = gs.sent ?? 0;
+        const opens = gs.uniqueOpens ?? 0;
+        const clicks = gs.uniqueClicks ?? 0;
+        const statusMap: Record<string, MktCampaign["status"]> = {
+          sent: "completed", scheduled: "active", draft: "paused",
+        };
+        // Find matching local campaign for brevoCampaignId linkage
+        const local = campaigns.find(c => c.brevoCampaignId === String(b.id));
+        return {
+          id: local?.id ?? String(b.id),
+          name: b.name,
+          status: statusMap[b.status] ?? "completed",
+          startDate: local?.startDate ?? Date.now(),
+          targetSegment: local?.targetSegment ?? "",
+          cadenceType: local?.cadenceType ?? "outreach",
+          channel: local?.channel ?? "brevo_email",
+          brevoCampaignId: String(b.id),
+          openRate: sent > 0 ? Math.round((opens / sent) * 1000) / 10 : 0,
+          clickRate: sent > 0 ? Math.round((clicks / sent) * 1000) / 10 : 0,
+          replyRate: local?.replyRate ?? 0,
+          totalContacts: sent,
+          conversions: local?.conversions ?? 0,
+          lastSent: local?.lastSent ?? null,
+        };
+      })
+    : campaigns;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>{campaigns.length} campañas registradas</p>
+          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>
+            {brevoLoading ? "Cargando campañas…" : `${displayCampaigns.length} campañas registradas`}
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <a
@@ -476,7 +532,7 @@ export function MktCampaignWall() {
         </div>
       </div>
 
-      {campaigns.length === 0 && (
+      {!brevoLoading && displayCampaigns.length === 0 && (
         <div style={{
           padding: 40, textAlign: "center",
           color: "var(--mkt-text-muted)", fontSize: 13,
@@ -488,7 +544,7 @@ export function MktCampaignWall() {
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
-        {campaigns.map(camp => {
+        {displayCampaigns.map(camp => {
           const openRate = safeRate(camp.openRate);
           const clickRate = safeRate(camp.clickRate);
           const replyRate = safeRate(camp.replyRate);
