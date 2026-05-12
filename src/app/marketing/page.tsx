@@ -101,7 +101,7 @@ function MktBrevoAnalytics() {
     const gs = (c.statistics as Record<string, unknown>)?.globalStats as Record<string, unknown> | undefined;
     return {
       sent: acc.sent + safeN(gs?.sent ?? c.statistics),
-      opens: acc.opens + safeN(gs?.uniqueOpens),
+      opens: acc.opens + safeN(gs?.uniqueViews),
       clicks: acc.clicks + safeN(gs?.uniqueClicks),
     };
   }, { sent: 0, opens: 0, clicks: 0 });
@@ -156,7 +156,7 @@ function MktBrevoAnalytics() {
                 {campaigns.map((c, i) => {
                   const gs = (c.statistics as Record<string, unknown>)?.globalStats as Record<string, unknown> | undefined;
                   const sent = safeN(gs?.sent);
-                  const opens = safeN(gs?.uniqueOpens);
+                  const opens = safeN(gs?.uniqueViews);
                   const clicks = safeN(gs?.uniqueClicks);
                   const openPct = sent > 0 ? ((opens / sent) * 100).toFixed(1) : "—";
                   const clickPct = sent > 0 ? ((clicks / sent) * 100).toFixed(1) : "—";

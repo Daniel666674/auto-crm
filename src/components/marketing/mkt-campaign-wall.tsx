@@ -412,7 +412,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
         {[
           { label: "Enviados", key: "sent" },
           { label: "Entregados", key: "delivered" },
-          { label: "Abiertos", key: "uniqueOpens" },
+          { label: "Abiertos", key: "uniqueViews" },
           { label: "Clicks", key: "uniqueClicks" },
           { label: "Rebotados", key: "hardBounces" },
           { label: "Desuscritos", key: "unsubscriptions" },
@@ -424,7 +424,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
         ))}
       </div>
       <a
-        href="https://app.brevo.com/campaigns"
+        href="https://app.brevo.com/campaigns/listing"
         target="_blank"
         rel="noopener noreferrer"
         style={{
@@ -447,7 +447,7 @@ interface BrevoCampaign {
   statistics?: {
     globalStats?: {
       sent?: number;
-      uniqueOpens?: number;
+      uniqueViews?: number;
       uniqueClicks?: number;
     };
   };
@@ -473,7 +473,7 @@ export function MktCampaignWall() {
     ? brevoLive.map(b => {
         const gs = b.statistics?.globalStats ?? {};
         const sent = gs.sent ?? 0;
-        const opens = gs.uniqueOpens ?? 0;
+        const opens = gs.uniqueViews ?? 0;
         const clicks = gs.uniqueClicks ?? 0;
         const statusMap: Record<string, MktCampaign["status"]> = {
           sent: "completed", scheduled: "active", draft: "paused",
@@ -509,7 +509,7 @@ export function MktCampaignWall() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <a
-            href="https://app.brevo.com/campaigns"
+            href="https://app.brevo.com/campaigns/listing"
             target="_blank"
             rel="noopener noreferrer"
             style={{
