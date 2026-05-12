@@ -118,7 +118,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (form.channel === "brevo_email" || form.channel === "outbound") {
       setLoadingLists(true);
-      fetch("/app/api/brevo/lists")
+      fetch("/api/brevo/lists")
         .then(r => r.json())
         .then(d => setBrevoLists(d.lists || []))
         .catch(() => {})
@@ -136,7 +136,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
       // If Brevo email: actually create the campaign in Brevo
       let brevoCampaignId = "";
       if (form.channel === "brevo_email" && form.subject && form.htmlContent && form.listIds.length > 0) {
-        const res = await fetch("/app/api/brevo/campaigns/create", {
+        const res = await fetch("/api/brevo/campaigns/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -390,7 +390,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
 
   useEffect(() => {
     if (!brevoCampaignId) return;
-    fetch(`/app/api/brevo/campaigns?id=${brevoCampaignId}`)
+    fetch(`/api/brevo/campaigns?id=${brevoCampaignId}`)
       .then(r => r.json())
       .then(d => {
         const campaign = d.campaigns?.find((c: Record<string, unknown>) => String(c.id) === brevoCampaignId);
@@ -412,8 +412,8 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
         {[
           { label: "Enviados", key: "sent" },
           { label: "Entregados", key: "delivered" },
-          { label: "Abiertos", key: "uniqueOpens" },
-          { label: "Clicks", key: "uniqueClicks" },
+          { label: "Abiertos", key: "uniqueViews" },
+          { label: "Clicks", key: "clickers" },
           { label: "Rebotados", key: "hardBounces" },
           { label: "Desuscritos", key: "unsubscriptions" },
         ].map(({ label, key }) => (
@@ -424,7 +424,7 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
         ))}
       </div>
       <a
-        href="https://app.brevo.com/campaigns"
+        href="https://app.brevo.com/campaigns/listing"
         target="_blank"
         rel="noopener noreferrer"
         style={{
@@ -444,6 +444,28 @@ export function MktCampaignWall() {
   const { campaigns } = useMkt();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [brevoLive, setBrevoLive] = useState<Record<string, { openRate: number; clickRate: number }>>({});
+
+  useEffect(() => {
+    fetch('/api/brevo/campaigns')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.campaigns) return;
+        const map: Record<string, { openRate: number; clickRate: number }> = {};
+        for (const c of d.campaigns) {
+          const gs = c.statistics?.globalStats as Record<string, number> | undefined;
+          if (!gs) continue;
+          const sent = gs.sent || 0;
+          if (sent === 0) continue;
+          map[String(c.id)] = {
+            openRate: (gs.uniqueViews || 0) / sent * 100,
+            clickRate: (gs.clickers || 0) / sent * 100,
+          };
+        }
+        setBrevoLive(map);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -453,7 +475,7 @@ export function MktCampaignWall() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <a
-            href="https://app.brevo.com/campaigns"
+            href="https://app.brevo.com/campaigns/listing"
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -489,8 +511,9 @@ export function MktCampaignWall() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
         {campaigns.map(camp => {
-          const openRate = safeRate(camp.openRate);
-          const clickRate = safeRate(camp.clickRate);
+          const live = camp.brevoCampaignId ? brevoLive[camp.brevoCampaignId] : undefined;
+          const openRate = live ? live.openRate : safeRate(camp.openRate);
+          const clickRate = live ? live.clickRate : safeRate(camp.clickRate);
           const replyRate = safeRate(camp.replyRate);
 
           return (
