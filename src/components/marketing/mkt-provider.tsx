@@ -36,8 +36,8 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
-      fetch("/api/marketing/contacts").then(r => r.json()),
-      fetch("/api/marketing/campaigns").then(r => r.json()),
+      fetch("/app/api/marketing/contacts").then(r => r.json()),
+      fetch("/app/api/marketing/campaigns").then(r => r.json()),
     ]).then(([c, camp]) => {
       setContacts(Array.isArray(c) ? c : []);
       setCampaigns(Array.isArray(camp) ? camp : []);
@@ -49,7 +49,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
 
   const updateEngagement = useCallback((id: string, status: MktContact["engagementStatus"]) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, engagementStatus: status } : c));
-    fetch(`/api/marketing/contacts/${id}`, {
+    fetch(`/app/api/marketing/contacts/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ engagement_status: status }),
@@ -71,14 +71,14 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     }]);
 
     // Mark in marketing DB
-    fetch(`/api/marketing/contacts/${id}`, {
+    fetch(`/app/api/marketing/contacts/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ready_for_sales: 1, passed_to_sales_at: ts }),
     });
 
     // Create real deal in sales pipeline
-    fetch("/api/handoff", {
+    fetch("/app/api/handoff", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -96,7 +96,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   }, [contacts]);
 
   const addContact = useCallback((data: Partial<MktContact>) => {
-    fetch("/api/marketing/contacts", {
+    fetch("/app/api/marketing/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -106,7 +106,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addCampaign = useCallback((data: Partial<MktCampaign>) => {
-    fetch("/api/marketing/campaigns", {
+    fetch("/app/api/marketing/campaigns", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -118,13 +118,13 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const recalculateScores = useCallback(async () => {
     setSyncing(true);
     try {
-      await fetch("/api/brevo/recalculate-scores", {
+      await fetch("/app/api/brevo/recalculate-scores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pushToBrevo: true }),
       });
       // Reload contacts with new scores
-      const updated = await fetch("/api/marketing/contacts").then(r => r.json());
+      const updated = await fetch("/app/api/marketing/contacts").then(r => r.json());
       setContacts(Array.isArray(updated) ? updated : []);
     } finally {
       setSyncing(false);
@@ -134,10 +134,10 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const syncFromBrevo = useCallback(async () => {
     setSyncing(true);
     try {
-      const res = await fetch("/api/brevo/sync", { method: "POST" });
+      const res = await fetch("/app/api/brevo/sync", { method: "POST" });
       const data = await res.json();
       // Reload after sync
-      const updated = await fetch("/api/marketing/contacts").then(r => r.json());
+      const updated = await fetch("/app/api/marketing/contacts").then(r => r.json());
       setContacts(Array.isArray(updated) ? updated : []);
       return { synced: data.synced || 0, total: data.total || 0 };
     } finally {
