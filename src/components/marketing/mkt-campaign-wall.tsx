@@ -444,6 +444,33 @@ export function MktCampaignWall() {
   const { campaigns } = useMkt();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [liveStats, setLiveStats] = useState<Record<string, { openRate: number; clickRate: number }>>({});
+  const [brevoError, setBrevoError] = useState("");
+
+  useEffect(() => {
+    fetch("/app/api/brevo/campaigns")
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) throw new Error(`Brevo no disponible (HTTP ${r.status}). Verifica la conexión del servidor.`);
+        return r.json();
+      })
+      .then(d => {
+        if (d.error) { setBrevoError(d.error); return; }
+        const map: Record<string, { openRate: number; clickRate: number }> = {};
+        (d.campaigns || []).forEach((c: Record<string, unknown>) => {
+          const gs = ((c.statistics as Record<string, unknown>)?.globalStats ?? {}) as Record<string, unknown>;
+          const sent = Number(gs.sent ?? 0);
+          const opens = Number(gs.uniqueOpens ?? 0);
+          const clicks = Number(gs.uniqueClicks ?? 0);
+          map[String(c.id)] = {
+            openRate: sent > 0 ? Math.round((opens / sent) * 10000) / 100 : 0,
+            clickRate: sent > 0 ? Math.round((clicks / sent) * 10000) / 100 : 0,
+          };
+        });
+        setLiveStats(map);
+      })
+      .catch(e => setBrevoError(String(e.message)));
+  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -476,6 +503,20 @@ export function MktCampaignWall() {
         </div>
       </div>
 
+      {brevoError && (
+        <div style={{
+          padding: "10px 16px", borderRadius: 8,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)",
+          fontSize: 12, color: "#ef4444", display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <span>Error: {brevoError}</span>
+          <button
+            onClick={() => { setBrevoError(""); setLiveStats({}); }}
+            style={{ background: "none", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 6, color: "#ef4444", fontSize: 11, padding: "3px 10px", cursor: "pointer" }}
+          >Reintentar</button>
+        </div>
+      )}
+
       {campaigns.length === 0 && (
         <div style={{
           padding: 40, textAlign: "center",
@@ -489,8 +530,9 @@ export function MktCampaignWall() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
         {campaigns.map(camp => {
-          const openRate = safeRate(camp.openRate);
-          const clickRate = safeRate(camp.clickRate);
+          const live = camp.brevoCampaignId ? liveStats[camp.brevoCampaignId] : null;
+          const openRate = safeRate(live?.openRate ?? camp.openRate);
+          const clickRate = safeRate(live?.clickRate ?? camp.clickRate);
           const replyRate = safeRate(camp.replyRate);
 
           return (

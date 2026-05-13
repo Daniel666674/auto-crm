@@ -41,12 +41,16 @@ function MktBrevoLists() {
 
   useEffect(() => {
     fetch("/app/api/brevo/lists")
-      .then(r => r.json())
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) throw new Error(`Brevo no disponible (HTTP ${r.status}). Verifica la conexión del servidor.`);
+        return r.json();
+      })
       .then(d => {
         if (d.error) { setError(d.error); return; }
         setLists(d.lists || []);
       })
-      .catch(() => setError("Error de red"))
+      .catch(e => setError(String(e.message)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -86,12 +90,16 @@ function MktBrevoAnalytics() {
 
   useEffect(() => {
     fetch("/app/api/brevo/campaigns")
-      .then(r => r.json())
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) throw new Error(`Brevo no disponible (HTTP ${r.status}). Verifica la conexión del servidor.`);
+        return r.json();
+      })
       .then(d => {
         if (d.error) { setError(d.error); return; }
         setCampaigns(d.campaigns || []);
       })
-      .catch(() => setError("Error de red"))
+      .catch(e => setError(String(e.message)))
       .finally(() => setLoading(false));
   }, []);
 
