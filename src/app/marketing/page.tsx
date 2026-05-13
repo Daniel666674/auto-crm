@@ -200,37 +200,12 @@ function MktBrevoAnalytics() {
 
 // ── Contacts tab ─────────────────────────────────────────────────────────────
 function MktContacts() {
-  const { contacts: mktContacts } = useMkt();
-  const [salesContacts, setSalesContacts] = useState<any[]>([]);
+  const { contacts } = useMkt();
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"all" | "brevo" | "apollo">("all");
   const [tierFilter, setTierFilter] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [sortBy, setSortBy] = useState<"score" | "tier" | "name" | "company" | "activity">("score");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
-
-  useEffect(() => {
-    fetch("/api/contacts")
-      .then(r => r.json())
-      .then((rows: any[]) => {
-        if (!Array.isArray(rows)) return;
-        const brevoEmails = new Set(mktContacts.map(c => c.email?.toLowerCase()).filter(Boolean));
-        const extra = rows
-          .filter(r => r.email && !brevoEmails.has(r.email.toLowerCase()))
-          .map(r => ({
-            id: r.id, name: r.name, company: r.company ?? "", email: r.email ?? "",
-            phone: r.phone ?? "", source: r.source ?? "", tier: 0, temperature: r.temperature ?? "cold",
-            score: r.score ?? 0, brevoCadence: "", engagementStatus: "cold" as const,
-            emailOpens: 0, emailClicks: 0, leadSourceDetail: "", marketingNotes: "",
-            readyForSales: false, passedToSalesAt: null, industry: "", lastActivity: 0,
-            linkedinUrl: "", brevoId: "", jobTitle: "", companySize: "", location: "",
-            emailVerified: false, emailBounced: false, emailUnsubscribed: false,
-          }));
-        setSalesContacts(extra);
-      })
-      .catch(() => {});
-  }, [mktContacts]);
-
-  const contacts = [...mktContacts, ...salesContacts];
 
   const filtered = contacts
     .filter(c => {

@@ -33,13 +33,32 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
+  function mergeContacts(mkt: MktContact[], sales: any[]): MktContact[] {
+    const seen = new Set(mkt.map(c => c.email?.toLowerCase()).filter(Boolean));
+    const extra: MktContact[] = sales
+      .filter(r => r.email && !seen.has(r.email.toLowerCase()))
+      .map(r => ({
+        id: r.id, name: r.name, company: r.company ?? "", email: r.email ?? "",
+        phone: r.phone ?? "", source: r.source ?? "", tier: 0,
+        temperature: r.temperature ?? "cold", score: r.score ?? 0,
+        brevoCadence: "", engagementStatus: "cold" as const,
+        emailOpens: 0, emailClicks: 0, leadSourceDetail: "", marketingNotes: "",
+        readyForSales: false, passedToSalesAt: null, industry: "", lastActivity: 0,
+        linkedinUrl: "", brevoId: "", jobTitle: "", companySize: "", location: "",
+        emailVerified: false, emailBounced: false, emailUnsubscribed: false,
+      }));
+    return [...mkt, ...extra];
+  }
+
   const loadData = useCallback(() => {
     setLoading(true);
     Promise.all([
       fetch("/api/marketing/contacts").then(r => r.json()),
       fetch("/api/marketing/campaigns").then(r => r.json()),
-    ]).then(([c, camp]) => {
-      setContacts(Array.isArray(c) ? c : []);
+      fetch("/api/contacts").then(r => r.json()).catch(() => []),
+    ]).then(([c, camp, sales]) => {
+      const mkt = Array.isArray(c) ? c : [];
+      setContacts(mergeContacts(mkt, Array.isArray(sales) ? sales : []));
       setCampaigns(Array.isArray(camp) ? camp : []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -123,9 +142,11 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pushToBrevo: true }),
       });
-      // Reload contacts with new scores
-      const updated = await fetch("/api/marketing/contacts").then(r => r.json());
-      setContacts(Array.isArray(updated) ? updated : []);
+      const [updated, sales] = await Promise.all([
+        fetch("/api/marketing/contacts").then(r => r.json()),
+        fetch("/api/contacts").then(r => r.json()).catch(() => []),
+      ]);
+      setContacts(mergeContacts(Array.isArray(updated) ? updated : [], Array.isArray(sales) ? sales : []));
     } finally {
       setSyncing(false);
     }
@@ -136,9 +157,11 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch("/api/brevo/sync", { method: "POST" });
       const data = await res.json();
-      // Reload after sync
-      const updated = await fetch("/api/marketing/contacts").then(r => r.json());
-      setContacts(Array.isArray(updated) ? updated : []);
+      const [updated, sales] = await Promise.all([
+        fetch("/api/marketing/contacts").then(r => r.json()),
+        fetch("/api/contacts").then(r => r.json()).catch(() => []),
+      ]);
+      setContacts(mergeContacts(Array.isArray(updated) ? updated : [], Array.isArray(sales) ? sales : []));
       return { synced: data.synced || 0, total: data.total || 0 };
     } finally {
       setSyncing(false);
