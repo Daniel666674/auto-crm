@@ -1,32 +1,29 @@
 import { NextResponse } from 'next/server';
 
-// Strip accidental [ ] brackets that some env editors add around values
 const KEY = (process.env.BREVO_API_KEY || '').replace(/^\[|\]$/g, '');
 const H = { 'api-key': KEY, 'Content-Type': 'application/json' };
 
-async function listCampaigns(status: string) {
-  const r = await fetch(
-    `https://api.brevo.com/v3/emailCampaigns?limit=50&offset=0&status=${status}`,
-    { headers: H, cache: 'no-store' }
-  );
-  if (!r.ok) throw new Error(`Brevo ${r.status}: ${await r.text()}`);
-  const d = await r.json();
-  return (d.campaigns || []) as any[];
+const TIMEOUT_MS = 20_000;
+
+function fetchWithTimeout(url: string, ms = TIMEOUT_MS) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { headers: H, cache: 'no-store', signal: ctrl.signal })
+    .finally(() => clearTimeout(t));
 }
 
-async function getCampaignDetail(id: number, attempt = 1): Promise<any> {
-  const r = await fetch(`https://api.brevo.com/v3/emailCampaigns/${id}`, {
-    headers: H, cache: 'no-store',
-  });
-  if (r.status === 429 && attempt < 4) {
-    await new Promise(res => setTimeout(res, attempt * 800));
-    return getCampaignDetail(id, attempt + 1);
+async function listCampaigns(status: string): Promise<any[]> {
+  try {
+    const r = await fetchWithTimeout(
+      `https://api.brevo.com/v3/emailCampaigns?limit=50&offset=0&status=${status}`
+    );
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d.campaigns || [];
+  } catch {
+    return [];
   }
-  if (!r.ok) throw new Error(`Brevo detail ${r.status} for id ${id}`);
-  return r.json();
 }
-
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function GET(req: Request) {
   if (!KEY) return NextResponse.json({ error: 'BREVO_API_KEY no configurada en .env' }, { status: 500 });
@@ -34,37 +31,26 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
+  // Single-campaign path — used by LiveStatsPanel
   if (id) {
     try {
-      const campaign = await getCampaignDetail(Number(id));
+      const r = await fetchWithTimeout(`https://api.brevo.com/v3/emailCampaigns/${id}`);
+      if (!r.ok) return NextResponse.json({ campaigns: [] });
+      const campaign = await r.json();
       return NextResponse.json({ campaigns: [campaign] });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch {
+      return NextResponse.json({ campaigns: [] });
     }
   }
 
   try {
-    // Brevo v3 valid statuses: sent, queued, draft, inProcess, suspended, archive
-    const listResults = await Promise.allSettled([
+    // Fetch all statuses in parallel — list response already includes statistics
+    const [sent, queued, draft] = await Promise.all([
       listCampaigns('sent'),
       listCampaigns('queued'),
       listCampaigns('draft'),
     ]);
-    const all = listResults
-      .filter((r): r is PromiseFulfilledResult<any[]> => r.status === 'fulfilled')
-      .flatMap(r => r.value);
-
-    // Sequential with 120ms gap — avoids Brevo rate-limiting parallel requests
-    const campaigns: any[] = [];
-    for (let i = 0; i < all.length; i++) {
-      if (i > 0) await sleep(120);
-      try {
-        campaigns.push(await getCampaignDetail(all[i].id));
-      } catch {
-        campaigns.push(all[i]);
-      }
-    }
-
+    const campaigns = [...sent, ...queued, ...draft];
     return NextResponse.json({ campaigns });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
