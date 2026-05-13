@@ -119,7 +119,11 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
     if (form.channel === "brevo_email" || form.channel === "outbound") {
       setLoadingLists(true);
       fetch("/app/api/brevo/lists")
-        .then(r => r.json())
+        .then(r => {
+          const ct = r.headers.get("content-type") ?? "";
+          if (!ct.includes("application/json")) throw new Error("Brevo no disponible");
+          return r.json();
+        })
         .then(d => setBrevoLists(d.lists || []))
         .catch(() => {})
         .finally(() => setLoadingLists(false));
@@ -391,7 +395,11 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
   useEffect(() => {
     if (!brevoCampaignId) return;
     fetch(`/app/api/brevo/campaigns?id=${brevoCampaignId}`)
-      .then(r => r.json())
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) throw new Error("Brevo no disponible");
+        return r.json();
+      })
       .then(d => {
         const campaign = d.campaigns?.find((c: Record<string, unknown>) => String(c.id) === brevoCampaignId);
         if (campaign?.statistics?.globalStats) setStats(campaign.statistics.globalStats);
@@ -440,16 +448,87 @@ function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
   );
 }
 
+type BrevoLiveStats = {
+  openRate: number;
+  clickRate: number;
+  totalContacts: number;
+  lastSent: number | null;
+};
+
 export function MktCampaignWall() {
   const { campaigns } = useMkt();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [brevoStats, setBrevoStats] = useState<Map<string, BrevoLiveStats>>(new Map());
+  const [brevoError, setBrevoError] = useState("");
+  const [brevoLoading, setBrevoLoading] = useState(true);
+
+  useEffect(() => {
+    setBrevoLoading(true);
+    fetch("/app/api/brevo/campaigns")
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) {
+          throw new Error(`Brevo no disponible (HTTP ${r.status}). Verifica la conexión del servidor.`);
+        }
+        return r.json();
+      })
+      .then(d => {
+        if (d.error) throw new Error(d.error);
+        const map = new Map<string, BrevoLiveStats>();
+        for (const c of (d.campaigns || []) as Record<string, unknown>[]) {
+          const gs = (c.statistics as Record<string, unknown>)?.globalStats as Record<string, unknown> | undefined;
+          if (!gs) continue;
+          const sent = Number(gs.sent) || 0;
+          const opens = Number(gs.uniqueOpens) || 0;
+          const clicks = Number(gs.uniqueClicks) || 0;
+          map.set(String(c.id), {
+            openRate: sent > 0 ? Math.round((opens / sent) * 10000) / 100 : 0,
+            clickRate: sent > 0 ? Math.round((clicks / sent) * 10000) / 100 : 0,
+            totalContacts: sent,
+            lastSent: null,
+          });
+        }
+        setBrevoStats(map);
+      })
+      .catch(e => setBrevoError((e as Error).message))
+      .finally(() => setBrevoLoading(false));
+  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Brevo error banner — intentionally visible for debugging */}
+      {!brevoLoading && brevoError && (
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "10px 16px", borderRadius: 8,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
+          fontSize: 12, color: "#ef4444",
+        }}>
+          <span>Error: {brevoError}</span>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+              border: "1px solid rgba(239,68,68,0.5)", background: "transparent",
+              color: "#ef4444", cursor: "pointer",
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>{campaigns.length} campañas registradas</p>
+          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>
+            {campaigns.length} campañas registradas
+            {!brevoLoading && !brevoError && brevoStats.size > 0 && (
+              <span style={{ marginLeft: 8, fontSize: 11, color: "var(--mkt-accent)" }}>
+                · stats en vivo desde Brevo
+              </span>
+            )}
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <a
@@ -489,9 +568,11 @@ export function MktCampaignWall() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
         {campaigns.map(camp => {
-          const openRate = safeRate(camp.openRate);
-          const clickRate = safeRate(camp.clickRate);
+          const live = camp.brevoCampaignId ? brevoStats.get(camp.brevoCampaignId) : undefined;
+          const openRate = safeRate(live?.openRate ?? camp.openRate);
+          const clickRate = safeRate(live?.clickRate ?? camp.clickRate);
           const replyRate = safeRate(camp.replyRate);
+          const displayContacts = live?.totalContacts ?? camp.totalContacts;
 
           return (
             <div key={camp.id}
@@ -542,7 +623,7 @@ export function MktCampaignWall() {
                 fontSize: 11, color: "var(--mkt-text-muted)",
                 paddingTop: 10, borderTop: "1px solid var(--mkt-border)",
               }}>
-                <span>{camp.totalContacts} contactos</span>
+                <span>{displayContacts} contactos</span>
                 <span style={{ color: camp.conversions > 0 ? "var(--mkt-accent)" : "var(--mkt-text-muted)", fontWeight: 600 }}>
                   {camp.conversions} al pipeline
                 </span>

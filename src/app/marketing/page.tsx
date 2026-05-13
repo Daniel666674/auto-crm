@@ -9,6 +9,7 @@ import { MktCampaignWall } from "@/components/marketing/mkt-campaign-wall";
 import { MktSegmentHealth } from "@/components/marketing/mkt-segment-health";
 import { MktAttributionDashboard } from "@/components/marketing/mkt-attribution";
 import { MktHandoffCenter } from "@/components/marketing/mkt-handoff-center";
+import { MktLists } from "@/components/marketing/mkt-lists";
 import { MKT_THEME_VARS } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -33,51 +34,6 @@ const SECTION_LABELS: Record<MktSection, string> = {
   integrations: "Integraciones",
 } as Record<MktSection, string>;
 
-// ── Listas Brevo ─────────────────────────────────────────────────────────────
-function MktBrevoLists() {
-  const [lists, setLists] = useState<Array<{ id: number; name: string; uniqueSubscribers: number; totalBlacklisted: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/app/api/brevo/lists")
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) { setError(d.error); return; }
-        setLists(d.lists || []);
-      })
-      .catch(() => setError("Error de red"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>Cargando listas…</div>;
-  if (error) return <div style={{ fontSize: 13, color: "#ef4444" }}>{error}</div>;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", marginBottom: 4 }}>{lists.length} listas en Brevo</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
-        {lists.map(list => (
-          <div key={list.id} style={{
-            padding: "14px 16px", borderRadius: 10, background: "var(--mkt-surface)",
-            border: "1px solid var(--mkt-border)",
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--mkt-text)", marginBottom: 6 }}>{list.name}</div>
-            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>
-              {list.uniqueSubscribers?.toLocaleString("es-CO")} suscriptores activos
-            </div>
-            {list.totalBlacklisted > 0 && (
-              <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 4 }}>
-                {list.totalBlacklisted} bloqueados
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Marketing Analytics (Brevo only) ────────────────────────────────────────
 function MktBrevoAnalytics() {
   const [campaigns, setCampaigns] = useState<Array<Record<string, unknown>>>([]);
@@ -86,12 +42,18 @@ function MktBrevoAnalytics() {
 
   useEffect(() => {
     fetch("/app/api/brevo/campaigns")
-      .then(r => r.json())
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) {
+          throw new Error(`Brevo no disponible (HTTP ${r.status}). Verifica la conexión del servidor.`);
+        }
+        return r.json();
+      })
       .then(d => {
         if (d.error) { setError(d.error); return; }
         setCampaigns(d.campaigns || []);
       })
-      .catch(() => setError("Error de red"))
+      .catch(e => setError((e as Error).message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -231,7 +193,7 @@ function MarketingContent() {
       case "segment-health": return <MktSegmentHealth />;
       case "attribution": return <MktAttributionDashboard />;
       case "handoff": return <MktHandoffCenter />;
-      case "lists": return <MktBrevoLists />;
+      case "lists": return <MktLists />;
       case "mkt-analytics": return <MktBrevoAnalytics />;
       case "pipeline-view": return <MktPlaceholder label="Vista Pipeline" />;
       case "lead-velocity": return <MktPlaceholder label="Lead Velocity" />;
