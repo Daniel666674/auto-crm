@@ -475,11 +475,12 @@ export function MktCampaignWall() {
   // Build display list: Brevo live campaigns take priority, fall back to local DB
   const displayCampaigns: MktCampaign[] = brevoLive.length > 0
     ? brevoLive.map(b => {
-        // Detail endpoint always returns statistics.globalStats
-        const gs = (b.statistics as any)?.globalStats ?? {};
-        const sent   = Number(gs.sent ?? gs.delivered ?? 0);
-        const opens  = Number(gs.uniqueViews ?? 0);
-        const clicks = Number(gs.uniqueClicks ?? 0);
+        const stats = (b.statistics as any) ?? {};
+        const csList: any[] = Array.isArray(stats.campaignStats) ? stats.campaignStats : [];
+        const gs = stats.globalStats ?? {};
+        const sent   = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + Number(cs.sent ?? 0), 0) : Number(gs.sent ?? gs.delivered ?? 0);
+        const opens  = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + Number(cs.uniqueViews ?? 0), 0) : Number(gs.uniqueViews ?? 0);
+        const clicks = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + Number(cs.uniqueClicks ?? 0), 0) : Number(gs.uniqueClicks ?? 0);
         const statusMap: Record<string, MktCampaign["status"]> = {
           sent: "completed", scheduled: "active", draft: "paused",
         };
