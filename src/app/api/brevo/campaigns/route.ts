@@ -37,7 +37,13 @@ export async function GET(req: Request) {
       listCampaigns('scheduled'),
       listCampaigns('draft'),
     ]);
-    return NextResponse.json({ campaigns: [...sent, ...scheduled, ...draft] });
+    const all = [...sent, ...scheduled, ...draft];
+
+    // Detail endpoint is the only reliable source for globalStats.
+    // List endpoint with statistics=true frequently returns zeroed stats.
+    const detailed = await Promise.all(all.map(c => getCampaignDetail(c.id)));
+
+    return NextResponse.json({ campaigns: detailed });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
