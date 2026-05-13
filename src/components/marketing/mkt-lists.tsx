@@ -59,7 +59,7 @@ export function MktLists() {
   const load = () => {
     setLoading(true);
     setError("");
-    fetch("/app/api/marketing/lists")
+    fetch("/api/marketing/lists")
       .then(r => {
         const ct = r.headers.get("content-type") ?? "";
         if (!ct.includes("application/json")) {
@@ -79,7 +79,7 @@ export function MktLists() {
     if (!newName.trim()) return;
     setSaving(true); setSaveError("");
     try {
-      const r = await fetch("/app/api/marketing/lists", {
+      const r = await fetch("/api/marketing/lists", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim() }),
       });
