@@ -1,27 +1,33 @@
 import { NextResponse } from 'next/server';
 
-const KEY = process.env.BREVO_API_KEY || '';
+// Strip accidental [ ] brackets that some env editors add around values
+const KEY = (process.env.BREVO_API_KEY || '').replace(/^\[|\]$/g, '');
 const H = { 'api-key': KEY, 'Content-Type': 'application/json' };
 
 async function listCampaigns(status: string) {
   const r = await fetch(
-    `https://api.brevo.com/v3/emailCampaigns?limit=50&offset=0&status=${status}&statistics=true`,
-    { headers: H }
+    `https://api.brevo.com/v3/emailCampaigns?limit=50&offset=0&status=${status}`,
+    { headers: H, cache: 'no-store' }
   );
+  if (!r.ok) throw new Error(`Brevo ${r.status}: ${await r.text()}`);
   const d = await r.json();
   return (d.campaigns || []) as any[];
 }
 
 async function getCampaignDetail(id: number) {
-  const r = await fetch(`https://api.brevo.com/v3/emailCampaigns/${id}`, { headers: H });
+  const r = await fetch(`https://api.brevo.com/v3/emailCampaigns/${id}`, {
+    headers: H, cache: 'no-store',
+  });
+  if (!r.ok) throw new Error(`Brevo detail ${r.status} for id ${id}`);
   return r.json();
 }
 
 export async function GET(req: Request) {
+  if (!KEY) return NextResponse.json({ error: 'BREVO_API_KEY no configurada en .env' }, { status: 500 });
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
-  // Single-campaign fast path — used by LiveStatsPanel to avoid fetching all campaigns
   if (id) {
     try {
       const campaign = await getCampaignDetail(Number(id));
@@ -39,11 +45,13 @@ export async function GET(req: Request) {
     ]);
     const all = [...sent, ...scheduled, ...draft];
 
-    // Detail endpoint is the only reliable source for globalStats.
-    // List endpoint with statistics=true frequently returns zeroed stats.
-    const detailed = await Promise.all(all.map(c => getCampaignDetail(c.id)));
+    // allSettled: one failing detail doesn't kill all campaigns
+    const results = await Promise.allSettled(all.map(c => getCampaignDetail(c.id)));
+    const campaigns = results.map((r, i) =>
+      r.status === 'fulfilled' ? r.value : all[i]
+    );
 
-    return NextResponse.json({ campaigns: detailed });
+    return NextResponse.json({ campaigns });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

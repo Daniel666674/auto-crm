@@ -459,12 +459,16 @@ export function MktCampaignWall() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [brevoLive, setBrevoLive] = useState<BrevoCampaign[]>([]);
   const [brevoLoading, setBrevoLoading] = useState(true);
+  const [brevoError, setBrevoError] = useState("");
 
   useEffect(() => {
     fetch("/api/brevo/campaigns")
       .then(r => r.json())
-      .then(d => setBrevoLive(d.campaigns || []))
-      .catch(() => {})
+      .then(d => {
+        if (d.error) { setBrevoError(d.error); return; }
+        setBrevoLive(d.campaigns || []);
+      })
+      .catch(e => setBrevoError(String(e)))
       .finally(() => setBrevoLoading(false));
   }, []);
 
@@ -532,6 +536,16 @@ export function MktCampaignWall() {
           }}>+ Nueva Campaña</button>
         </div>
       </div>
+
+      {brevoError && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)",
+          fontSize: 12, color: "#ef4444",
+        }}>
+          Error Brevo: {brevoError}
+        </div>
+      )}
 
       {!brevoLoading && displayCampaigns.length === 0 && (
         <div style={{
