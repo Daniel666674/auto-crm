@@ -60,7 +60,13 @@ export function MktLists() {
     setLoading(true);
     setError("");
     fetch("/app/api/marketing/lists")
-      .then(r => r.json())
+      .then(r => {
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) {
+          throw new Error(`Brevo no disponible (HTTP ${r.status}). Verifica la conexión del servidor.`);
+        }
+        return r.json();
+      })
       .then(d => { if (d.error) setError(d.error); else setLists(d.lists || []); })
       .catch(e => setError(String(e)))
       .finally(() => setLoading(false));
@@ -77,6 +83,8 @@ export function MktLists() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim() }),
       });
+      const ct = r.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) throw new Error(`Brevo no disponible (HTTP ${r.status})`);
       const d = await r.json();
       if (d.error) { setSaveError(d.error); return; }
       setNewName(""); setShowModal(false); load();

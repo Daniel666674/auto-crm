@@ -1,21 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useMkt } from "./mkt-provider";
-
-interface Stats {
-  campaigns: { total: number; totalSent: number; avgOpenRate: number; avgClickRate: number; totalConversions: number };
-  contacts: { total: number; newThisWeek: number; handoffsThisWeek: number };
-  best: { name: string; openRate: number; clickRate: number; conversions: number } | null;
-}
 
 function todayLabel() {
   const d = new Date();
   const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   return `${d.getDate()} de ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
-
-const n = (v: unknown) => { const x = Number(v); return isNaN(x) ? 0 : x; };
 
 const card: React.CSSProperties = { background: "#111111", border: "1px solid #1e1e1e", borderRadius: 10, padding: "14px 18px" };
 
@@ -30,22 +22,20 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string |
 }
 
 export function MktDigest() {
-  const { contacts } = useMkt();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/app/api/marketing/stats")
-      .then(r => r.json())
-      .then(d => { if (d.error) setError(d.error); else setStats(d); })
-      .catch(e => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
+  const { contacts, campaigns, loading } = useMkt();
 
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const newContacts = contacts.filter(c => (c.lastActivity || 0) >= weekAgo).length;
   const handoffsWeek = contacts.filter(c => c.readyForSales && c.passedToSalesAt && c.passedToSalesAt >= weekAgo).length;
+
+  const totalSent = campaigns.reduce((s, c) => s + (c.totalSent || 0), 0);
+  const avgOpenRate = campaigns.length > 0
+    ? campaigns.reduce((s, c) => s + (c.openRate || 0), 0) / campaigns.length
+    : 0;
+  const totalConversions = campaigns.reduce((s, c) => s + (c.conversions || 0), 0);
+  const best = campaigns.length > 0
+    ? campaigns.reduce((a, b) => (b.openRate || 0) > (a.openRate || 0) ? b : a)
+    : null;
 
   const handleExportCSV = () => {
     const rows = [
@@ -53,13 +43,12 @@ export function MktDigest() {
       ["Semana", todayLabel()],
       ["Nuevos contactos", newContacts],
       ["Handoffs a ventas", handoffsWeek],
-      ["Campañas totales", n(stats?.campaigns.total)],
-      ["Total enviados", n(stats?.campaigns.totalSent)],
-      ["Open rate avg %", n(stats?.campaigns.avgOpenRate).toFixed(1)],
-      ["Click rate avg %", n(stats?.campaigns.avgClickRate).toFixed(1)],
-      ["Conversiones", n(stats?.campaigns.totalConversions)],
-      ["Mejor campaña", stats?.best?.name ?? "—"],
-      ["Mejor open rate %", n(stats?.best?.openRate).toFixed(1)],
+      ["Campañas totales", campaigns.length],
+      ["Total enviados", totalSent],
+      ["Open rate avg %", avgOpenRate.toFixed(1)],
+      ["Conversiones", totalConversions],
+      ["Mejor campaña", best?.name ?? "—"],
+      ["Mejor open rate %", (best?.openRate || 0).toFixed(1)],
     ];
     const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -82,10 +71,6 @@ export function MktDigest() {
         </button>
       </div>
 
-      {error && (
-        <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(109,31,46,0.15)", border: "1px solid #6D1F2E", fontSize: 12, color: "#f87171" }}>{error}</div>
-      )}
-
       {loading ? (
         <div style={{ fontSize: 13, color: "#718096" }}>Cargando resumen…</div>
       ) : (
@@ -103,23 +88,23 @@ export function MktDigest() {
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Email (Brevo acumulado)</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 10 }}>
-              <KpiCard label="Total enviados" value={n(stats?.campaigns.totalSent).toLocaleString("es-CO")} />
-              <KpiCard label="Open rate avg" value={`${n(stats?.campaigns.avgOpenRate).toFixed(1)}%`} />
-              <KpiCard label="Total clicks" value={n(stats?.campaigns.totalConversions)} />
+              <KpiCard label="Total enviados" value={totalSent.toLocaleString("es-CO")} />
+              <KpiCard label="Open rate avg" value={`${avgOpenRate.toFixed(1)}%`} />
+              <KpiCard label="Total conversiones" value={totalConversions} />
               <KpiCard label="Replies" value="—" sub="No disponible en Brevo v3" />
             </div>
           </div>
 
           {/* Mejor campaña */}
-          {stats?.best && (
+          {best && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Mejor campaña</div>
               <div style={{ ...card, display: "flex", flexDirection: "column", gap: 8, borderColor: "rgba(195,154,76,0.3)" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{stats.best.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{best.name}</div>
                 <div style={{ display: "flex", gap: 20, fontSize: 12, color: "#718096" }}>
-                  <span>Open rate <strong style={{ color: "#C39A4C" }}>{n(stats.best.openRate).toFixed(1)}%</strong></span>
-                  <span>Clicks <strong style={{ color: "#e2e8f0" }}>{n(stats.best.clickRate).toFixed(1)}%</strong></span>
-                  <span>Conversiones <strong style={{ color: "#e2e8f0" }}>{n(stats.best.conversions)}</strong></span>
+                  <span>Open rate <strong style={{ color: "#C39A4C" }}>{(best.openRate || 0).toFixed(1)}%</strong></span>
+                  <span>Clicks <strong style={{ color: "#e2e8f0" }}>{(best.clickRate || 0).toFixed(1)}%</strong></span>
+                  <span>Conversiones <strong style={{ color: "#e2e8f0" }}>{best.conversions || 0}</strong></span>
                 </div>
               </div>
             </div>

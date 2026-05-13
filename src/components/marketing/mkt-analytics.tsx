@@ -1,12 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-
-interface Stats {
-  campaigns: { total: number; totalSent: number; avgOpenRate: number; avgClickRate: number; totalConversions: number };
-  contacts: { total: number; newThisWeek: number; handoffsThisWeek: number };
-  best: { name: string; openRate: number; clickRate: number; conversions: number } | null;
-}
+import React from "react";
+import { useMkt } from "./mkt-provider";
 
 const card: React.CSSProperties = { background: "#111111", border: "1px solid #1e1e1e", borderRadius: 12, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14 };
 
@@ -36,28 +31,22 @@ function PendingCard({ name, reason }: { name: string; reason: string }) {
 }
 
 export function MktAnalytics() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { campaigns, loading } = useMkt();
 
-  useEffect(() => {
-    fetch("/app/api/marketing/stats")
-      .then(r => r.json())
-      .then(d => { if (d.error) setError(d.error); else setStats(d); })
-      .catch(e => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const s = stats;
-  const n = (v: unknown) => { const x = Number(v); return isNaN(x) ? 0 : x; };
+  const totalSent = campaigns.reduce((s, c) => s + (c.totalSent || 0), 0);
+  const avgOpenRate = campaigns.length > 0
+    ? campaigns.reduce((s, c) => s + (c.openRate || 0), 0) / campaigns.length
+    : 0;
+  const avgClickRate = campaigns.length > 0
+    ? campaigns.reduce((s, c) => s + (c.clickRate || 0), 0) / campaigns.length
+    : 0;
+  const best = campaigns.length > 0
+    ? campaigns.reduce((a, b) => (b.openRate || 0) > (a.openRate || 0) ? b : a)
+    : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ fontSize: 12, color: "#718096" }}>Visión 360 de canales de marketing. Solo Brevo está conectado.</div>
-
-      {error && (
-        <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(109,31,46,0.15)", border: "1px solid #6D1F2E", fontSize: 12, color: "#f87171" }}>{error}</div>
-      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
         {/* Brevo — real data */}
@@ -72,16 +61,16 @@ export function MktAnalytics() {
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <KPI label="Campañas" value={n(s?.campaigns.total)} />
-                <KPI label="Total enviados" value={n(s?.campaigns.totalSent).toLocaleString("es-CO")} />
-                <KPI label="Open rate avg" value={`${n(s?.campaigns.avgOpenRate).toFixed(1)}%`} />
-                <KPI label="Click rate avg" value={`${n(s?.campaigns.avgClickRate).toFixed(1)}%`} />
+                <KPI label="Campañas" value={campaigns.length} />
+                <KPI label="Total enviados" value={totalSent.toLocaleString("es-CO")} />
+                <KPI label="Open rate avg" value={`${avgOpenRate.toFixed(1)}%`} />
+                <KPI label="Click rate avg" value={`${avgClickRate.toFixed(1)}%`} />
               </div>
-              {s?.best && (
+              {best && (
                 <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(195,154,76,0.06)", border: "1px solid rgba(195,154,76,0.15)", fontSize: 11 }}>
                   <div style={{ color: "#718096", marginBottom: 3 }}>Mejor campaña</div>
-                  <div style={{ fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>{s.best.name}</div>
-                  <div style={{ color: "#718096" }}>Open {n(s.best.openRate).toFixed(1)}% · Clicks {n(s.best.clickRate).toFixed(1)}%</div>
+                  <div style={{ fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>{best.name}</div>
+                  <div style={{ color: "#718096" }}>Open {(best.openRate || 0).toFixed(1)}% · Clicks {(best.clickRate || 0).toFixed(1)}%</div>
                 </div>
               )}
               <button

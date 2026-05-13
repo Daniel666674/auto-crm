@@ -16,8 +16,8 @@ interface CalEvent {
 }
 
 const PARTICIPANTS = [
-  { label: "Daniel", email: "daniel@blackscale.consulting", initials: "D" },
-  { label: "Julian", email: "julian@blackscale.consulting", initials: "J" },
+  { label: "Daniel", email: "daniel.acosta@blackscale.consulting", initials: "D" },
+  { label: "Julian", email: "julian.vallejo@blackscale.consulting", initials: "J" },
 ];
 
 const TYPE_COLORS: Record<EventType, { bg: string; color: string }> = {
@@ -158,12 +158,20 @@ export function MktCalendar() {
             const isToday = day !== null && new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
             const dayEvents = day ? eventsForDay(day) : [];
             return (
-              <div key={idx} style={{
-                minHeight: 80, padding: "6px 8px",
-                borderRight: (idx + 1) % 7 !== 0 ? "1px solid #1e1e1e" : "none",
-                borderBottom: idx < cells.length - 7 ? "1px solid #1e1e1e" : "none",
-                background: !day ? "rgba(255,255,255,0.01)" : "transparent",
-              }}>
+              <div key={idx}
+                onClick={() => {
+                  if (!day) return;
+                  const iso = `${year}-${pad2(month + 1)}-${pad2(day)}`;
+                  setForm(f => ({ ...f, date: iso }));
+                  setShowModal(true);
+                }}
+                style={{
+                  minHeight: 80, padding: "6px 8px",
+                  borderRight: (idx + 1) % 7 !== 0 ? "1px solid #1e1e1e" : "none",
+                  borderBottom: idx < cells.length - 7 ? "1px solid #1e1e1e" : "none",
+                  background: !day ? "rgba(255,255,255,0.01)" : "transparent",
+                  cursor: day ? "pointer" : "default",
+                }}>
                 {day && (
                   <>
                     <div style={{ fontSize: 11, fontWeight: isToday ? 700 : 400, color: isToday ? "#C39A4C" : "#718096", marginBottom: 4,
