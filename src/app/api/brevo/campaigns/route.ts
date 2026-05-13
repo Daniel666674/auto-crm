@@ -38,16 +38,19 @@ export async function GET(req: Request) {
   }
 
   try {
-    const [sent, scheduled, draft] = await Promise.all([
+    // Brevo v3 valid statuses: sent, queued, draft, inProcess, suspended, archive
+    const listResults = await Promise.allSettled([
       listCampaigns('sent'),
-      listCampaigns('scheduled'),
+      listCampaigns('queued'),
       listCampaigns('draft'),
     ]);
-    const all = [...sent, ...scheduled, ...draft];
+    const all = listResults
+      .filter((r): r is PromiseFulfilledResult<any[]> => r.status === 'fulfilled')
+      .flatMap(r => r.value);
 
     // allSettled: one failing detail doesn't kill all campaigns
-    const results = await Promise.allSettled(all.map(c => getCampaignDetail(c.id)));
-    const campaigns = results.map((r, i) =>
+    const detailResults = await Promise.allSettled(all.map(c => getCampaignDetail(c.id)));
+    const campaigns = detailResults.map((r, i) =>
       r.status === 'fulfilled' ? r.value : all[i]
     );
 
