@@ -9,6 +9,7 @@ import { MktCampaignWall } from "@/components/marketing/mkt-campaign-wall";
 import { MktSegmentHealth } from "@/components/marketing/mkt-segment-health";
 import { MktAttributionDashboard } from "@/components/marketing/mkt-attribution";
 import { MktHandoffCenter } from "@/components/marketing/mkt-handoff-center";
+import { MktPipelineView } from "@/components/marketing/mkt-pipeline-view";
 import { MKT_THEME_VARS } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -235,7 +236,7 @@ function MarketingContent() {
       case "handoff": return <MktHandoffCenter />;
       case "lists": return <MktBrevoLists />;
       case "mkt-analytics": return <MktBrevoAnalytics />;
-      case "pipeline-view": return <MktPlaceholder label="Vista Pipeline" />;
+      case "pipeline-view": return <MktPipelineView />;
       case "lead-velocity": return <MktPlaceholder label="Lead Velocity" />;
       case "calendar": return <MktPlaceholder label="Calendario" />;
       case "abm": return <MktPlaceholder label="ABM Board" />;
