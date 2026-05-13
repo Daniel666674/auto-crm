@@ -4,9 +4,24 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Users, Download } from "lucide-react";
-import { formatDate } from "@/lib/constants";
 import { SOURCE_LABELS } from "@/lib/constants";
 import type { Contact, Temperature, LeadSource } from "@/types";
+
+const SOURCE_COLORS: Record<string, { bg: string; color: string }> = {
+  website:        { bg: "#3b82f620", color: "#3b82f6" },
+  referido:       { bg: "#22c55e20", color: "#22c55e" },
+  redes_sociales: { bg: "#ec489920", color: "#ec4899" },
+  formulario:     { bg: "#6366f120", color: "#6366f1" },
+  evento:         { bg: "#f59e0b20", color: "#f59e0b" },
+  llamada_fria:   { bg: "#f9731620", color: "#f97316" },
+  whatsapp:       { bg: "#22c55e20", color: "#22c55e" },
+  importado:      { bg: "#8b5cf620", color: "#8b5cf6" },
+  import:         { bg: "#8b5cf620", color: "#8b5cf6" },
+};
+
+function getSourceStyle(source: string) {
+  return SOURCE_COLORS[source] ?? { bg: "rgba(255,255,255,0.07)", color: "var(--muted-foreground)" };
+}
 
 function scoreTemp(score: number): { label: string; color: string; bg: string } {
   if (score >= 70) return { label: "Caliente", color: "#ef4444", bg: "rgba(239,68,68,0.12)" };
@@ -132,11 +147,11 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
       <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
         {/* Header */}
         <div style={{
-          display: "grid", gridTemplateColumns: "36px 2fr 1.2fr 1fr 110px 100px 90px",
+          display: "grid", gridTemplateColumns: "36px 2fr 1.2fr 1fr 110px 100px",
           padding: "10px 16px", borderBottom: "1px solid var(--border)",
           background: "var(--card)",
         }}>
-          {["#", "Nombre", "Empresa", "Fuente", "Temperatura", "Score", "Fecha"].map(h => (
+          {["#", "Nombre", "Empresa", "Fuente", "Temperatura", "Score"].map(h => (
             <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
           ))}
         </div>
@@ -155,7 +170,7 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                 key={contact.id}
                 onClick={() => router.push(`/contacts/${contact.id}`)}
                 style={{
-                  display: "grid", gridTemplateColumns: "36px 2fr 1.2fr 1fr 110px 100px 90px",
+                  display: "grid", gridTemplateColumns: "36px 2fr 1.2fr 1fr 110px 100px",
                   padding: "12px 16px", cursor: "pointer", alignItems: "center",
                   borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                   background: i % 2 === 0 ? "var(--card)" : "var(--accent)",
@@ -182,9 +197,14 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                 </span>
 
                 {/* Source badge */}
-                <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: "rgba(255,255,255,0.07)", color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
-                  {SOURCE_LABELS[contact.source as LeadSource] || contact.source}
-                </span>
+                {(() => {
+                  const s = getSourceStyle(contact.source);
+                  return (
+                    <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: s.bg, color: s.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                      {SOURCE_LABELS[contact.source as LeadSource] || contact.source}
+                    </span>
+                  );
+                })()}
 
                 {/* Temperature badge — score-derived */}
                 <div>
@@ -206,10 +226,6 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                   <span style={{ fontSize: 11, color: sc, fontWeight: 600 }}>{contact.score ?? 0}</span>
                 </div>
 
-                {/* Date */}
-                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                  {formatDate(contact.createdAt)}
-                </span>
               </div>
             );
           })
