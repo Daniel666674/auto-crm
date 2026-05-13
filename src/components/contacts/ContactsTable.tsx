@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Users, Download } from "lucide-react";
@@ -41,16 +41,19 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterTemp, setFilterTemp] = useState<Temperature | "">("");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
-  const filtered = contacts.filter((c) => {
-    const matchesSearch =
-      !search ||
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email?.toLowerCase().includes(search.toLowerCase()) ||
-      c.company?.toLowerCase().includes(search.toLowerCase());
-    const matchesTemp = !filterTemp || c.temperature === filterTemp;
-    return matchesSearch && matchesTemp;
-  });
+  const filtered = contacts
+    .filter((c) => {
+      const matchesSearch =
+        !search ||
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.email?.toLowerCase().includes(search.toLowerCase()) ||
+        c.company?.toLowerCase().includes(search.toLowerCase());
+      const matchesTemp = !filterTemp || c.temperature === filterTemp;
+      return matchesSearch && matchesTemp;
+    })
+    .sort((a, b) => sortDir === "desc" ? (b.score ?? 0) - (a.score ?? 0) : (a.score ?? 0) - (b.score ?? 0));
 
   if (contacts.length === 0) {
     return (
@@ -71,10 +74,18 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
     { value: "cold", label: "Frío" },
   ];
 
+  const pill = (active: boolean): React.CSSProperties => ({
+    padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 500,
+    cursor: "pointer", border: "1px solid var(--border)",
+    background: active ? "var(--primary)" : "transparent",
+    color: active ? "var(--primary-foreground)" : "var(--muted-foreground)",
+    transition: "all 0.12s",
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Toolbar */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         {/* Search */}
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "var(--muted-foreground)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -86,42 +97,33 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
-              width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
-              background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8,
-              fontSize: 13, color: "var(--foreground)", outline: "none",
+              width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 6, paddingBottom: 6,
+              background: "var(--card)", border: "1px solid var(--border)", borderRadius: 7,
+              fontSize: 12, color: "var(--foreground)", outline: "none", boxSizing: "border-box",
             }}
           />
         </div>
 
         {/* Temp filters */}
-        <div style={{ display: "flex", gap: 6 }}>
-          {filters.map(f => (
-            <button
-              key={f.value}
-              onClick={() => setFilterTemp(f.value)}
-              style={{
-                padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer",
-                border: `1px solid ${filterTemp === f.value ? "var(--primary)" : "var(--border)"}`,
-                background: filterTemp === f.value ? "rgba(209,156,21,0.12)" : "var(--card)",
-                color: filterTemp === f.value ? "var(--primary)" : "var(--muted-foreground)",
-                transition: "all 0.15s",
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        {filters.map(f => (
+          <button key={f.value} onClick={() => setFilterTemp(f.value)} style={pill(filterTemp === f.value)}>
+            {f.label}
+          </button>
+        ))}
 
-        {/* Export */}
+        <div style={{ width: 1, height: 20, background: "var(--border)" }} />
+
+        {/* Sort direction */}
+        <button style={pill(false)} onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}>
+          Score {sortDir === "desc" ? "↓" : "↑"}
+        </button>
+
+        {/* Export — same pill style, functional */}
         <button
           onClick={() => window.open("/api/export?type=contacts")}
-          style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
-            border: "1px solid var(--border)", borderRadius: 6, background: "var(--card)",
-            fontSize: 12, color: "var(--muted-foreground)", cursor: "pointer",
-          }}
+          style={{ ...pill(false), display: "inline-flex", alignItems: "center", gap: 5 }}
         >
-          <Download size={13} />
+          <Download size={12} />
           Exportar
         </button>
       </div>

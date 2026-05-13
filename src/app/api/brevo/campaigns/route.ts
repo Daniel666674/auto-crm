@@ -14,13 +14,19 @@ async function listCampaigns(status: string) {
   return (d.campaigns || []) as any[];
 }
 
-async function getCampaignDetail(id: number) {
+async function getCampaignDetail(id: number, attempt = 1): Promise<any> {
   const r = await fetch(`https://api.brevo.com/v3/emailCampaigns/${id}`, {
     headers: H, cache: 'no-store',
   });
+  if (r.status === 429 && attempt < 4) {
+    await new Promise(res => setTimeout(res, attempt * 800));
+    return getCampaignDetail(id, attempt + 1);
+  }
   if (!r.ok) throw new Error(`Brevo detail ${r.status} for id ${id}`);
   return r.json();
 }
+
+const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function GET(req: Request) {
   if (!KEY) return NextResponse.json({ error: 'BREVO_API_KEY no configurada en .env' }, { status: 500 });
@@ -48,11 +54,16 @@ export async function GET(req: Request) {
       .filter((r): r is PromiseFulfilledResult<any[]> => r.status === 'fulfilled')
       .flatMap(r => r.value);
 
-    // allSettled: one failing detail doesn't kill all campaigns
-    const detailResults = await Promise.allSettled(all.map(c => getCampaignDetail(c.id)));
-    const campaigns = detailResults.map((r, i) =>
-      r.status === 'fulfilled' ? r.value : all[i]
-    );
+    // Sequential with 120ms gap — avoids Brevo rate-limiting parallel requests
+    const campaigns: any[] = [];
+    for (let i = 0; i < all.length; i++) {
+      if (i > 0) await sleep(120);
+      try {
+        campaigns.push(await getCampaignDetail(all[i].id));
+      } catch {
+        campaigns.push(all[i]);
+      }
+    }
 
     return NextResponse.json({ campaigns });
   } catch (e: any) {
