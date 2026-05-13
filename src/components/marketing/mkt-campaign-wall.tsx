@@ -468,16 +468,24 @@ export function MktCampaignWall() {
     for (let attempt = 1; attempt <= MAX; attempt++) {
       try {
         const r = await fetch("/app/api/brevo/campaigns");
+        // Guard: if server returned HTML (502/504/etc) parse would throw a misleading SyntaxError
+        const ct = r.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) {
+          const msg = `Brevo API no disponible (HTTP ${r.status} — respuesta no-JSON). Mostrando datos locales.`;
+          if (attempt === MAX) { setBrevoError(msg); break; }
+          await new Promise(res => setTimeout(res, attempt * 1500));
+          continue;
+        }
         const d = await r.json();
         if (d.error) {
-          if (attempt === MAX) { setBrevoError(d.error); break; }
+          if (attempt === MAX) { setBrevoError(`Brevo: ${d.error}`); break; }
           await new Promise(res => setTimeout(res, attempt * 1500));
           continue;
         }
         setBrevoLive(d.campaigns || []);
         break;
       } catch (e) {
-        if (attempt === MAX) setBrevoError(String(e));
+        if (attempt === MAX) setBrevoError(`Error de red al conectar con Brevo: ${String(e)}`);
         else await new Promise(res => setTimeout(res, attempt * 1500));
       }
     }

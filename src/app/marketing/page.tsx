@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { MktProvider, useMkt } from "@/components/marketing/mkt-provider";
 import { MktSidebar } from "@/components/marketing/mkt-sidebar";
 import { MktEngagementBoard } from "@/components/marketing/mkt-engagement-board";
@@ -10,6 +10,12 @@ import { MktSegmentHealth } from "@/components/marketing/mkt-segment-health";
 import { MktAttributionDashboard } from "@/components/marketing/mkt-attribution";
 import { MktHandoffCenter } from "@/components/marketing/mkt-handoff-center";
 import { MktPipelineView } from "@/components/marketing/mkt-pipeline-view";
+import { MktLists } from "@/components/marketing/mkt-lists";
+import { MktLeadVelocity } from "@/components/marketing/mkt-lead-velocity";
+import { MktAnalytics } from "@/components/marketing/mkt-analytics";
+import { MktCalendar } from "@/components/marketing/mkt-calendar";
+import { MktDigest } from "@/components/marketing/mkt-digest";
+import { MktROI } from "@/components/marketing/mkt-roi";
 import { MKT_THEME_VARS } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -34,169 +40,6 @@ const SECTION_LABELS: Record<MktSection, string> = {
   export: "Exportar",
   integrations: "Integraciones",
 } as Record<MktSection, string>;
-
-// ── Listas Brevo ─────────────────────────────────────────────────────────────
-function MktBrevoLists() {
-  const [lists, setLists] = useState<Array<{ id: number; name: string; uniqueSubscribers: number; totalBlacklisted: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/api/brevo/lists")
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) { setError(d.error); return; }
-        setLists(d.lists || []);
-      })
-      .catch(() => setError("Error de red"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>Cargando listas…</div>;
-  if (error) return <div style={{ fontSize: 13, color: "#ef4444" }}>{error}</div>;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", marginBottom: 4 }}>{lists.length} listas en Brevo</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
-        {lists.map(list => (
-          <div key={list.id} style={{
-            padding: "14px 16px", borderRadius: 10, background: "var(--mkt-surface)",
-            border: "1px solid var(--mkt-border)",
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--mkt-text)", marginBottom: 6 }}>{list.name}</div>
-            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>
-              {list.uniqueSubscribers?.toLocaleString("es-CO")} suscriptores activos
-            </div>
-            {list.totalBlacklisted > 0 && (
-              <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 4 }}>
-                {list.totalBlacklisted} bloqueados
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Marketing Analytics (Brevo only) ────────────────────────────────────────
-function MktBrevoAnalytics() {
-  const [campaigns, setCampaigns] = useState<Array<Record<string, unknown>>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/api/brevo/campaigns")
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) { setError(d.error); return; }
-        setCampaigns(d.campaigns || []);
-      })
-      .catch(() => setError("Error de red"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const safeN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
-
-  const totals = campaigns.reduce((acc, c) => {
-    const raw = c.statistics as any;
-    const gs = raw?.globalStats ?? raw ?? {};
-    return {
-      sent:   acc.sent   + safeN(gs.sent   ?? gs.delivered),
-      opens:  acc.opens  + safeN(gs.uniqueViews ?? gs.opened ?? gs.viewed),
-      clicks: acc.clicks + safeN(gs.uniqueClicks ?? gs.clickers ?? gs.clicks),
-    };
-  }, { sent: 0, opens: 0, clicks: 0 });
-
-  const avgOpenRate = totals.sent > 0 ? ((totals.opens / totals.sent) * 100).toFixed(1) : "—";
-  const avgClickRate = totals.sent > 0 ? ((totals.clicks / totals.sent) * 100).toFixed(1) : "—";
-
-  const kpis = [
-    { label: "Campañas", value: campaigns.length, suffix: "" },
-    { label: "Total enviados", value: totals.sent.toLocaleString("es-CO"), suffix: "" },
-    { label: "Open Rate promedio", value: avgOpenRate, suffix: "%" },
-    { label: "Click Rate promedio", value: avgClickRate, suffix: "%" },
-  ];
-
-  const disabledChannels = [
-    { label: "Google Analytics", reason: "API no conectada" },
-    { label: "Meta Ads", reason: "API no conectada" },
-    { label: "LinkedIn Ads", reason: "API no conectada" },
-  ];
-
-  if (loading) return <div style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>Cargando estadísticas…</div>;
-  if (error) return <div style={{ fontSize: 13, color: "#ef4444" }}>{error}</div>;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
-        {kpis.map(k => (
-          <div key={k.label} style={{ padding: "14px 16px", borderRadius: 10, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--mkt-text)" }}>{k.value}{k.suffix}</div>
-            <div style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginTop: 4 }}>{k.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Per-campaign table */}
-      {campaigns.length > 0 && (
-        <div style={{ background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)", borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--mkt-border)", fontSize: 12, fontWeight: 600, color: "var(--mkt-text)" }}>
-            Detalle por campaña — Brevo
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: "var(--mkt-text-muted)" }}>
-                  {["Nombre", "Estado", "Enviados", "Abiertos", "Clicks", "Open%", "Click%"].map(h => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid var(--mkt-border)" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.map((c, i) => {
-                  const raw = c.statistics as any;
-                  const gs = raw?.globalStats ?? raw ?? {};
-                  const sent = safeN(gs.sent ?? gs.delivered);
-                  const opens = safeN(gs.uniqueViews ?? gs.opened ?? gs.viewed);
-                  const clicks = safeN(gs.uniqueClicks ?? gs.clickers ?? gs.clicks);
-                  const openPct = sent > 0 ? ((opens / sent) * 100).toFixed(1) : "—";
-                  const clickPct = sent > 0 ? ((clicks / sent) * 100).toFixed(1) : "—";
-                  return (
-                    <tr key={i} style={{ borderBottom: "1px solid var(--mkt-border)" }}>
-                      <td style={{ padding: "8px 12px", color: "var(--mkt-text)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(c.name)}</td>
-                      <td style={{ padding: "8px 12px", color: "var(--mkt-text-muted)" }}>{String(c.status)}</td>
-                      <td style={{ padding: "8px 12px", color: "var(--mkt-text)" }}>{sent.toLocaleString("es-CO")}</td>
-                      <td style={{ padding: "8px 12px", color: "var(--mkt-text)" }}>{opens.toLocaleString("es-CO")}</td>
-                      <td style={{ padding: "8px 12px", color: "var(--mkt-text)" }}>{clicks.toLocaleString("es-CO")}</td>
-                      <td style={{ padding: "8px 12px", color: Number(openPct) >= 20 ? "#22c55e" : Number(openPct) >= 10 ? "#f59e0b" : "var(--mkt-text-muted)" }}>{openPct}{openPct !== "—" ? "%" : ""}</td>
-                      <td style={{ padding: "8px 12px", color: Number(clickPct) >= 5 ? "#22c55e" : Number(clickPct) >= 2 ? "#f59e0b" : "var(--mkt-text-muted)" }}>{clickPct}{clickPct !== "—" ? "%" : ""}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Disabled channel slots */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
-        {disabledChannels.map(ch => (
-          <div key={ch.label} style={{
-            padding: "14px 16px", borderRadius: 10, opacity: 0.4,
-            background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)",
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--mkt-text)", marginBottom: 4 }}>{ch.label}</div>
-            <div style={{ fontSize: 11, color: "var(--mkt-text-muted)" }}>{ch.reason}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── Contacts tab ─────────────────────────────────────────────────────────────
 function MktContacts() {
@@ -385,14 +228,14 @@ function MarketingContent() {
       case "segment-health": return <MktSegmentHealth />;
       case "attribution": return <MktAttributionDashboard />;
       case "handoff": return <MktHandoffCenter />;
-      case "lists": return <MktBrevoLists />;
-      case "mkt-analytics": return <MktBrevoAnalytics />;
+      case "lists": return <MktLists />;
+      case "mkt-analytics": return <MktAnalytics />;
       case "pipeline-view": return <MktPipelineView />;
-      case "lead-velocity": return <MktPlaceholder label="Lead Velocity" />;
-      case "calendar": return <MktPlaceholder label="Calendario" />;
+      case "lead-velocity": return <MktLeadVelocity />;
+      case "calendar": return <MktCalendar />;
       case "abm": return <MktPlaceholder label="ABM Board" />;
-      case "digest": return <MktPlaceholder label="Digest Semanal" />;
-      case "roi": return <MktPlaceholder label="ROI" />;
+      case "digest": return <MktDigest />;
+      case "roi": return <MktROI />;
       case "export": return <MktPlaceholder label="Exportar" />;
       case "integrations": return <MktPlaceholder label="Integraciones" />;
     }
