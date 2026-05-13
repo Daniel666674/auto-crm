@@ -18,6 +18,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   icp: "ICP Scorer",
   "icp-insights": "ICP Insights",
   campaigns: "Campañas",
+  contacts: "Contactos",
   segments: "Segment Health",
   "segment-health": "Segment Health",
   attribution: "Atribución",
@@ -197,6 +198,149 @@ function MktBrevoAnalytics() {
   );
 }
 
+// ── Contacts tab ─────────────────────────────────────────────────────────────
+function MktContacts() {
+  const { contacts, syncing } = useMkt();
+  const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "brevo" | "apollo">("all");
+  const [tierFilter, setTierFilter] = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [sortBy, setSortBy] = useState<"score" | "tier" | "name" | "company" | "activity">("score");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+
+  const filtered = contacts
+    .filter(c => {
+      const q = search.toLowerCase();
+      const matchSearch = !search || c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q);
+      const isBrevo = !!c.brevoId;
+      const matchSource = sourceFilter === "all" || (sourceFilter === "brevo" ? isBrevo : !isBrevo);
+      const matchTier = tierFilter === 0 || c.tier === tierFilter;
+      return matchSearch && matchSource && matchTier;
+    })
+    .sort((a, b) => {
+      let diff = 0;
+      if (sortBy === "score") diff = a.score - b.score;
+      else if (sortBy === "tier") diff = a.tier - b.tier;
+      else if (sortBy === "name") diff = a.name.localeCompare(b.name);
+      else if (sortBy === "company") diff = (a.company || "").localeCompare(b.company || "");
+      else if (sortBy === "activity") diff = (a.lastActivity || 0) - (b.lastActivity || 0);
+      return sortDir === "desc" ? -diff : diff;
+    });
+
+  const brevoCount = contacts.filter(c => !!c.brevoId).length;
+  const apolloCount = contacts.length - brevoCount;
+  const tierCounts = [1, 2, 3, 4].map(t => contacts.filter(c => c.tier === t).length);
+
+  const cell: React.CSSProperties = { padding: "10px 12px", fontSize: 12, borderBottom: "1px solid var(--mkt-border)", verticalAlign: "middle" };
+  const hcell: React.CSSProperties = { ...cell, fontSize: 11, color: "var(--mkt-text-muted)", fontWeight: 600, background: "var(--mkt-surface)" };
+  const btn = (active: boolean): React.CSSProperties => ({
+    padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "1px solid var(--mkt-border)",
+    background: active ? "var(--mkt-accent)" : "transparent", color: active ? "#0a0a0a" : "var(--mkt-text-muted)",
+  });
+
+  return (
+    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, height: "100%", overflow: "auto" }}>
+      {/* Summary */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {[
+          { label: "Total", value: contacts.length },
+          { label: "Brevo", value: brevoCount },
+          { label: "Solo Apollo", value: apolloCount },
+          ...tierCounts.map((n, i) => ({ label: `T${i + 1}`, value: n })),
+        ].map(({ label, value }) => (
+          <div key={label} style={{ padding: "8px 14px", borderRadius: 8, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)", fontSize: 12 }}>
+            <span style={{ color: "var(--mkt-text-muted)" }}>{label} </span>
+            <span style={{ fontWeight: 700 }}>{value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 220px" }}>
+          <svg style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "var(--mkt-text-muted)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" /></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre, email, empresa…" style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 6, paddingBottom: 6, borderRadius: 7, border: "1px solid var(--mkt-border)", background: "var(--mkt-surface)", color: "var(--mkt-text)", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+        </div>
+        {(["all", "brevo", "apollo"] as const).map(s => (
+          <button key={s} style={btn(sourceFilter === s)} onClick={() => setSourceFilter(s)}>
+            {s === "all" ? "Todos" : s === "brevo" ? "Brevo" : "Solo Apollo"}
+          </button>
+        ))}
+        <div style={{ width: 1, height: 20, background: "var(--mkt-border)" }} />
+        {([0, 1, 2, 3, 4] as const).map(t => (
+          <button key={t} style={btn(tierFilter === t)} onClick={() => setTierFilter(t)}>
+            {t === 0 ? "Todos Tiers" : `T${t}`}
+          </button>
+        ))}
+        <div style={{ width: 1, height: 20, background: "var(--mkt-border)" }} />
+        <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)} style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--mkt-border)", background: "var(--mkt-surface)", color: "var(--mkt-text)", fontSize: 11, cursor: "pointer" }}>
+          <option value="score">Score ICP</option>
+          <option value="tier">Tier</option>
+          <option value="name">Nombre</option>
+          <option value="company">Empresa</option>
+          <option value="activity">Última actividad</option>
+        </select>
+        <button style={btn(false)} onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}>{sortDir === "desc" ? "↓" : "↑"}</button>
+        <button disabled title="Próximamente: sincronizar contactos desde Apollo CSV" style={{ ...btn(false), display: "inline-flex", alignItems: "center", gap: 5, opacity: 0.35, cursor: "not-allowed" }}>
+          <svg width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          Sincronizar Apollo CSV
+        </button>
+      </div>
+
+      {/* Table */}
+      <div style={{ flex: 1, overflow: "auto", borderRadius: 10, border: "1px solid var(--mkt-border)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Ubicación", "Score", "Fuente", "Tier"].map(h => (
+                <th key={h} style={hcell}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr><td colSpan={9} style={{ ...cell, textAlign: "center", color: "var(--mkt-text-muted)", padding: "32px 0" }}>Sin resultados</td></tr>
+            ) : filtered.map((c, i) => {
+              const isBrevo = !!c.brevoId;
+              return (
+                <tr key={c.id} style={{ background: i % 2 === 0 ? "transparent" : "var(--mkt-surface)" }}>
+                  <td style={{ ...cell, color: "var(--mkt-text-muted)", width: 32 }}>{i + 1}</td>
+                  <td style={cell}>
+                    <div style={{ fontWeight: 600, fontSize: 12 }}>{c.name}</div>
+                    <div style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>{c.email || "—"}</div>
+                  </td>
+                  <td style={cell}>{c.company || "—"}</td>
+                  <td style={cell}>{c.industry || "—"}</td>
+                  <td style={cell}>{c.jobTitle || "—"}</td>
+                  <td style={cell}>{c.location || "—"}</td>
+                  <td style={cell}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 52, height: 5, borderRadius: 3, background: "var(--mkt-border)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 3, background: "var(--mkt-accent)", width: `${Math.min(c.score, 100)}%` }} />
+                      </div>
+                      <span style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>{c.score}</span>
+                    </div>
+                  </td>
+                  <td style={cell}>
+                    <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: isBrevo ? "#3b82f620" : "#8b5cf620", color: isBrevo ? "#3b82f6" : "#8b5cf6" }}>
+                      {isBrevo ? "Brevo" : "Apollo"}
+                    </span>
+                  </td>
+                  <td style={cell}>
+                    {c.tier ? (
+                      <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 700, background: "var(--mkt-accent)20", color: "var(--mkt-accent)" }}>T{c.tier}</span>
+                    ) : <span style={{ color: "var(--mkt-text-muted)", fontSize: 11 }}>—</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--mkt-text-muted)" }}>{filtered.length} de {contacts.length} contactos</div>
+    </div>
+  );
+}
+
 // ── Generic placeholder ──────────────────────────────────────────────────────
 function MktPlaceholder({ label }: { label: string }) {
   return (
@@ -230,6 +374,7 @@ function MarketingContent() {
       case "icp":
       case "icp-insights": return <MktIcpScorer />;
       case "campaigns": return <MktCampaignWall />;
+      case "contacts": return <MktContacts />;
       case "segments":
       case "segment-health": return <MktSegmentHealth />;
       case "attribution": return <MktAttributionDashboard />;
