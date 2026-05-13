@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useMkt } from "./mkt-provider";
 import { mktFormatRelative } from "./mkt-utils";
 import type { MktCampaign } from "./mkt-types";
@@ -461,16 +461,30 @@ export function MktCampaignWall() {
   const [brevoLoading, setBrevoLoading] = useState(true);
   const [brevoError, setBrevoError] = useState("");
 
-  useEffect(() => {
-    fetch("/api/brevo/campaigns")
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) { setBrevoError(d.error); return; }
+  const loadCampaigns = useCallback(async () => {
+    setBrevoLoading(true);
+    setBrevoError("");
+    const MAX = 3;
+    for (let attempt = 1; attempt <= MAX; attempt++) {
+      try {
+        const r = await fetch("/api/brevo/campaigns");
+        const d = await r.json();
+        if (d.error) {
+          if (attempt === MAX) { setBrevoError(d.error); break; }
+          await new Promise(res => setTimeout(res, attempt * 1500));
+          continue;
+        }
         setBrevoLive(d.campaigns || []);
-      })
-      .catch(e => setBrevoError(String(e)))
-      .finally(() => setBrevoLoading(false));
+        break;
+      } catch (e) {
+        if (attempt === MAX) setBrevoError(String(e));
+        else await new Promise(res => setTimeout(res, attempt * 1500));
+      }
+    }
+    setBrevoLoading(false);
   }, []);
+
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
 
   // Build display list: Brevo live campaigns take priority, fall back to local DB
   const displayCampaigns: MktCampaign[] = brevoLive.length > 0
@@ -509,8 +523,13 @@ export function MktCampaignWall() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>
+          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", display: "flex", alignItems: "center", gap: 8 }}>
             {brevoLoading ? "Cargando campañas…" : `${displayCampaigns.length} campañas registradas`}
+            {!brevoLoading && (
+              <button onClick={loadCampaigns} title="Actualizar campañas" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--mkt-text-muted)", padding: 0, lineHeight: 1 }}>
+                <svg width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              </button>
+            )}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -540,11 +559,14 @@ export function MktCampaignWall() {
 
       {brevoError && (
         <div style={{
-          padding: "10px 14px", borderRadius: 8,
+          padding: "10px 14px", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "space-between",
           background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)",
           fontSize: 12, color: "#ef4444",
         }}>
-          Error Brevo: {brevoError}
+          <span>Error Brevo: {brevoError}</span>
+          <button onClick={loadCampaigns} style={{ marginLeft: 12, padding: "3px 10px", borderRadius: 5, border: "1px solid rgba(239,68,68,0.4)", background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }}>
+            Reintentar
+          </button>
         </div>
       )}
 

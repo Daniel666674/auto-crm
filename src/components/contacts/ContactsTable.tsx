@@ -8,11 +8,17 @@ import { formatDate } from "@/lib/constants";
 import { SOURCE_LABELS } from "@/lib/constants";
 import type { Contact, Temperature, LeadSource } from "@/types";
 
-const TEMP_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  hot:  { label: "Caliente", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-  warm: { label: "Tibio",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-  cold: { label: "Frío",     color: "var(--muted-foreground)", bg: "rgba(255,255,255,0.06)" },
-};
+function scoreTemp(score: number): { label: string; color: string; bg: string } {
+  if (score >= 70) return { label: "Caliente", color: "#ef4444", bg: "rgba(239,68,68,0.12)" };
+  if (score >= 55) return { label: "Tibio",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" };
+  return               { label: "Frío",      color: "var(--muted-foreground)", bg: "rgba(255,255,255,0.06)" };
+}
+
+function scoreColor(score: number): string {
+  if (score >= 70) return "#22c55e";
+  if (score >= 55) return "#f59e0b";
+  return "#ef4444";
+}
 
 function Avatar({ name }: { name: string }) {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -124,11 +130,11 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
       <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
         {/* Header */}
         <div style={{
-          display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 80px 90px",
+          display: "grid", gridTemplateColumns: "36px 2fr 1.2fr 1fr 110px 100px 90px",
           padding: "10px 16px", borderBottom: "1px solid var(--border)",
           background: "var(--card)",
         }}>
-          {["Nombre", "Empresa", "Fuente", "Temperatura", "ICP Fit", "Engagement", "Fecha"].map(h => (
+          {["#", "Nombre", "Empresa", "Fuente", "Temperatura", "Score", "Fecha"].map(h => (
             <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</span>
           ))}
         </div>
@@ -140,25 +146,30 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
           </div>
         ) : (
           filtered.map((contact, i) => {
-            const temp = TEMP_CONFIG[contact.temperature] ?? TEMP_CONFIG.cold;
+            const temp = scoreTemp(contact.score ?? 0);
+            const sc = scoreColor(contact.score ?? 0);
             return (
               <div
                 key={contact.id}
                 onClick={() => router.push(`/contacts/${contact.id}`)}
                 style={{
-                  display: "grid", gridTemplateColumns: "2fr 1.2fr 1fr 100px 80px 80px 90px",
+                  display: "grid", gridTemplateColumns: "36px 2fr 1.2fr 1fr 110px 100px 90px",
                   padding: "12px 16px", cursor: "pointer", alignItems: "center",
                   borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
-                  background: "var(--card)", transition: "background 0.15s",
+                  background: i % 2 === 0 ? "var(--card)" : "var(--accent)",
+                  transition: "filter 0.12s",
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "var(--card)")}
+                onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.08)")}
+                onMouseLeave={e => (e.currentTarget.style.filter = "")}
               >
+                {/* Rank */}
+                <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
+
                 {/* Name + avatar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Avatar name={contact.name} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contact.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contact.name}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contact.email || "—"}</div>
                   </div>
                 </div>
@@ -168,43 +179,29 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                   {contact.company || "—"}
                 </span>
 
-                {/* Source */}
-                <span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {/* Source badge */}
+                <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: "rgba(255,255,255,0.07)", color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
                   {SOURCE_LABELS[contact.source as LeadSource] || contact.source}
                 </span>
 
-                {/* Temperature badge */}
+                {/* Temperature badge — score-derived */}
                 <div>
                   <span style={{
                     display: "inline-flex", alignItems: "center", gap: 5,
                     padding: "3px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
                     background: temp.bg, color: temp.color,
                   }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: temp.color, display: "inline-block" }} />
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: temp.color, flexShrink: 0 }} />
                     {temp.label}
                   </span>
                 </div>
 
-                {/* ICP Fit bar (Apollo score) */}
+                {/* Score bar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ height: 4, width: 36, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${contact.score ?? 0}%`, borderRadius: 2, background: "var(--primary)" }} />
+                  <div style={{ height: 5, width: 52, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${Math.min(contact.score ?? 0, 100)}%`, borderRadius: 3, background: sc, transition: "width 0.5s" }} />
                   </div>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{contact.score ?? 0}</span>
-                </div>
-
-                {/* Engagement bar (Brevo score, nullable) */}
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  {contact.engagementScore != null ? (
-                    <>
-                      <div style={{ height: 4, width: 36, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${contact.engagementScore}%`, borderRadius: 2, background: "#2dd4bf" }} />
-                      </div>
-                      <span style={{ fontSize: 11, color: "#2dd4bf" }}>{contact.engagementScore}</span>
-                    </>
-                  ) : (
-                    <span style={{ fontSize: 10, color: "var(--muted-foreground)", opacity: 0.4 }}>—</span>
-                  )}
+                  <span style={{ fontSize: 11, color: sc, fontWeight: 600 }}>{contact.score ?? 0}</span>
                 </div>
 
                 {/* Date */}

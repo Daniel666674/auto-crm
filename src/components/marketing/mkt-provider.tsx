@@ -26,6 +26,13 @@ interface MktContextValue {
 
 const MktContext = createContext<MktContextValue | null>(null);
 
+function scoreToEngagement(score: number, current: MktContact["engagementStatus"]): MktContact["engagementStatus"] {
+  if (current === "dead") return "dead";
+  if (score >= 70) return "hot";
+  if (score >= 55) return "warm";
+  return "cold";
+}
+
 export function MktProvider({ children }: { children: React.ReactNode }) {
   const [contacts, setContacts] = useState<MktContact[]>([]);
   const [campaigns, setCampaigns] = useState<MktCampaign[]>([]);
@@ -37,17 +44,21 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     const seen = new Set(mkt.map(c => c.email?.toLowerCase()).filter(Boolean));
     const extra: MktContact[] = sales
       .filter(r => r.email && !seen.has(r.email.toLowerCase()))
-      .map(r => ({
-        id: r.id, name: r.name, company: r.company ?? "", email: r.email ?? "",
-        phone: r.phone ?? "", source: r.source ?? "", tier: 0,
-        temperature: r.temperature ?? "cold", score: r.score ?? 0,
-        brevoCadence: "", engagementStatus: "cold" as const,
-        emailOpens: 0, emailClicks: 0, leadSourceDetail: "", marketingNotes: "",
-        readyForSales: false, passedToSalesAt: null, industry: "", lastActivity: 0,
-        linkedinUrl: "", brevoId: "", jobTitle: "", companySize: "", location: "",
-        emailVerified: false, emailBounced: false, emailUnsubscribed: false,
-      }));
-    return [...mkt, ...extra];
+      .map(r => {
+        const score = r.score ?? 0;
+        return {
+          id: r.id, name: r.name, company: r.company ?? "", email: r.email ?? "",
+          phone: r.phone ?? "", source: r.source ?? "", tier: 0,
+          temperature: r.temperature ?? "cold", score,
+          brevoCadence: "", engagementStatus: scoreToEngagement(score, "cold"),
+          emailOpens: 0, emailClicks: 0, leadSourceDetail: "", marketingNotes: "",
+          readyForSales: false, passedToSalesAt: null, industry: "", lastActivity: 0,
+          linkedinUrl: "", brevoId: "", jobTitle: "", companySize: "", location: "",
+          emailVerified: false, emailBounced: false, emailUnsubscribed: false,
+        };
+      });
+    const all = [...mkt.map(c => ({ ...c, engagementStatus: scoreToEngagement(c.score, c.engagementStatus) })), ...extra];
+    return all;
   }
 
   const loadData = useCallback(() => {
