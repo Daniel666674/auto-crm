@@ -39,6 +39,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   roi: "ROI",
   export: "Exportar",
   integrations: "Integraciones",
+  settings: "Configuración",
 } as Record<MktSection, string>;
 
 // ── Contacts tab ─────────────────────────────────────────────────────────────
@@ -191,6 +192,182 @@ function MktContacts() {
 }
 
 // ── Generic placeholder ──────────────────────────────────────────────────────
+// ── Inline settings for marketing module ─────────────────────────────────────
+function MktSettings() {
+  const { syncFromBrevo } = useMkt();
+  const [activeTab, setActiveTab] = useState<"perfil" | "integraciones" | "notificaciones">("perfil");
+
+  // Brevo sync
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalcResult, setRecalcResult] = useState("");
+
+  // Apollo sync
+  const [apolloSyncing, setApolloSyncing] = useState(false);
+  const [apolloMsg, setApolloMsg] = useState("");
+
+  const handleSyncBrevo = async () => {
+    setSyncing(true); setSyncMsg("Sincronizando…");
+    try {
+      const result = await syncFromBrevo();
+      setSyncMsg(`✓ ${result.synced} contactos sincronizados`);
+    } catch { setSyncMsg("Error al sincronizar"); }
+    finally { setSyncing(false); setTimeout(() => setSyncMsg(""), 5000); }
+  };
+
+  const handleRecalculate = async () => {
+    setRecalculating(true); setRecalcResult("Calculando…");
+    try {
+      const res = await fetch("/api/brevo/recalculate-scores", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pushToBrevo: true }),
+      });
+      const d = await res.json();
+      setRecalcResult(d.error ? `Error: ${d.error}` : `✓ ${d.processed} contactos procesados`);
+    } catch { setRecalcResult("Error al recalcular"); }
+    finally { setRecalculating(false); setTimeout(() => setRecalcResult(""), 6000); }
+  };
+
+  const handleSyncApollo = async () => {
+    setApolloSyncing(true); setApolloMsg("Importando…");
+    try {
+      const res = await fetch("/api/import-apollo", { method: "POST" });
+      const d = await res.json();
+      setApolloMsg(d.error ? `Error` : `✓ ${d.inserted} importados`);
+    } catch { setApolloMsg("Error"); }
+    finally { setApolloSyncing(false); setTimeout(() => setApolloMsg(""), 5000); }
+  };
+
+  const tabStyle = (id: string): React.CSSProperties => ({
+    padding: "7px 16px", borderRadius: "8px 8px 0 0", fontSize: 13, fontWeight: 500,
+    cursor: "pointer", border: "1px solid transparent", background: "transparent",
+    color: activeTab === id ? "var(--mkt-text)" : "var(--mkt-text-muted)",
+    borderColor: activeTab === id ? "var(--mkt-border)" : "transparent",
+    borderBottomColor: activeTab === id ? "var(--mkt-bg)" : "transparent",
+    marginBottom: activeTab === id ? -1 : 0, transition: "all 0.12s",
+  });
+
+  const card: React.CSSProperties = {
+    background: "var(--mkt-card)", border: "1px solid var(--mkt-border)",
+    borderRadius: 12, padding: 24,
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 12px", background: "var(--mkt-bg)",
+    border: "1px solid var(--mkt-border)", borderRadius: 8, fontSize: 13,
+    color: "var(--mkt-text)", outline: "none", boxSizing: "border-box",
+  };
+
+  const btnStyle = (variant: "primary" | "outline" = "outline"): React.CSSProperties => ({
+    padding: "7px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+    cursor: "pointer", border: `1px solid var(--mkt-border)`,
+    display: "inline-flex", alignItems: "center", gap: 6, transition: "all 0.12s",
+    background: variant === "primary" ? "var(--mkt-accent)" : "transparent",
+    color: variant === "primary" ? "#0a0a0a" : "var(--mkt-text-muted)",
+  });
+
+  const syncBtn = (loading: boolean): React.CSSProperties => ({
+    ...btnStyle("outline"), width: "100%", justifyContent: "center",
+    opacity: loading ? 0.6 : 1, cursor: loading ? "wait" : "pointer",
+  });
+
+  return (
+    <div style={{ maxWidth: 800 }}>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px", color: "var(--mkt-text)" }}>Configuración</h2>
+        <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", margin: 0 }}>Perfil, integraciones y notificaciones</p>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--mkt-border)", marginBottom: 20 }}>
+        {(["perfil", "integraciones", "notificaciones"] as const).map(t => (
+          <button key={t} onClick={() => setActiveTab(t)} style={tabStyle(t)}>
+            {t === "perfil" ? "Perfil" : t === "integraciones" ? "Integraciones" : "Notificaciones"}
+          </button>
+        ))}
+      </div>
+
+      {/* Perfil */}
+      {activeTab === "perfil" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={card}>
+            <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", margin: "0 0 16px" }}>
+              Tu perfil y preferencias personales se gestionan en la{" "}
+              <a href="/settings" style={{ color: "var(--mkt-accent)", textDecoration: "underline" }}>
+                página de Ajustes del CRM
+              </a>
+              . Los cambios aplican a toda la plataforma.
+            </p>
+            <a href="/settings" style={{ textDecoration: "none" }}>
+              <button style={btnStyle("primary")}>Ir a Ajustes completos</button>
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Integraciones */}
+      {activeTab === "integraciones" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Brevo */}
+          <div style={card}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: "var(--mkt-text)" }}>Brevo — Sincronización</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--mkt-text)" }}>Sincronizar contactos</div>
+                <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+                  Importa contactos de Brevo con atributos SCORE, TIER e INDUSTRY.
+                </p>
+                <button style={syncBtn(syncing)} onClick={handleSyncBrevo} disabled={syncing}>
+                  {syncing ? "Sincronizando…" : "Sincronizar desde Brevo"}
+                </button>
+                {syncMsg && <p style={{ fontSize: 11, color: "var(--mkt-accent)", marginTop: 6 }}>{syncMsg}</p>}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--mkt-text)" }}>Recalcular ICP Scores</div>
+                <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+                  Aplica algoritmo completo y actualiza TIER en Brevo.
+                </p>
+                <button style={syncBtn(recalculating)} onClick={handleRecalculate} disabled={recalculating}>
+                  {recalculating ? "Calculando…" : "Recalcular Scores ICP"}
+                </button>
+                {recalcResult && <p style={{ fontSize: 11, color: "var(--mkt-accent)", marginTop: 6 }}>{recalcResult}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Apollo */}
+          <div style={card}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: "var(--mkt-text)" }}>Apollo — CSV Sync</div>
+            <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", marginBottom: 12, lineHeight: 1.6 }}>
+              Importa contactos del archivo Apollo CSV. Cada contacto recibe un score ICP automático.
+            </p>
+            <button style={syncBtn(apolloSyncing)} onClick={handleSyncApollo} disabled={apolloSyncing}>
+              {apolloSyncing ? "Importando…" : "Sincronizar Apollo CSV"}
+            </button>
+            {apolloMsg && <p style={{ fontSize: 11, color: "var(--mkt-accent)", marginTop: 8 }}>{apolloMsg}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Notificaciones */}
+      {activeTab === "notificaciones" && (
+        <div style={card}>
+          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", margin: "0 0 16px", lineHeight: 1.6 }}>
+            Configura tus preferencias de notificación en{" "}
+            <a href="/settings" style={{ color: "var(--mkt-accent)", textDecoration: "underline" }}>
+              Ajustes → Notificaciones
+            </a>.
+          </p>
+          <a href="/settings" style={{ textDecoration: "none" }}>
+            <button style={btnStyle("primary")}>Ir a Notificaciones</button>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MktPlaceholder({ label }: { label: string }) {
   return (
     <div style={{
@@ -238,6 +415,7 @@ function MarketingContent() {
       case "roi": return <MktROI />;
       case "export": return <MktPlaceholder label="Exportar" />;
       case "integrations": return <MktPlaceholder label="Integraciones" />;
+      case "settings": return <MktSettings />;
     }
   };
 
