@@ -8,17 +8,8 @@ import { eq } from "drizzle-orm";
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID ?? "530528809";
 const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
 
-async function getValidAccessToken(userId: string): Promise<string | null> {
-  const row = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
-  if (!row) return null;
-
-  const now = Date.now();
-  const expired = !row.expiryDate || row.expiryDate < now + 60000;
-
-  if (!expired) return row.accessTokenEnc;
-
+async function refreshToken(row: typeof googleTokens.$inferSelect): Promise<string | null> {
   if (!row.refreshTokenEnc) return null;
-
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -29,18 +20,30 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
       grant_type: "refresh_token",
     }),
   });
-
   if (!res.ok) return null;
   const data = await res.json();
   if (!data.access_token) return null;
-
   const newExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
-  db.update(googleTokens)
-    .set({ accessTokenEnc: data.access_token, expiryDate: newExpiry, updatedAt: new Date() })
-    .where(eq(googleTokens.userId, userId))
-    .run();
-
+  db.update(googleTokens).set({ accessTokenEnc: data.access_token, expiryDate: newExpiry, updatedAt: new Date() }).where(eq(googleTokens.userId, row.userId)).run();
   return data.access_token;
+}
+
+async function getValidAccessToken(userId: string): Promise<string | null> {
+  // Try current user's token first, then fall back to any stored token
+  const allTokens = db.select().from(googleTokens).all();
+  const ordered = [
+    ...allTokens.filter(r => r.userId === userId),
+    ...allTokens.filter(r => r.userId !== userId),
+  ];
+
+  for (const row of ordered) {
+    const now = Date.now();
+    const expired = !row.expiryDate || row.expiryDate < now + 60000;
+    if (!expired) return row.accessTokenEnc;
+    const refreshed = await refreshToken(row);
+    if (refreshed) return refreshed;
+  }
+  return null;
 }
 
 async function runGA4Report(accessToken: string, body: object) {
