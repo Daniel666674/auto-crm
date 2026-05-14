@@ -35,12 +35,9 @@ interface MktSidebarProps {
 }
 
 export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
-  const { contacts, syncing, syncFromBrevo } = useMkt();
+  const { contacts } = useMkt();
   const { data: session } = useSession();
   const readyCount = contacts.filter(c => c.readyForSales && !c.passedToSalesAt).length;
-  const [syncMsg, setSyncMsg] = useState("");
-  const [apolloSyncing, setApolloSyncing] = useState(false);
-  const [apolloMsg, setApolloMsg] = useState("");
 
   const NAV_GROUPS: NavGroup[] = [
     {
@@ -96,17 +93,6 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
       ],
     },
   ];
-
-  const handleSync = async () => {
-    setSyncMsg("Sincronizando…");
-    try {
-      const result = await syncFromBrevo();
-      setSyncMsg(`✓ ${result.synced} contactos sincronizados`);
-    } catch {
-      setSyncMsg("Error al sincronizar");
-    }
-    setTimeout(() => setSyncMsg(""), 4000);
-  };
 
   const userName = session?.user?.name || "Usuario";
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
@@ -179,72 +165,17 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
         ))}
       </nav>
 
-      {/* Apollo CSV Sync */}
+      {/* Settings link */}
       <div style={{ padding: "8px 8px 0", borderTop: "1px solid var(--mkt-border)" }}>
-        <button
-          onClick={async () => {
-            setApolloSyncing(true);
-            setApolloMsg("");
-            try {
-              const res = await fetch("/api/import-apollo", { method: "POST" });
-              const data = await res.json();
-              if (data.error) { setApolloMsg(`Error`); return; }
-              setApolloMsg(`✓ ${data.inserted} importados`);
-              setTimeout(() => setApolloMsg(""), 4000);
-            } catch {
-              setApolloMsg("Error");
-            } finally {
-              setApolloSyncing(false);
-            }
-          }}
-          disabled={apolloSyncing}
-          style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
-            width: "100%", borderRadius: 8, border: "1px solid var(--mkt-border)",
-            background: "transparent", cursor: apolloSyncing ? "wait" : "pointer",
-            color: apolloSyncing ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
-            fontSize: 12, textAlign: "left" as const, transition: "color 0.15s",
-          }}
-        >
-          <SvgIcon path="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" size={14} />
-          {apolloSyncing ? "Importando…" : apolloMsg || "Sincronizar Apollo CSV"}
-        </button>
-      </div>
-
-      {/* Brevo Sync */}
-      <div style={{ padding: "8px 8px 0" }}>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
-            width: "100%", borderRadius: 8, border: "1px solid var(--mkt-border)",
-            background: "transparent", cursor: syncing ? "wait" : "pointer",
-            color: syncing ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
-            fontSize: 12, textAlign: "left", transition: "color 0.15s",
-          }}
-        >
-          <SvgIcon path="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" size={14} />
-          {syncing ? "Sincronizando…" : "Sincronizar Brevo"}
-        </button>
-        {syncMsg && (
-          <p style={{ fontSize: 10, color: "var(--mkt-accent)", padding: "4px 12px", margin: 0 }}>
-            {syncMsg}
-          </p>
-        )}
-      </div>
-
-      {/* Switch to CRM */}
-      <div style={{ padding: "8px" }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
+        <Link href="/settings" style={{ textDecoration: "none" }}>
           <button style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
+            display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
             width: "100%", borderRadius: 8, border: "1px solid var(--mkt-border)",
             background: "transparent", color: "var(--mkt-text-muted)",
-            fontSize: 12, cursor: "pointer", textAlign: "left",
+            fontSize: 12, cursor: "pointer", textAlign: "left" as const, transition: "color 0.15s",
           }}>
-            <SvgIcon path="M10 19l-7-7m0 0l7-7m-7 7h18" size={14} />
-            Ver Pipeline de Ventas
+            <SvgIcon path="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" size={14} />
+            Configuración
           </button>
         </Link>
       </div>
