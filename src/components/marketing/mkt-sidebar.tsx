@@ -68,7 +68,6 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
       label: "Performance 360",
       items: [
         { id: "mkt-analytics", label: "Analytics", path: "M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
-        { id: "brevo-hub", label: "Brevo Hub", path: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
       ],
     },
     {

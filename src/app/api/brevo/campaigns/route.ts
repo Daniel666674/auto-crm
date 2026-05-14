@@ -29,7 +29,10 @@ async function fetchCampaignStats(id: number): Promise<any> {
   try {
     const r = await fetchWithTimeout(`https://api.brevo.com/v3/emailCampaigns/${id}`);
     if (!r.ok) return null;
-    return r.json();
+    const d = await r.json();
+    // Treat Brevo error payloads (rate limit, auth) as null so we fall back to list data
+    if (d?.code) return null;
+    return d;
   } catch {
     return null;
   }
@@ -55,12 +58,13 @@ export async function GET(req: Request) {
 
   try {
     // Brevo list API does NOT include statistics — fetch list first, then enrich each campaign individually
-    const [sent, queued, draft] = await Promise.all([
+    const [sent, queued, draft, archive] = await Promise.all([
       listCampaigns('sent'),
       listCampaigns('queued'),
       listCampaigns('draft'),
+      listCampaigns('archive'),
     ]);
-    const allCampaigns = [...sent, ...queued, ...draft];
+    const allCampaigns = [...sent, ...queued, ...draft, ...archive];
 
     // Enrich with individual fetches (parallel, capped at 10 concurrent)
     const enriched: any[] = [];

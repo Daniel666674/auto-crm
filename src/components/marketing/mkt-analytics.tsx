@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 
 const GOLD = "#C39A4C";
 
@@ -55,6 +56,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
   const [brevoLoading, setBrevoLoading] = useState(true);
   const [ga4, setGa4] = useState<GA4Data | null>(null);
   const [ga4Loading, setGa4Loading] = useState(true);
+  const [showHub, setShowHub] = useState(false);
 
   useEffect(() => {
     fetch("/api/brevo/campaigns")
@@ -64,7 +66,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
         const mapped: BrevoCampaign[] = raw.map((c: any) => {
           const gs = c.statistics?.globalStats ?? {};
           const sent = safeN(gs.sent);
-          const opens = safeN(gs.uniqueViews);
+          const opens = safeN(gs.uniqueViews ?? gs.uniqueOpens);
           const clicks = safeN(gs.uniqueClicks);
           return {
             id: c.id, name: c.name, status: c.status,
@@ -117,11 +119,11 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <KPI label="Campañas" value={campaigns.length} />
-                <KPI label="Total contactos" value={totalSent.toLocaleString("es-CO")} />
+                <KPI label="Total enviados" value={totalSent.toLocaleString("es-CO")} />
                 <KPI label="Open rate avg" value={`${avgOpenRate.toFixed(1)}%`} />
                 <KPI label="Click rate avg" value={`${avgClickRate.toFixed(1)}%`} />
               </div>
-              {best && (
+              {best && best.openRate > 0 && (
                 <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(195,154,76,0.06)", border: "1px solid rgba(195,154,76,0.15)", fontSize: 11 }}>
                   <div style={{ color: "var(--mkt-text-muted)", marginBottom: 3 }}>Mejor campaña</div>
                   <div style={{ fontWeight: 600, color: "var(--mkt-text)", marginBottom: 2 }}>{best.name}</div>
@@ -129,9 +131,9 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
                 </div>
               )}
               <button
-                onClick={() => onNavigate?.("brevo-hub")}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver datos →
+                onClick={() => setShowHub(v => !v)}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: showHub ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                {showHub ? "Ocultar datos Brevo ↑" : "Ver todos los datos de Brevo ↓"}
               </button>
             </>
           )}
@@ -218,6 +220,17 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
         </div>
 
       </div>
+
+      {/* Inline full Brevo data panel — toggled by "Ver todos los datos de Brevo" button */}
+      {showHub && (
+        <div style={{
+          borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)",
+          background: "rgba(195,154,76,0.03)",
+          padding: "20px 22px",
+        }}>
+          <MktBrevoHub />
+        </div>
+      )}
     </div>
   );
 }

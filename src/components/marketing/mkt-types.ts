@@ -50,7 +50,6 @@ export type MktSection =
   | "segment-health" | "icp-insights" | "lists"
   | "pipeline-view" | "lead-velocity"
   | "mkt-analytics"
-  | "brevo-hub"
   | "calendar" | "abm"
   | "digest" | "roi" | "export"
   | "integrations"
