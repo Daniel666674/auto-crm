@@ -25,7 +25,7 @@ function KPI({ label, value, sub }: { label: string; value: string | number; sub
   );
 }
 
-interface BrevoCampaign {
+interface DisplayCampaign {
   id: number;
   name: string;
   status: string;
@@ -51,31 +51,37 @@ function safeN(v: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) => void }) {
-  const [campaigns, setCampaigns] = useState<BrevoCampaign[]>([]);
+function mapBrevoCampaign(c: any): DisplayCampaign {
+  const stats = c.statistics ?? {};
+  const csList: any[] = Array.isArray(stats.campaignStats) ? stats.campaignStats : [];
+  const gs = stats.globalStats ?? {};
+  const sent   = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + safeN(cs.sent), 0)         : safeN(gs.sent ?? gs.delivered);
+  const opens  = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + safeN(cs.uniqueViews), 0)  : safeN(gs.uniqueViews);
+  const clicks = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + safeN(cs.uniqueClicks), 0) : safeN(gs.uniqueClicks);
+  return {
+    id: c.id,
+    name: c.name,
+    status: c.status,
+    totalContacts: sent,
+    openRate:  sent > 0 ? Math.round((opens / sent) * 1000) / 10 : 0,
+    clickRate: sent > 0 ? Math.round((clicks / sent) * 1000) / 10 : 0,
+  };
+}
+
+export function MktAnalytics({ onNavigate: _onNavigate }: { onNavigate?: (section: string) => void }) {
+  const [campaigns, setCampaigns] = useState<DisplayCampaign[]>([]);
   const [brevoLoading, setBrevoLoading] = useState(true);
   const [ga4, setGa4] = useState<GA4Data | null>(null);
   const [ga4Loading, setGa4Loading] = useState(true);
   const [showHub, setShowHub] = useState(false);
+  const [showGA4Detail, setShowGA4Detail] = useState(false);
 
   useEffect(() => {
     fetch("/api/brevo/campaigns")
       .then(r => r.json())
       .then(d => {
-        const raw = d.campaigns || [];
-        const mapped: BrevoCampaign[] = raw.map((c: any) => {
-          const gs = c.statistics?.globalStats ?? {};
-          const sent = safeN(gs.sent);
-          const opens = safeN(gs.uniqueViews ?? gs.uniqueOpens);
-          const clicks = safeN(gs.uniqueClicks);
-          return {
-            id: c.id, name: c.name, status: c.status,
-            totalContacts: sent,
-            openRate: sent > 0 ? (opens / sent) * 100 : 0,
-            clickRate: sent > 0 ? (clicks / sent) * 100 : 0,
-          };
-        });
-        setCampaigns(mapped);
+        const raw: any[] = d.campaigns || [];
+        setCampaigns(raw.map(mapBrevoCampaign));
       })
       .catch(() => {})
       .finally(() => setBrevoLoading(false));
@@ -87,19 +93,16 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
       .finally(() => setGa4Loading(false));
   }, []);
 
-  const totalSent = campaigns.reduce((s, c) => s + c.totalContacts, 0);
-  const avgOpenRate = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + c.openRate, 0) / campaigns.length
-    : 0;
-  const avgClickRate = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + c.clickRate, 0) / campaigns.length
-    : 0;
-  const best = campaigns.length > 0
-    ? campaigns.reduce((a, b) => b.openRate > a.openRate ? b : a)
-    : null;
+  const totalSent    = campaigns.reduce((s, c) => s + c.totalContacts, 0);
+  const avgOpenRate  = campaigns.length > 0 ? campaigns.reduce((s, c) => s + c.openRate, 0)  / campaigns.length : 0;
+  const avgClickRate = campaigns.length > 0 ? campaigns.reduce((s, c) => s + c.clickRate, 0) / campaigns.length : 0;
+  const best = campaigns.length > 0 ? campaigns.reduce((a, b) => b.openRate > a.openRate ? b : a) : null;
 
-  const ga4Connected = ga4 && !ga4.error;
+  const ga4Connected    = ga4 && !ga4.error;
   const ga4NotConnected = ga4?.error === "ga4_not_connected";
+
+  // GA4 detail: sparkline max for scaling
+  const maxSessions = ga4Connected && ga4 ? Math.max(...ga4.daily.map(d => d.sessions), 1) : 1;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -108,7 +111,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
 
         {/* Brevo */}
-        <div style={{ ...card, border: `1px solid rgba(195,154,76,0.3)` }}>
+        <div style={{ ...card, border: "1px solid rgba(195,154,76,0.3)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Brevo Overview</div>
             <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Conectado</span>
@@ -127,12 +130,12 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
                 <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(195,154,76,0.06)", border: "1px solid rgba(195,154,76,0.15)", fontSize: 11 }}>
                   <div style={{ color: "var(--mkt-text-muted)", marginBottom: 3 }}>Mejor campaña</div>
                   <div style={{ fontWeight: 600, color: "var(--mkt-text)", marginBottom: 2 }}>{best.name}</div>
-                  <div style={{ color: "var(--mkt-text-muted)" }}>Open {(best.openRate || 0).toFixed(1)}% · Clicks {(best.clickRate || 0).toFixed(1)}%</div>
+                  <div style={{ color: "var(--mkt-text-muted)" }}>Open {best.openRate.toFixed(1)}% · Clicks {best.clickRate.toFixed(1)}%</div>
                 </div>
               )}
               <button
                 onClick={() => setShowHub(v => !v)}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: showHub ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: showHub ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                 {showHub ? "Ocultar datos Brevo ↑" : "Ver todos los datos de Brevo ↓"}
               </button>
             </>
@@ -174,9 +177,9 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
                 </div>
               )}
               <button
-                onClick={() => window.open("/analytics", "_blank")}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver Analytics →
+                onClick={() => setShowGA4Detail(v => !v)}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: showGA4Detail ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                {showGA4Detail ? "Ocultar Analytics ↑" : "Ver Analytics ↓"}
               </button>
             </>
           ) : (
@@ -207,7 +210,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
           </button>
         </div>
 
-        {/* Meta — pending */}
+        {/* Meta — not configured */}
         <div style={{ ...card, opacity: 0.45 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Meta Ads</div>
@@ -221,14 +224,72 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
 
       </div>
 
-      {/* Inline full Brevo data panel — toggled by "Ver todos los datos de Brevo" button */}
+      {/* Inline Brevo data panel */}
       {showHub && (
-        <div style={{
-          borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)",
-          background: "rgba(195,154,76,0.03)",
-          padding: "20px 22px",
-        }}>
+        <div style={{ borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)", background: "rgba(195,154,76,0.03)", padding: "20px 22px" }}>
           <MktBrevoHub />
+        </div>
+      )}
+
+      {/* Inline GA4 detail panel */}
+      {showGA4Detail && ga4Connected && ga4 && (
+        <div style={{ borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)", background: "rgba(195,154,76,0.03)", padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Traffic sources bar chart */}
+          {ga4.trafficSources.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--mkt-text)", marginBottom: 12 }}>Fuentes de Tráfico</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {ga4.trafficSources.slice(0, 8).map((s, i) => {
+                  const maxS = Math.max(...ga4.trafficSources.map(x => x.sessions), 1);
+                  const pct = Math.round((s.sessions / maxS) * 100);
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 110, fontSize: 11, color: "var(--mkt-text-muted)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.source}</div>
+                      <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--mkt-border, #1e1e1e)", overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 4, background: GOLD, transition: "width 0.4s ease" }} />
+                      </div>
+                      <div style={{ width: 40, fontSize: 11, fontWeight: 600, color: "var(--mkt-text)", textAlign: "right", flexShrink: 0 }}>{s.sessions}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Daily sessions sparkline */}
+          {ga4.daily.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--mkt-text)", marginBottom: 12 }}>Sesiones diarias (30d)</div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 60 }}>
+                {ga4.daily.map((d, i) => {
+                  const h = Math.max(4, Math.round((d.sessions / maxSessions) * 56));
+                  return (
+                    <div key={i} title={`${d.date}: ${d.sessions}`} style={{ flex: 1, height: h, borderRadius: "2px 2px 0 0", background: GOLD, opacity: 0.75, minWidth: 3 }} />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Top pages table */}
+          {ga4.topPages.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--mkt-text)", marginBottom: 10 }}>Páginas más vistas</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--mkt-text-muted)", fontWeight: 600, paddingBottom: 4, borderBottom: "1px solid var(--mkt-border, #1e1e1e)" }}>
+                  <span>Página</span><span>Vistas</span>
+                </div>
+                {ga4.topPages.slice(0, 10).map((p, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--mkt-text-muted)", padding: "3px 0" }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "80%" }}>{p.page}</span>
+                    <span style={{ fontWeight: 600, color: "var(--mkt-text)", flexShrink: 0 }}>{p.views.toLocaleString("es-CO")}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </div>
