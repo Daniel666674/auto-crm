@@ -1,39 +1,57 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useMkt } from "./mkt-provider";
 
-const card: React.CSSProperties = { background: "#111111", border: "1px solid #1e1e1e", borderRadius: 12, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14 };
+const GOLD = "#C39A4C";
+
+const card: React.CSSProperties = {
+  background: "var(--mkt-card, #111111)",
+  border: "1px solid var(--mkt-border, #1e1e1e)",
+  borderRadius: 12,
+  padding: "20px 22px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+};
 
 function KPI({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: "#C39A4C" }}>{value}</div>
-      <div style={{ fontSize: 11, color: "#718096", marginTop: 2 }}>{label}</div>
-      {sub && <div style={{ fontSize: 10, color: "#718096", marginTop: 1, opacity: 0.7 }}>{sub}</div>}
+      <div style={{ fontSize: 24, fontWeight: 700, color: GOLD }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 10, color: "var(--mkt-text-muted)", marginTop: 1, opacity: 0.7 }}>{sub}</div>}
     </div>
   );
 }
 
-function PendingCard({ name, reason }: { name: string; reason: string }) {
-  return (
-    <div style={{ ...card, opacity: 0.55 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{name}</div>
-        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(109,31,46,0.25)", color: "#f87171" }}>{reason}</span>
-      </div>
-      <div style={{ fontSize: 12, color: "#718096" }}>Sin datos disponibles. Conecta la integración para ver métricas en tiempo real.</div>
-      <button disabled style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid #1e1e1e", background: "transparent", color: "#718096", fontSize: 12, cursor: "not-allowed" }}>
-        Conectar
-      </button>
-    </div>
-  );
+interface GA4Data {
+  sessions: number;
+  pageviews: number;
+  activeUsers: number;
+  bounceRate: number;
+  newUsers: number;
+  topPages: { page: string; views: number }[];
+  trafficSources: { source: string; sessions: number }[];
+  daily: { date: string; sessions: number }[];
+  error?: string;
 }
 
 export function MktAnalytics() {
   const { campaigns, loading } = useMkt();
 
-  const totalSent = campaigns.reduce((s, c) => s + (c.totalSent || 0), 0);
+  const [ga4, setGa4] = useState<GA4Data | null>(null);
+  const [ga4Loading, setGa4Loading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/ga4")
+      .then(r => r.json())
+      .then(setGa4)
+      .catch(() => setGa4({ error: "network", sessions: 0, pageviews: 0, activeUsers: 0, bounceRate: 0, newUsers: 0, topPages: [], trafficSources: [], daily: [] }))
+      .finally(() => setGa4Loading(false));
+  }, []);
+
+  const totalSent = campaigns.reduce((s, c) => s + (c.totalContacts || 0), 0);
   const avgOpenRate = campaigns.length > 0
     ? campaigns.reduce((s, c) => s + (c.openRate || 0), 0) / campaigns.length
     : 0;
@@ -44,48 +62,127 @@ export function MktAnalytics() {
     ? campaigns.reduce((a, b) => (b.openRate || 0) > (a.openRate || 0) ? b : a)
     : null;
 
+  const ga4Connected = ga4 && !ga4.error;
+  const ga4NotConnected = ga4?.error === "ga4_not_connected";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 12, color: "#718096" }}>Visión 360 de canales de marketing. Solo Brevo está conectado.</div>
+      <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Visión 360 de canales de marketing. Brevo y GA4 conectados.</div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
-        {/* Brevo — real data */}
-        <div style={{ ...card, border: "1px solid rgba(195,154,76,0.3)" }}>
+
+        {/* Brevo */}
+        <div style={{ ...card, border: `1px solid rgba(195,154,76,0.3)` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>Brevo Overview</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Brevo Overview</div>
             <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Conectado</span>
           </div>
-
           {loading ? (
-            <div style={{ fontSize: 12, color: "#718096" }}>Cargando…</div>
+            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Cargando…</div>
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <KPI label="Campañas" value={campaigns.length} />
-                <KPI label="Total enviados" value={totalSent.toLocaleString("es-CO")} />
+                <KPI label="Total contactos" value={totalSent.toLocaleString("es-CO")} />
                 <KPI label="Open rate avg" value={`${avgOpenRate.toFixed(1)}%`} />
                 <KPI label="Click rate avg" value={`${avgClickRate.toFixed(1)}%`} />
               </div>
               {best && (
                 <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(195,154,76,0.06)", border: "1px solid rgba(195,154,76,0.15)", fontSize: 11 }}>
-                  <div style={{ color: "#718096", marginBottom: 3 }}>Mejor campaña</div>
-                  <div style={{ fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>{best.name}</div>
-                  <div style={{ color: "#718096" }}>Open {(best.openRate || 0).toFixed(1)}% · Clicks {(best.clickRate || 0).toFixed(1)}%</div>
+                  <div style={{ color: "var(--mkt-text-muted)", marginBottom: 3 }}>Mejor campaña</div>
+                  <div style={{ fontWeight: 600, color: "var(--mkt-text)", marginBottom: 2 }}>{best.name}</div>
+                  <div style={{ color: "var(--mkt-text-muted)" }}>Open {(best.openRate || 0).toFixed(1)}% · Clicks {(best.clickRate || 0).toFixed(1)}%</div>
                 </div>
               )}
               <button
                 onClick={() => window.open("https://app.brevo.com", "_blank")}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: "transparent", color: "#C39A4C", fontSize: 12, cursor: "pointer", fontWeight: 600 }}
-              >
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                 Ver datos →
               </button>
             </>
           )}
         </div>
 
-        <PendingCard name="Google Analytics" reason="Pendiente" />
-        <PendingCard name="LinkedIn API" reason="Pendiente" />
-        <PendingCard name="Meta Ads" reason="No configurado" />
+        {/* Google Analytics 4 */}
+        <div style={{ ...card, border: ga4Connected ? "1px solid rgba(195,154,76,0.3)" : "1px solid var(--mkt-border, #1e1e1e)", opacity: ga4Connected ? 1 : ga4NotConnected ? 0.75 : 0.55 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Google Analytics 4</div>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+              background: ga4Connected ? "rgba(72,187,120,0.15)" : "rgba(109,31,46,0.25)",
+              color: ga4Connected ? "#48bb78" : "#f87171",
+            }}>
+              {ga4Connected ? "Conectado" : "Pendiente"}
+            </span>
+          </div>
+
+          {ga4Loading ? (
+            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Cargando…</div>
+          ) : ga4Connected && ga4 ? (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <KPI label="Sesiones (30d)" value={ga4.sessions.toLocaleString("es-CO")} />
+                <KPI label="Páginas vistas" value={ga4.pageviews.toLocaleString("es-CO")} />
+                <KPI label="Usuarios activos" value={ga4.activeUsers.toLocaleString("es-CO")} />
+                <KPI label="Bounce Rate" value={`${(ga4.bounceRate * 100).toFixed(1)}%`} />
+              </div>
+              {ga4.trafficSources.length > 0 && (
+                <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(195,154,76,0.06)", border: "1px solid rgba(195,154,76,0.15)", fontSize: 11 }}>
+                  <div style={{ color: "var(--mkt-text-muted)", marginBottom: 6 }}>Top fuente</div>
+                  {ga4.trafficSources.slice(0, 3).map((s, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", color: "var(--mkt-text-muted)", marginBottom: 3 }}>
+                      <span>{s.source}</span>
+                      <span style={{ fontWeight: 600, color: "var(--mkt-text)" }}>{s.sessions}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => window.location.href = "/analytics"}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                Ver Analytics →
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>
+                {ga4NotConnected
+                  ? "Conecta Google Analytics para ver sesiones y tráfico en tiempo real."
+                  : "Sin datos disponibles. Conecta la integración para ver métricas en tiempo real."}
+              </div>
+              <button
+                onClick={() => { window.location.href = "/api/auth/signin/google?callbackUrl=/marketing"; }}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid var(--mkt-border, #1e1e1e)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                Conectar GA4
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* LinkedIn — pending */}
+        <div style={{ ...card, opacity: 0.45 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>LinkedIn API</div>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(109,31,46,0.25)", color: "#f87171" }}>Pendiente</span>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Sin datos disponibles. Conecta la integración para ver métricas en tiempo real.</div>
+          <button disabled style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid var(--mkt-border, #1e1e1e)", background: "transparent", color: "var(--mkt-text-muted)", fontSize: 12, cursor: "not-allowed" }}>
+            Conectar
+          </button>
+        </div>
+
+        {/* Meta — pending */}
+        <div style={{ ...card, opacity: 0.45 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Meta Ads</div>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(100,100,100,0.25)", color: "#9ca3af" }}>No configurado</span>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Sin datos disponibles. Conecta la integración para ver métricas en tiempo real.</div>
+          <button disabled style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid var(--mkt-border, #1e1e1e)", background: "transparent", color: "var(--mkt-text-muted)", fontSize: 12, cursor: "not-allowed" }}>
+            Conectar
+          </button>
+        </div>
+
       </div>
     </div>
   );
