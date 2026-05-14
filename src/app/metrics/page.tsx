@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Phone, Mail, Users, FileText, Star, TrendingUp } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Loader2, Phone, Mail, Users, FileText, TrendingUp } from "lucide-react";
 
 const GOLD = "#C39A4C";
 

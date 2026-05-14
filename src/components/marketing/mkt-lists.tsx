@@ -47,14 +47,10 @@ function Skeleton() {
   );
 }
 
-export function MktLists() {
+export function MktLists({ onNavigate }: { onNavigate?: (section: string) => void }) {
   const [lists, setLists] = useState<BrevoList[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
 
   const load = () => {
     setLoading(true);
@@ -74,24 +70,6 @@ export function MktLists() {
 
   useEffect(() => { load(); }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    setSaving(true); setSaveError("");
-    try {
-      const r = await fetch("/api/marketing/lists", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-      const ct = r.headers.get("content-type") ?? "";
-      if (!ct.includes("application/json")) throw new Error(`Brevo no disponible (HTTP ${r.status})`);
-      const d = await r.json();
-      if (d.error) { setSaveError(d.error); return; }
-      setNewName(""); setShowModal(false); load();
-    } catch (e: any) { setSaveError(String(e)); }
-    finally { setSaving(false); }
-  };
-
   const totalContacts = lists.reduce((s, l) => s + (l.uniqueSubscribers || 0), 0);
 
   return (
@@ -108,8 +86,10 @@ export function MktLists() {
             <span style={{ fontWeight: 700, color: "#C39A4C" }}>{totalContacts.toLocaleString("es-CO")}</span>
           </div>
         </div>
-        <button onClick={() => setShowModal(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#C39A4C", color: "#0a0a0a", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-          + Nueva lista
+        <button
+          onClick={() => onNavigate?.("contacts")}
+          style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #C39A4C", background: "transparent", color: "#C39A4C", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          Ver Contactos →
         </button>
       </div>
 
@@ -173,35 +153,13 @@ export function MktLists() {
         </div>
       )}
 
-      {/* Create modal */}
-      {showModal && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={() => setShowModal(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)" }} />
-          <div style={{ position: "relative", width: 400, background: "#111111", border: "1px solid #1e1e1e", borderRadius: 14, padding: 24, boxShadow: "0 24px 48px rgba(0,0,0,0.5)" }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>Nueva lista en Brevo</h2>
-            {saveError && (
-              <div style={{ padding: "8px 12px", borderRadius: 7, background: "rgba(109,31,46,0.15)", border: "1px solid #6D1F2E", fontSize: 12, color: "#f87171", marginBottom: 12 }}>{saveError}</div>
-            )}
-            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>Nombre de lista *</label>
-                <input
-                  required autoFocus
-                  value={newName} onChange={e => setNewName(e.target.value)}
-                  placeholder="Ej: Tier 1 — Seguros Colombia"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #1e1e1e", background: "#0a0a0a", color: "#e2e8f0", fontSize: 13, outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #1e1e1e", background: "transparent", color: "#718096", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
-                <button type="submit" disabled={saving} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: saving ? "rgba(195,154,76,0.5)" : "#C39A4C", color: "#0a0a0a", fontSize: 13, fontWeight: 600, cursor: saving ? "wait" : "pointer" }}>
-                  {saving ? "Creando…" : "Crear lista"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <div style={{ marginTop: 8 }}>
+        <button
+          onClick={() => window.open("https://app.brevo.com/contact/list", "_blank")}
+          style={{ fontSize: 11, color: "#718096", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+          Gestionar listas en Brevo →
+        </button>
+      </div>
     </div>
   );
 }

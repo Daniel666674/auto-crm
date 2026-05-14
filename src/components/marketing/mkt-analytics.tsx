@@ -37,7 +37,7 @@ interface GA4Data {
   error?: string;
 }
 
-export function MktAnalytics() {
+export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) => void }) {
   const { campaigns, loading } = useMkt();
 
   const [ga4, setGa4] = useState<GA4Data | null>(null);
@@ -95,9 +95,9 @@ export function MktAnalytics() {
                 </div>
               )}
               <button
-                onClick={() => window.open("/analytics", "_blank")}
+                onClick={() => onNavigate?.("campaigns")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver datos →
+                Ver Campañas →
               </button>
             </>
           )}
@@ -138,9 +138,9 @@ export function MktAnalytics() {
                 </div>
               )}
               <button
-                onClick={() => window.open("/analytics", "_blank")}
+                onClick={() => window.open("https://analytics.google.com", "_blank")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver Analytics →
+                Abrir GA4 →
               </button>
             </>
           ) : (
@@ -151,7 +151,7 @@ export function MktAnalytics() {
                   : "Sin datos disponibles. Conecta la integración para ver métricas en tiempo real."}
               </div>
               <button
-                onClick={() => { window.location.href = "/api/auth/signin/google?callbackUrl=/marketing"; }}
+                onClick={() => window.open("/api/auth/signin/google?callbackUrl=/marketing", "_blank")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid var(--mkt-border, #1e1e1e)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                 Conectar GA4
               </button>

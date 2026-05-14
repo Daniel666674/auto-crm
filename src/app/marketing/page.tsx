@@ -536,8 +536,8 @@ function MarketingContent() {
       case "segment-health": return <MktSegmentHealth />;
       case "attribution": return <MktAttributionDashboard />;
       case "handoff": return <MktHandoffCenter />;
-      case "lists": return <MktLists />;
-      case "mkt-analytics": return <MktAnalytics />;
+      case "lists": return <MktLists onNavigate={setSection as any} />;
+      case "mkt-analytics": return <MktAnalytics onNavigate={setSection as any} />;
       case "pipeline-view": return <MktPipelineView />;
       case "lead-velocity": return <MktLeadVelocity />;
       case "calendar": return <MktCalendar />;
