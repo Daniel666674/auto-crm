@@ -666,6 +666,16 @@ function TabUsuarios({ currentUserId }: { currentUserId: string }) {
 function TabIntegraciones({ role }: { role: string }) {
   const isSuperadmin = role === "superadmin";
 
+  const [ga4Connected, setGa4Connected] = useState<boolean | null>(null);
+  const [ga4Checking, setGa4Checking] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/ga4")
+      .then(r => r.json())
+      .then(d => setGa4Connected(d.error !== "ga4_not_connected"))
+      .catch(() => setGa4Connected(false));
+  }, []);
+
   const [brevoKey, setBrevoKey] = useState("");
   const [savingBrevo, setSavingBrevo] = useState(false);
   const [brevoStatus, setBrevoStatus] = useState<"idle" | "ok" | "error">("idle");
@@ -863,6 +873,44 @@ function TabIntegraciones({ role }: { role: string }) {
       </IntSection>
 
       {/* Webhook */}
+      {/* GA4 */}
+      <IntSection title="Google Analytics 4" icon={<span style={{ fontSize: 14, color: "#ea4335" }}>G</span>}>
+        <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 14 }}>
+          Conecta tu cuenta Google para ver métricas de Analytics en el CRM. Property ID: <strong>530528809</strong>
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {ga4Connected === null ? (
+            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Verificando...</span>
+          ) : ga4Connected ? (
+            <>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "rgba(34,197,94,0.1)", color: "#22c55e" }}>CONECTADO</span>
+              <button
+                style={{ ...S.btn("outline") }}
+                disabled={ga4Checking}
+                onClick={async () => {
+                  setGa4Checking(true);
+                  await fetch("/api/ga4?bypass=1");
+                  setGa4Checking(false);
+                  toast.success("Cache de GA4 actualizado");
+                }}>
+                {ga4Checking ? <RefreshCw size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                Refrescar datos
+              </button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>NO CONECTADO</span>
+              <button
+                style={{ ...S.btn() }}
+                onClick={() => { window.location.href = "/api/auth/signin/google?callbackUrl=/settings"; }}>
+                Conectar GA4
+              </button>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Re-autentica con Google para otorgar acceso a Analytics</span>
+            </>
+          )}
+        </div>
+      </IntSection>
+
       <IntSection title="Webhook de leads" icon={<span style={{ fontSize: 14 }}>⚡</span>}>
         <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 12 }}>
           Recibe leads automáticamente desde Typeform, Tally, formularios web, etc.

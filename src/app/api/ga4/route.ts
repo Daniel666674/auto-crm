@@ -1,73 +1,144 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/db";
+import { googleTokens, analyticsCache } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
-export async function GET() {
-  try {
-    const credsB64 = process.env.GA4_CREDENTIALS || '';
-    const propertyId = process.env.GA4_PROPERTY_ID || '';
-    if (!credsB64 || !propertyId) {
-      return NextResponse.json({ error: 'GA4 not configured' }, { status: 400 });
+const PROPERTY_ID = process.env.GA4_PROPERTY_ID ?? "530528809";
+const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
+
+async function getValidAccessToken(userId: string): Promise<string | null> {
+  const row = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
+  if (!row) return null;
+
+  const now = Date.now();
+  const expired = !row.expiryDate || row.expiryDate < now + 60000;
+
+  if (!expired) return row.accessTokenEnc;
+
+  if (!row.refreshTokenEnc) return null;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      refresh_token: row.refreshTokenEnc,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data.access_token) return null;
+
+  const newExpiry = Date.now() + (data.expires_in ?? 3600) * 1000;
+  db.update(googleTokens)
+    .set({ accessTokenEnc: data.access_token, expiryDate: newExpiry, updatedAt: new Date() })
+    .where(eq(googleTokens.userId, userId))
+    .run();
+
+  return data.access_token;
+}
+
+async function runGA4Report(accessToken: string, body: object) {
+  const res = await fetch(
+    `https://analyticsdata.googleapis.com/v1beta/properties/${PROPERTY_ID}:runReport`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     }
+  );
+  return res.json();
+}
 
-    const creds = JSON.parse(Buffer.from(credsB64, 'base64').toString('utf-8'));
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-    // Get access token via service account
-    const jwt = await getServiceAccountToken(creds);
+  const bypass = req.nextUrl.searchParams.get("bypass") === "1";
 
-    const body = {
-      dateRanges: [
-        { startDate: '30daysAgo', endDate: 'today' },
-        { startDate: '60daysAgo', endDate: '31daysAgo' },
-      ],
-      metrics: [
-        { name: 'sessions' },
-        { name: 'activeUsers' },
-        { name: 'bounceRate' },
-        { name: 'averageSessionDuration' },
-        { name: 'newUsers' },
-      ],
-      dimensions: [{ name: 'date' }],
-      limit: 30,
+  // Serve cache if fresh (unless bypass requested)
+  if (!bypass) {
+    const cached = db.select().from(analyticsCache).where(eq(analyticsCache.id, "ga4")).get();
+    if (cached) {
+      const age = Date.now() - new Date(cached.cachedAt).getTime();
+      if (age < CACHE_TTL) return NextResponse.json(JSON.parse(cached.data));
+    }
+  }
+
+  const accessToken = await getValidAccessToken(session.user.id as string);
+  if (!accessToken) {
+    return NextResponse.json(
+      { error: "ga4_not_connected", message: "Conecta GA4 desde Configuración → Integraciones" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const [overview, pages, sources, daily] = await Promise.all([
+      runGA4Report(accessToken, {
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        metrics: [
+          { name: "sessions" }, { name: "screenPageViews" },
+          { name: "activeUsers" }, { name: "bounceRate" }, { name: "newUsers" },
+        ],
+      }),
+      runGA4Report(accessToken, {
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensions: [{ name: "pagePath" }],
+        metrics: [{ name: "screenPageViews" }],
+        orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+        limit: 10,
+      }),
+      runGA4Report(accessToken, {
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensions: [{ name: "sessionSource" }],
+        metrics: [{ name: "sessions" }],
+        orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+        limit: 8,
+      }),
+      runGA4Report(accessToken, {
+        dateRanges: [{ startDate: "29daysAgo", endDate: "today" }],
+        dimensions: [{ name: "date" }],
+        metrics: [{ name: "sessions" }, { name: "screenPageViews" }],
+        orderBys: [{ dimension: { dimensionName: "date" } }],
+      }),
+    ]);
+
+    const row0 = overview.rows?.[0];
+    const report = {
+      sessions: parseInt(row0?.metricValues?.[0]?.value ?? "0", 10),
+      pageviews: parseInt(row0?.metricValues?.[1]?.value ?? "0", 10),
+      activeUsers: parseInt(row0?.metricValues?.[2]?.value ?? "0", 10),
+      bounceRate: parseFloat(row0?.metricValues?.[3]?.value ?? "0"),
+      newUsers: parseInt(row0?.metricValues?.[4]?.value ?? "0", 10),
+      topPages: (pages.rows ?? []).map((r: any) => ({
+        page: r.dimensionValues?.[0]?.value ?? "/",
+        views: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
+      })),
+      trafficSources: (sources.rows ?? []).map((r: any) => ({
+        source: r.dimensionValues?.[0]?.value ?? "(direct)",
+        sessions: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
+      })),
+      daily: (daily.rows ?? []).map((r: any) => ({
+        date: r.dimensionValues?.[0]?.value ?? "",
+        sessions: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
+        pageviews: parseInt(r.metricValues?.[1]?.value ?? "0", 10),
+      })),
+      fetchedAt: new Date().toISOString(),
     };
 
-    const gaRes = await fetch(
-      `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }
-    );
-    const data = await gaRes.json();
-    return NextResponse.json(data);
+    db.insert(analyticsCache)
+      .values({ id: "ga4", data: JSON.stringify(report) })
+      .onConflictDoUpdate({ target: analyticsCache.id, set: { data: JSON.stringify(report), cachedAt: new Date() } })
+      .run();
+
+    return NextResponse.json(report);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
-
-async function getServiceAccountToken(creds: any): Promise<string> {
-  const { createSign } = await import('crypto');
-  const now = Math.floor(Date.now() / 1000);
-  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({
-    iss: creds.client_email,
-    scope: 'https://www.googleapis.com/auth/analytics.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now, exp: now + 3600,
-  })).toString('base64url');
-
-  const sign = createSign('RSA-SHA256');
-  sign.update(`${header}.${payload}`);
-  const sig = sign.sign(creds.private_key, 'base64url');
-  const assertion = `${header}.${payload}.${sig}`;
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion,
-    }),
-  });
-  const data = await res.json();
-  return data.access_token;
 }

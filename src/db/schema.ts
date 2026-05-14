@@ -54,8 +54,26 @@ export const deals = sqliteTable("deals", {
   expectedClose: integer("expected_close", { mode: "timestamp" }),
   probability: integer("probability").notNull().default(0),
   notes: text("notes"),
+  closedAt: integer("closed_at", { mode: "timestamp" }),
+  closedBy: text("closed_by"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const radarEntries = sqliteTable("radar_entries", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contactName: text("contact_name").notNull(),
+  company: text("company").notNull(),
+  tier: integer("tier").notNull().default(2),
+  reason: text("reason").notNull(),
+  trigger: text("trigger").notNull(),
+  estimatedValue: integer("estimated_value"),
+  bantBlocking: text("bant_blocking"),
+  nextAction: text("next_action"),
+  priority: text("priority").notNull().default("medium"),
+  reengageDate: integer("reengage_date").notNull(),
+  removedAt: integer("removed_at"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export const activities = sqliteTable("activities", {

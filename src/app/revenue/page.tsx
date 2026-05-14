@@ -4,79 +4,18 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 
 const GOLD = "#D19C15";
+const COLORS = [GOLD, "#7c2d3e", "#3b82f6", "#22c55e", "#a855f7"];
 
-// ── Static chart data ─────────────────────────────────────────────────────────
-
-const MONTHLY_REVENUE = [
-  { label: "Oct", value: 38000000, target: 60000000 },
-  { label: "Nov", value: 55000000, target: 65000000 },
-  { label: "Dic", value: 47000000, target: 70000000 },
-  { label: "Ene", value: 72000000, target: 75000000 },
-  { label: "Feb", value: 68000000, target: 80000000 },
-  { label: "Mar", value: 91000000, target: 85000000 },
-  { label: "Abr", value: 74000000, target: 90000000 },
-];
-
-const CONCENTRATION = [
-  { label: "Agencia Creativa", value: 22000000, color: GOLD },
-  { label: "Martínez Cons.", value: 18000000, color: "#7c2d3e" },
-  { label: "TechStartup", value: 16000000, color: "#3b82f6" },
-  { label: "Otros", value: 18000000, color: "#7a756e" },
-];
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface DealRow {
-  id: string;
-  value: number;
-  probability: number;
-  stageIsWon: boolean | null;
-  stageIsLost: boolean | null;
+interface RevenueMonth { label: string; revenue: number; target: number }
+interface Concentration { label: string; value: number }
+interface RevenueSummary {
+  totalRevenue: number; totalWonPipeline: number;
+  currentTarget: number; closedCount: number; wonCount: number;
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtCOP(v: number) {
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(v);
 }
-
-// ── SVG Donut ─────────────────────────────────────────────────────────────────
-
-function SVGDonut({ data, size = 110, thick = 22 }: { data: { value: number; color: string }[]; size?: number; thick?: number }) {
-  const cx = size / 2, cy = size / 2, r = (size - thick) / 2;
-  const total = data.reduce((s, d) => s + d.value, 0);
-  let startAngle = -Math.PI / 2;
-  const paths: JSX.Element[] = [];
-
-  data.forEach((seg, i) => {
-    const sweep = (seg.value / total) * 2 * Math.PI;
-    const end = startAngle + sweep;
-    const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
-    const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
-    const large = sweep > Math.PI ? 1 : 0;
-    paths.push(
-      <path
-        key={i}
-        d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`}
-        fill="none"
-        stroke={seg.color}
-        strokeWidth={thick}
-        strokeLinecap="butt"
-        opacity={0.85}
-      />
-    );
-    startAngle = end;
-  });
-
-  return (
-    <svg width={size} height={size} style={{ flexShrink: 0 }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={thick} />
-      {paths}
-    </svg>
-  );
-}
-
-// ── StatCard ──────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
@@ -88,36 +27,65 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+function SVGDonut({ data, size = 110, thick = 22 }: { data: { value: number; color: string }[]; size?: number; thick?: number }) {
+  const cx = size / 2, cy = size / 2, r = (size - thick) / 2;
+  const total = data.reduce((s, d) => s + d.value, 0) || 1;
+  let angle = -Math.PI / 2;
+  const paths: React.ReactElement[] = [];
+  data.forEach((seg, i) => {
+    const sweep = (seg.value / total) * 2 * Math.PI;
+    const end = angle + sweep;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+    const large = sweep > Math.PI ? 1 : 0;
+    paths.push(
+      <path key={i} d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`}
+        fill="none" stroke={seg.color} strokeWidth={thick} strokeLinecap="butt" opacity={0.85} />
+    );
+    angle = end;
+  });
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={thick} />
+      {paths}
+    </svg>
+  );
+}
 
 export default function RevenuePage() {
-  const [deals, setDeals] = useState<DealRow[]>([]);
+  const [months, setMonths] = useState<RevenueMonth[]>([]);
+  const [concentration, setConcentration] = useState<Concentration[]>([]);
+  const [summary, setSummary] = useState<RevenueSummary | null>(null);
+  const [range, setRange] = useState<"6m" | "12m">("6m");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/deals")
+    setLoading(true);
+    fetch(`/api/revenue?range=${range}`)
       .then(r => r.json())
-      .then(setDeals)
+      .then(data => {
+        setMonths(data.months ?? []);
+        setConcentration((data.concentration ?? []).map((c: Concentration, i: number) => ({ ...c, color: COLORS[i % COLORS.length] })));
+        setSummary(data.summary ?? null);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [range]);
 
-  const wonDeals = deals.filter(d => d.stageIsWon);
-  const activeDeals = deals.filter(d => !d.stageIsWon && !d.stageIsLost);
-  const winRate = deals.length > 0 ? wonDeals.length / deals.length : 0.3;
-  const weightedPipeline = activeDeals.reduce((s, d) => s + d.value * (d.probability / 100), 0);
-  const lastMonth = MONTHLY_REVENUE[MONTHLY_REVENUE.length - 1];
-  const projected90d = Math.round(weightedPipeline + lastMonth.value * 3 * 0.9);
+  const totalConc = concentration.reduce((s, c) => s + c.value, 0) || 1;
+  const topPct = concentration.length ? Math.round((concentration[0].value / totalConc) * 100) : 0;
+  const concentrated = topPct > 40 && concentration.length > 0;
 
-  const totalConc = CONCENTRATION.reduce((s, c) => s + c.value, 0);
-  const topPct = Math.round((CONCENTRATION[0].value / totalConc) * 100);
-  const concentrated = topPct > 40;
-
-  // Chart geometry
   const W = 500, H = 160, PAD = 20;
-  const maxVal = Math.max(...MONTHLY_REVENUE.map(m => Math.max(m.value, m.target)));
-  const segW = W / MONTHLY_REVENUE.length;
+  const maxVal = Math.max(...months.map(m => Math.max(m.revenue, m.target)), 1);
+  const segW = months.length > 0 ? W / months.length : W;
   const bw = segW * 0.5;
+
+  const thisMonth = months[months.length - 1];
+  const prevMonth = months[months.length - 2];
+  const mom = thisMonth && prevMonth && prevMonth.revenue > 0
+    ? Math.round(((thisMonth.revenue - prevMonth.revenue) / prevMonth.revenue) * 100)
+    : null;
 
   if (loading) {
     return (
@@ -127,57 +95,98 @@ export default function RevenuePage() {
     );
   }
 
+  const hasNoData = !summary || summary.closedCount === 0;
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Revenue Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">MRR, targets y concentración de clientes · en COP</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Revenue Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">Ingresos cerrados vs targets · en COP</p>
+        </div>
+        <div className="flex gap-1 rounded-lg border p-1" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+          {(["6m", "12m"] as const).map(r => (
+            <button key={r} onClick={() => setRange(r)}
+              style={{
+                padding: "5px 14px", borderRadius: 7, border: "none", cursor: "pointer",
+                fontSize: 12, fontWeight: 600,
+                background: range === r ? GOLD : "transparent",
+                color: range === r ? "#0a0a0a" : "var(--muted-foreground)",
+              }}>
+              {r}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {hasNoData && (
+        <div className="rounded-xl border p-4 text-sm" style={{ background: "rgba(209,156,21,0.08)", borderColor: "rgba(209,156,21,0.3)", color: GOLD }}>
+          No hay deals marcados como pagados todavía. Usa "Marcar como pagado" en un deal para registrar ingresos reales.
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-3">
-        <StatCard label="MRR este mes" value={fmtCOP(lastMonth.value)} accent={GOLD} />
-        <StatCard label="Target este mes" value={fmtCOP(lastMonth.target)} />
         <StatCard
-          label="Win rate"
-          value={`${Math.round(winRate * 100)}%`}
-          sub={`${wonDeals.length} deal${wonDeals.length !== 1 ? "s" : ""} cerrado${wonDeals.length !== 1 ? "s" : ""}`}
-          accent={winRate >= 0.4 ? "#22c55e" : "#f59e0b"}
+          label="Ingresos este mes"
+          value={thisMonth ? fmtCOP(thisMonth.revenue) : "$0"}
+          sub={mom !== null ? `${mom > 0 ? "+" : ""}${mom}% vs mes anterior` : undefined}
+          accent={GOLD}
         />
-        <StatCard label="Proyección 90d" value={fmtCOP(projected90d)} sub="pipeline ponderado + tendencia" accent="#3b82f6" />
+        <StatCard
+          label="Target este mes"
+          value={summary ? fmtCOP(summary.currentTarget) : "—"}
+          sub={thisMonth && summary ? `${Math.round((thisMonth.revenue / summary.currentTarget) * 100)}% alcanzado` : undefined}
+        />
+        <StatCard
+          label="Total ingresos acumulados"
+          value={summary ? fmtCOP(summary.totalRevenue) : "$0"}
+          sub={`${summary?.closedCount ?? 0} deal${summary?.closedCount !== 1 ? "s" : ""} pagado${summary?.closedCount !== 1 ? "s" : ""}`}
+          accent={summary && summary.totalRevenue > 0 ? "#22c55e" : undefined}
+        />
+        <StatCard
+          label="Pipeline ganado (no cobrado)"
+          value={summary ? fmtCOP(summary.totalWonPipeline) : "$0"}
+          sub={`${summary?.wonCount ?? 0} deal${summary?.wonCount !== 1 ? "s" : ""} en etapa ganada`}
+          accent="#3b82f6"
+        />
       </div>
 
       {/* Bar + target line chart */}
       <div className="rounded-xl border p-5" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-        <div className="text-sm font-bold mb-1">Revenue vs Target</div>
+        <div className="text-sm font-bold mb-1">Ingresos vs Target mensual</div>
         <div className="flex gap-4 text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
-          <span><span style={{ color: GOLD }}>■</span> Revenue real</span>
-          <span><span style={{ color: "#7c2d3e" }}>– –</span> Target mensual</span>
+          <span><span style={{ color: GOLD }}>■</span> Ingresos reales</span>
           <span><span style={{ color: "#22c55e" }}>■</span> Por encima del target</span>
+          <span><span style={{ color: "#7c2d3e" }}>– –</span> Target mensual</span>
         </div>
-        <svg width="100%" height={H + PAD} viewBox={`0 0 ${W} ${H + PAD}`} preserveAspectRatio="none">
-          {MONTHLY_REVENUE.map((m, i) => {
-            const bh = Math.max(3, (m.value / maxVal) * H);
-            const x = i * segW + (segW - bw) / 2;
-            const y = H - bh;
-            const col = m.value >= m.target ? "#22c55e" : GOLD;
-            return (
-              <g key={i}>
-                <rect x={x} y={y} width={bw} height={bh} rx={3} fill={col} opacity={0.85} />
-                <text x={x + bw / 2} y={H + 14} textAnchor="middle" fontSize={9} fill="var(--muted-foreground)" fontFamily="inherit">
-                  {m.label}
-                </text>
-              </g>
-            );
-          })}
-          {MONTHLY_REVENUE.map((m, i) => {
-            if (i === 0) return null;
-            const prev = MONTHLY_REVENUE[i - 1];
-            const x1 = (i - 1) * segW + segW / 2, y1 = H - (prev.target / maxVal) * H;
-            const x2 = i * segW + segW / 2, y2 = H - (m.target / maxVal) * H;
-            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#7c2d3e" strokeWidth={1.5} strokeDasharray="4,3" opacity={0.9} />;
-          })}
-        </svg>
+        {months.length > 0 ? (
+          <svg width="100%" height={H + PAD} viewBox={`0 0 ${W} ${H + PAD}`} preserveAspectRatio="none">
+            {months.map((m, i) => {
+              const bh = Math.max(3, (m.revenue / maxVal) * H);
+              const x = i * segW + (segW - bw) / 2;
+              const y = H - bh;
+              const col = m.revenue >= m.target && m.revenue > 0 ? "#22c55e" : GOLD;
+              return (
+                <g key={i}>
+                  <rect x={x} y={y} width={bw} height={bh} rx={3} fill={col} opacity={m.revenue > 0 ? 0.85 : 0.2} />
+                  <text x={x + bw / 2} y={H + 14} textAnchor="middle" fontSize={9} fill="var(--muted-foreground)" fontFamily="inherit">
+                    {m.label}
+                  </text>
+                </g>
+              );
+            })}
+            {months.map((m, i) => {
+              if (i === 0) return null;
+              const prev = months[i - 1];
+              const x1 = (i - 1) * segW + segW / 2, y1 = H - (prev.target / maxVal) * H;
+              const x2 = i * segW + segW / 2, y2 = H - (m.target / maxVal) * H;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#7c2d3e" strokeWidth={1.5} strokeDasharray="4,3" opacity={0.9} />;
+            })}
+          </svg>
+        ) : (
+          <div className="text-sm text-center py-8" style={{ color: "var(--muted-foreground)" }}>Sin datos en el rango seleccionado</div>
+        )}
       </div>
 
       {/* Client concentration */}
@@ -185,39 +194,44 @@ export default function RevenuePage() {
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm font-bold">Concentración de clientes</div>
           {concentrated && (
-            <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+            <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full"
+              style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
               <AlertTriangle size={12} />
-              {CONCENTRATION[0].label} representa {topPct}% del revenue
+              {concentration[0].label} representa {topPct}% del revenue
             </div>
           )}
         </div>
-        <div className="flex items-center gap-6">
-          <SVGDonut data={CONCENTRATION} size={110} thick={22} />
-          <div className="flex-1 flex flex-col gap-2.5">
-            {CONCENTRATION.map((c, i) => {
-              const pct = Math.round((c.value / totalConc) * 100);
-              return (
-                <div key={i}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-sm" style={{ background: c.color }} />
-                      <span>{c.label}</span>
+        {concentration.length > 0 ? (
+          <div className="flex items-center gap-6">
+            <SVGDonut data={concentration.map((c, i) => ({ ...c, color: COLORS[i % COLORS.length] }))} size={110} thick={22} />
+            <div className="flex-1 flex flex-col gap-2.5">
+              {concentration.map((c, i) => {
+                const pct = Math.round((c.value / totalConc) * 100);
+                const color = COLORS[i % COLORS.length];
+                return (
+                  <div key={i}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
+                        <span>{c.label}</span>
+                      </div>
+                      <span className="font-semibold" style={{ color: i === 0 && concentrated ? "#ef4444" : "var(--foreground)" }}>
+                        {pct}% · {fmtCOP(c.value)}
+                      </span>
                     </div>
-                    <span className="font-semibold" style={{ color: i === 0 && concentrated ? "#ef4444" : "var(--foreground)" }}>
-                      {pct}%
-                    </span>
+                    <div className="h-1 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                    </div>
                   </div>
-                  <div className="h-1 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, background: c.color }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-sm py-4" style={{ color: "var(--muted-foreground)" }}>
+            La concentración de clientes aparecerá cuando haya deals marcados como pagados.
+          </div>
+        )}
       </div>
     </div>
   );

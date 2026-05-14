@@ -1,6 +1,9 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { upsertGoogleUser } from "@/db/users";
+import { db } from "@/db";
+import { googleTokens } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const ALLOWED_DOMAIN = "blackscale.consulting";
 
@@ -17,9 +20,10 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          // Force account picker so switching accounts is easy
           prompt: "select_account",
-          hd: ALLOWED_DOMAIN, // Google's hosted domain hint (pre-filters the UI)
+          hd: ALLOWED_DOMAIN,
+          access_type: "offline",
+          scope: "openid email profile https://www.googleapis.com/auth/analytics.readonly",
         },
       },
     }),
@@ -50,6 +54,30 @@ export const authOptions: NextAuthOptions = {
         const dbUser = upsertGoogleUser(email, user.name ?? email.split("@")[0], defaultRole);
         token.id = dbUser.id;
         token.role = dbUser.role;
+
+        // Persist Google OAuth tokens for GA4 access
+        if (account.access_token) {
+          const expiryDate = account.expires_at ? account.expires_at * 1000 : Date.now() + 3600000;
+          const existing = db.select().from(googleTokens).where(eq(googleTokens.userId, dbUser.id)).get();
+          if (existing) {
+            db.update(googleTokens)
+              .set({
+                accessTokenEnc: account.access_token,
+                refreshTokenEnc: account.refresh_token ?? existing.refreshTokenEnc ?? undefined,
+                expiryDate,
+                updatedAt: new Date(),
+              })
+              .where(eq(googleTokens.userId, dbUser.id))
+              .run();
+          } else {
+            db.insert(googleTokens).values({
+              userId: dbUser.id,
+              accessTokenEnc: account.access_token,
+              refreshTokenEnc: account.refresh_token ?? null,
+              expiryDate,
+            }).run();
+          }
+        }
       }
       return token;
     },
