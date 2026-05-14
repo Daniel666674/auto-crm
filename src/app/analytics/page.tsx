@@ -13,7 +13,7 @@ interface BrevoCampaign {
     globalStats?: {
       sent?: number;
       delivered?: number;
-      uniqueOpens?: number;
+      uniqueViews?: number;
       uniqueClicks?: number;
       hardBounces?: number;
       softBounces?: number;
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
       return {
         sent: acc.sent + safeN(gs.sent),
         delivered: acc.delivered + safeN(gs.delivered),
-        opens: acc.opens + safeN(gs.uniqueOpens),
+        opens: acc.opens + safeN(gs.uniqueViews),
         clicks: acc.clicks + safeN(gs.uniqueClicks),
         bounces: acc.bounces + safeN(gs.hardBounces) + safeN(gs.softBounces),
         unsubs: acc.unsubs + safeN(gs.unsubscriptions),
@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
                       {campaigns.map(c => {
                         const gs = c.statistics?.globalStats ?? {};
                         const sent = safeN(gs.sent);
-                        const opens = safeN(gs.uniqueOpens);
+                        const opens = safeN(gs.uniqueViews);
                         const clicks = safeN(gs.uniqueClicks);
                         return (
                           <tr key={c.id} style={{ borderBottom: "1px solid var(--border)" }}>
