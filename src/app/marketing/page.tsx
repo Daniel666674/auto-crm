@@ -14,6 +14,7 @@ import { MktPipelineView } from "@/components/marketing/mkt-pipeline-view";
 import { MktLists } from "@/components/marketing/mkt-lists";
 import { MktLeadVelocity } from "@/components/marketing/mkt-lead-velocity";
 import { MktAnalytics } from "@/components/marketing/mkt-analytics";
+import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 import { MktCalendar } from "@/components/marketing/mkt-calendar";
 import { MktDigest } from "@/components/marketing/mkt-digest";
 import { MktROI } from "@/components/marketing/mkt-roi";
@@ -34,6 +35,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   "pipeline-view": "Vista Pipeline",
   "lead-velocity": "Lead Velocity",
   "mkt-analytics": "Analytics",
+  "brevo-hub": "Brevo Hub",
   calendar: "Calendario",
   abm: "ABM Board",
   digest: "Digest Semanal",
@@ -538,6 +540,7 @@ function MarketingContent() {
       case "handoff": return <MktHandoffCenter />;
       case "lists": return <MktLists onNavigate={setSection as any} />;
       case "mkt-analytics": return <MktAnalytics onNavigate={setSection as any} />;
+      case "brevo-hub": return <MktBrevoHub />;
       case "pipeline-view": return <MktPipelineView />;
       case "lead-velocity": return <MktLeadVelocity />;
       case "calendar": return <MktCalendar />;

@@ -95,9 +95,9 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
                 </div>
               )}
               <button
-                onClick={() => onNavigate?.("campaigns")}
+                onClick={() => onNavigate?.("brevo-hub")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver Campañas →
+                Ver datos →
               </button>
             </>
           )}
@@ -138,9 +138,9 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
                 </div>
               )}
               <button
-                onClick={() => window.open("https://analytics.google.com", "_blank")}
+                onClick={() => window.open("/analytics", "_blank")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Abrir GA4 →
+                Ver Analytics →
               </button>
             </>
           ) : (
