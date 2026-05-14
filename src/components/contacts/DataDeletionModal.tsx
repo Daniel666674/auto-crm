@@ -31,7 +31,7 @@ export function DataDeletionModal({ contactId, contactName, onDeleted }: DataDel
     if (!canConfirm) return;
     setLoading(true);
     try {
-      const res = await fetch(`/app/api/contacts/${contactId}/delete-gdpr`, {
+      const res = await fetch(`/api/contacts/${contactId}/delete-gdpr`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: confirmText, reason }),

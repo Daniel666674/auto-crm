@@ -8,6 +8,7 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import { AppShell } from "@/components/shared/AppShell";
 import { PrivacyPolicyModal } from "@/components/shared/PrivacyPolicyModal";
 import { PushManager } from "@/components/shared/PushManager";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} h-full antialiased dark`} suppressHydrationWarning>
       <body className="min-h-full flex" suppressHydrationWarning>
         <SessionProvider>
+          <ThemeProvider>
           <TooltipProvider>
             <AppShell>
               {children}
@@ -39,6 +41,7 @@ export default function RootLayout({
             <PrivacyPolicyModal />
             <PushManager />
           </TooltipProvider>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>
