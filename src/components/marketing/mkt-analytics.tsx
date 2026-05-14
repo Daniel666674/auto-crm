@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useMkt } from "./mkt-provider";
 
 const GOLD = "#C39A4C";
 
@@ -25,6 +24,15 @@ function KPI({ label, value, sub }: { label: string; value: string | number; sub
   );
 }
 
+interface BrevoCampaign {
+  id: number;
+  name: string;
+  status: string;
+  totalContacts: number;
+  openRate: number;
+  clickRate: number;
+}
+
 interface GA4Data {
   sessions: number;
   pageviews: number;
@@ -37,13 +45,39 @@ interface GA4Data {
   error?: string;
 }
 
-export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) => void }) {
-  const { campaigns, loading } = useMkt();
+function safeN(v: unknown): number {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
 
+export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) => void }) {
+  const [campaigns, setCampaigns] = useState<BrevoCampaign[]>([]);
+  const [brevoLoading, setBrevoLoading] = useState(true);
   const [ga4, setGa4] = useState<GA4Data | null>(null);
   const [ga4Loading, setGa4Loading] = useState(true);
 
   useEffect(() => {
+    fetch("/api/brevo/campaigns")
+      .then(r => r.json())
+      .then(d => {
+        const raw = d.campaigns || [];
+        const mapped: BrevoCampaign[] = raw.map((c: any) => {
+          const gs = c.statistics?.globalStats ?? {};
+          const sent = safeN(gs.sent);
+          const opens = safeN(gs.uniqueViews);
+          const clicks = safeN(gs.uniqueClicks);
+          return {
+            id: c.id, name: c.name, status: c.status,
+            totalContacts: sent,
+            openRate: sent > 0 ? (opens / sent) * 100 : 0,
+            clickRate: sent > 0 ? (clicks / sent) * 100 : 0,
+          };
+        });
+        setCampaigns(mapped);
+      })
+      .catch(() => {})
+      .finally(() => setBrevoLoading(false));
+
     fetch("/api/ga4")
       .then(r => r.json())
       .then(setGa4)
@@ -51,15 +85,15 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
       .finally(() => setGa4Loading(false));
   }, []);
 
-  const totalSent = campaigns.reduce((s, c) => s + (c.totalContacts || 0), 0);
+  const totalSent = campaigns.reduce((s, c) => s + c.totalContacts, 0);
   const avgOpenRate = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + (c.openRate || 0), 0) / campaigns.length
+    ? campaigns.reduce((s, c) => s + c.openRate, 0) / campaigns.length
     : 0;
   const avgClickRate = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + (c.clickRate || 0), 0) / campaigns.length
+    ? campaigns.reduce((s, c) => s + c.clickRate, 0) / campaigns.length
     : 0;
   const best = campaigns.length > 0
-    ? campaigns.reduce((a, b) => (b.openRate || 0) > (a.openRate || 0) ? b : a)
+    ? campaigns.reduce((a, b) => b.openRate > a.openRate ? b : a)
     : null;
 
   const ga4Connected = ga4 && !ga4.error;
@@ -77,7 +111,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Brevo Overview</div>
             <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Conectado</span>
           </div>
-          {loading ? (
+          {brevoLoading ? (
             <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Cargando…</div>
           ) : (
             <>
