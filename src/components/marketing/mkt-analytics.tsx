@@ -95,7 +95,7 @@ export function MktAnalytics() {
                 </div>
               )}
               <button
-                onClick={() => window.open("https://app.brevo.com", "_blank")}
+                onClick={() => window.open("/analytics", "_blank")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                 Ver datos →
               </button>
@@ -138,7 +138,7 @@ export function MktAnalytics() {
                 </div>
               )}
               <button
-                onClick={() => window.location.href = "/analytics"}
+                onClick={() => window.open("/analytics", "_blank")}
                 style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                 Ver Analytics →
               </button>

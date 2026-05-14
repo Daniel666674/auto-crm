@@ -25,6 +25,16 @@ async function listCampaigns(status: string): Promise<any[]> {
   }
 }
 
+async function fetchCampaignStats(id: number): Promise<any> {
+  try {
+    const r = await fetchWithTimeout(`https://api.brevo.com/v3/emailCampaigns/${id}`);
+    if (!r.ok) return null;
+    return r.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request) {
   if (!KEY) return NextResponse.json({ error: 'BREVO_API_KEY no configurada en .env' }, { status: 500 });
 
@@ -44,14 +54,26 @@ export async function GET(req: Request) {
   }
 
   try {
-    // Fetch all statuses in parallel — list response already includes statistics
+    // Brevo list API does NOT include statistics — fetch list first, then enrich each campaign individually
     const [sent, queued, draft] = await Promise.all([
       listCampaigns('sent'),
       listCampaigns('queued'),
       listCampaigns('draft'),
     ]);
-    const campaigns = [...sent, ...queued, ...draft];
-    return NextResponse.json({ campaigns });
+    const allCampaigns = [...sent, ...queued, ...draft];
+
+    // Enrich with individual fetches (parallel, capped at 10 concurrent)
+    const enriched: any[] = [];
+    const chunkSize = 10;
+    for (let i = 0; i < allCampaigns.length; i += chunkSize) {
+      const chunk = allCampaigns.slice(i, i + chunkSize);
+      const results = await Promise.all(chunk.map(c => fetchCampaignStats(c.id)));
+      for (let j = 0; j < chunk.length; j++) {
+        enriched.push(results[j] ?? chunk[j]);
+      }
+    }
+
+    return NextResponse.json({ campaigns: enriched });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

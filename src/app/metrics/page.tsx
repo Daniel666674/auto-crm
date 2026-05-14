@@ -3,7 +3,30 @@
 import { useEffect, useState } from "react";
 import { Loader2, Phone, Mail, Users, FileText, Star, TrendingUp } from "lucide-react";
 
-const GOLD = "#D19C15";
+const GOLD = "#C39A4C";
+
+const cardStyle: React.CSSProperties = {
+  background: "var(--card)",
+  border: "1px solid rgba(195,154,76,0.3)",
+  borderRadius: 12,
+  padding: "20px 22px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+};
+
+function OvKPI({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: GOLD }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1, opacity: 0.7 }}>{sub}</div>}
+    </div>
+  );
+}
+
+interface RevenueOverview { summary: { totalRevenue: number; totalWonPipeline: number; currentTarget: number; closedCount: number; wonCount: number } }
+interface PipelineOverview { stages: { name: string; deals: any[] }[]; deals: any[] }
 
 interface MetricsSummary {
   totalActivities: number;
@@ -62,6 +85,13 @@ export default function MetricsPage() {
   const [summary, setSummary] = useState<MetricsSummary | null>(null);
   const [weeks, setWeeks] = useState<WeekBucket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [revenue, setRevenue] = useState<RevenueOverview | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineOverview | null>(null);
+
+  useEffect(() => {
+    fetch("/api/revenue?range=6m").then(r => r.json()).then(setRevenue).catch(() => {});
+    fetch("/api/pipeline").then(r => r.json()).then(setPipeline).catch(() => {});
+  }, []);
 
   const now = new Date();
 
@@ -91,8 +121,81 @@ export default function MetricsPage() {
     background: "var(--background)", color: "var(--foreground)", fontSize: 12,
   };
 
+  const totalDeals = pipeline?.deals?.length ?? 0;
+  const openDeals = pipeline?.deals?.filter((d: any) => !d.closedAt)?.length ?? 0;
+  const pipelineValue = pipeline?.deals?.filter((d: any) => !d.closedAt)?.reduce((s: number, d: any) => s + (d.value || 0), 0) ?? 0;
+
+  function fmtShort(v: number) {
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+    return `$${v}`;
+  }
+
   return (
     <div className="space-y-5">
+
+      {/* ── Sales Overview Cards (marketing-style) ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14, marginBottom: 8 }}>
+
+        {/* Pipeline Overview */}
+        <div style={cardStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Pipeline Overview</div>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Activo</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <OvKPI label="Deals totales" value={totalDeals} />
+            <OvKPI label="Deals abiertos" value={openDeals} />
+            <OvKPI label="Valor en pipeline" value={fmtShort(pipelineValue)} sub="COP" />
+            <OvKPI label="Deals ganados (pagados)" value={revenue?.summary?.closedCount ?? 0} />
+          </div>
+          <button
+            onClick={() => window.open("/pipeline", "_self")}
+            style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+            Ver Pipeline →
+          </button>
+        </div>
+
+        {/* Revenue Overview */}
+        <div style={cardStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Revenue Overview</div>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Conectado</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <OvKPI label="Ingresos totales" value={fmtShort(revenue?.summary?.totalRevenue ?? 0)} sub="COP" />
+            <OvKPI label="Target este mes" value={fmtShort(revenue?.summary?.currentTarget ?? 0)} sub="COP" />
+            <OvKPI label="Pipeline ganado" value={fmtShort(revenue?.summary?.totalWonPipeline ?? 0)} sub="por facturar" />
+            <OvKPI label="Deals won" value={revenue?.summary?.wonCount ?? 0} sub="en pipeline" />
+          </div>
+          <button
+            onClick={() => window.open("/revenue", "_self")}
+            style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+            Ver Revenue →
+          </button>
+        </div>
+
+        {/* Activity Overview */}
+        <div style={{ ...cardStyle, border: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Actividad Comercial</div>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(195,154,76,0.15)", color: GOLD }}>28 días</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <OvKPI label="Total actividades" value={summary?.totalActivities ?? "—"} />
+            <OvKPI label="Llamadas" value={summary?.calls ?? "—"} />
+            <OvKPI label="Reuniones" value={summary?.meetings ?? "—"} />
+            <OvKPI label="Follow-ups" value={summary?.followUps ?? "—"} />
+          </div>
+          <button
+            onClick={() => window.open("/analytics", "_blank")}
+            style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+            Ver Analytics →
+          </button>
+        </div>
+
+      </div>
+
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Métricas de Actividad</h1>
