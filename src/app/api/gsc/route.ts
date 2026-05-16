@@ -79,8 +79,8 @@ function computeRange(preset: string): { startDate: string; endDate: string } {
   }
 }
 
-async function gscQuery(accessToken: string, body: object) {
-  const siteEncoded = encodeURIComponent(SITE_URL);
+async function gscQuery(accessToken: string, siteUrl: string, body: object) {
+  const siteEncoded = encodeURIComponent(siteUrl);
   const res = await fetch(
     `https://www.googleapis.com/webmasters/v3/sites/${siteEncoded}/searchAnalytics/query`,
     {
@@ -93,15 +93,37 @@ async function gscQuery(accessToken: string, body: object) {
   return { data, status: res.status };
 }
 
-async function listSites(accessToken: string): Promise<string[]> {
+interface SiteEntry { siteUrl: string; permissionLevel: string }
+
+async function fetchSites(accessToken: string): Promise<SiteEntry[]> {
   try {
     const res = await fetch("https://www.googleapis.com/webmasters/v3/sites", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.siteEntry ?? []).map((s: any) => `${s.siteUrl} (${s.permissionLevel})`);
+    return (data.siteEntry ?? []).filter((s: SiteEntry) => s.permissionLevel !== "siteUnverifiedUser");
   } catch { return []; }
+}
+
+// Pick the best property the user can actually read.
+// Priority: configured SITE_URL → exact match in user's verified sites → first accessible
+function pickAccessibleSite(configured: string, sites: SiteEntry[]): string | null {
+  if (sites.length === 0) return null;
+  const exact = sites.find(s => s.siteUrl === configured);
+  if (exact) return exact.siteUrl;
+  // Try stripping/adding www on URL-prefix properties to match what user expects
+  const stripWww = configured.replace(/^https?:\/\/www\./, m => m.replace("www.", ""));
+  const addWww = configured.replace(/^(https?:\/\/)(?!www\.)/, "$1www.");
+  const variant = sites.find(s => s.siteUrl === stripWww || s.siteUrl === addWww);
+  if (variant) return variant.siteUrl;
+  // Try domain property variant
+  const host = configured.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
+  const domainProp = sites.find(s => s.siteUrl === `sc-domain:${host}`);
+  if (domainProp) return domainProp.siteUrl;
+  // Fall back to highest-permission site
+  const owner = sites.find(s => s.permissionLevel === "siteOwner");
+  return (owner ?? sites[0]).siteUrl;
 }
 
 export async function GET(req: NextRequest) {
@@ -136,33 +158,33 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Resolve which site to query: prefer configured, fall back to one the user owns
+  const userSites = await fetchSites(accessToken);
+  const resolvedSite = pickAccessibleSite(SITE_URL, userSites) ?? SITE_URL;
+  const usedFallback = resolvedSite !== SITE_URL;
+
   const base = { startDate, endDate, rowLimit: 10 };
 
   try {
     const [overview, queries, pages, countries, daily] = await Promise.all([
-      gscQuery(accessToken, { ...base, dimensions: [] }),
-      gscQuery(accessToken, { ...base, dimensions: ["query"],   orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }] }),
-      gscQuery(accessToken, { ...base, dimensions: ["page"],    orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }] }),
-      gscQuery(accessToken, { ...base, dimensions: ["country"], orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }], rowLimit: 6 }),
-      gscQuery(accessToken, { startDate, endDate, dimensions: ["date"],  orderBy: [{ fieldName: "date", sortOrder: "ASCENDING" }], rowLimit: 90 }),
+      gscQuery(accessToken, resolvedSite, { ...base, dimensions: [] }),
+      gscQuery(accessToken, resolvedSite, { ...base, dimensions: ["query"],   orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }] }),
+      gscQuery(accessToken, resolvedSite, { ...base, dimensions: ["page"],    orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }] }),
+      gscQuery(accessToken, resolvedSite, { ...base, dimensions: ["country"], orderBy: [{ fieldName: "clicks", sortOrder: "DESCENDING" }], rowLimit: 6 }),
+      gscQuery(accessToken, resolvedSite, { startDate, endDate, dimensions: ["date"],  orderBy: [{ fieldName: "date", sortOrder: "ASCENDING" }], rowLimit: 90 }),
     ]);
 
     if (overview.data?.error) {
       const code = overview.data.error.code ?? overview.status;
       const reason = overview.data.error.errors?.[0]?.reason ?? "";
       const rawMsg = overview.data.error.message ?? "GSC error";
-
-      // Inspect actual scopes/sites so the panel surfaces the root cause
-      const sites = await listSites(accessToken);
-      const hasSiteAccess = sites.some(s => s.startsWith(SITE_URL));
+      const sitesDisplay = userSites.map(s => `${s.siteUrl} (${s.permissionLevel})`);
 
       let friendly = rawMsg;
       if (reason === "insufficientPermissions" || rawMsg.toLowerCase().includes("permission")) {
-        friendly = sites.length === 0
-          ? `El token funciona pero ninguna propiedad de Search Console está disponible para este usuario. Agrega tu correo (con permiso 'Restricted' o 'Full') a la propiedad ${SITE_URL} en https://search.google.com/search-console.`
-          : !hasSiteAccess
-            ? `Este usuario no tiene acceso a "${SITE_URL}". Propiedades disponibles: ${sites.join(" · ")}. Configura GSC_SITE_URL con una de estas, o agrega el usuario a la propiedad.`
-            : rawMsg;
+        friendly = userSites.length === 0
+          ? `El token funciona pero ninguna propiedad de Search Console está disponible para este usuario. Agrega tu correo (con permiso 'Restricted' o 'Full') a una propiedad en https://search.google.com/search-console.`
+          : `Sin acceso a "${resolvedSite}". Verifica los permisos en Search Console.`;
       } else if (code === 401 || reason === "authError" || rawMsg.toLowerCase().includes("invalid_grant")) {
         friendly = "Token Google inválido o expirado. Cierra sesión y vuelve a entrar.";
       } else if (rawMsg.toLowerCase().includes("api") && rawMsg.toLowerCase().includes("disabled")) {
@@ -174,8 +196,9 @@ export async function GET(req: NextRequest) {
         message: friendly,
         code,
         reason,
-        siteUrl: SITE_URL,
-        availableSites: sites,
+        siteUrl: resolvedSite,
+        configuredSiteUrl: SITE_URL,
+        availableSites: sitesDisplay,
         rawMessage: rawMsg,
       }, { status: code === 401 || code === 403 ? 403 : 502 });
     }
@@ -202,7 +225,9 @@ export async function GET(req: NextRequest) {
       countries: (countries.data.rows ?? []).map(mapRow),
       daily: (daily.data.rows ?? []).map(mapRow),
       range: { startDate, endDate, preset },
-      siteUrl: SITE_URL,
+      siteUrl: resolvedSite,
+      configuredSiteUrl: SITE_URL,
+      usedFallback,
       fetchedAt: new Date().toISOString(),
     };
 
