@@ -8,6 +8,50 @@ import { eq } from "drizzle-orm";
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID ?? "530528809";
 const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
 
+function computeRange(preset: string, customStart?: string, customEnd?: string): { startDate: string; endDate: string; key: string } {
+  if (customStart && customEnd) {
+    return { startDate: customStart, endDate: customEnd, key: `${customStart}_${customEnd}` };
+  }
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const now = new Date();
+  const today = fmt(now);
+  const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+  const startOfWeek = (d: Date) => {
+    const r = new Date(d);
+    const day = r.getDay();
+    r.setDate(r.getDate() - (day === 0 ? 6 : day - 1));
+    r.setHours(0, 0, 0, 0);
+    return r;
+  };
+  switch (preset) {
+    case "today":     return { startDate: "today",     endDate: "today",     key: "today" };
+    case "yesterday": return { startDate: "yesterday", endDate: "yesterday", key: "yesterday" };
+    case "7d":        return { startDate: "7daysAgo",  endDate: "today",     key: "7d" };
+    case "28d":       return { startDate: "28daysAgo", endDate: "today",     key: "28d" };
+    case "90d":       return { startDate: "90daysAgo", endDate: "today",     key: "90d" };
+    case "thisWeek": {
+      const s = startOfWeek(now);
+      return { startDate: fmt(s), endDate: today, key: `thisWeek_${fmt(s)}` };
+    }
+    case "lastWeek": {
+      const s = addDays(startOfWeek(now), -7);
+      const e = addDays(s, 6);
+      return { startDate: fmt(s), endDate: fmt(e), key: `lastWeek_${fmt(s)}` };
+    }
+    case "thisMonth": {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { startDate: fmt(s), endDate: today, key: `thisMonth_${fmt(s)}` };
+    }
+    case "lastMonth": {
+      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const e = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { startDate: fmt(s), endDate: fmt(e), key: `lastMonth_${fmt(s)}` };
+    }
+    case "30d":
+    default:          return { startDate: "30daysAgo", endDate: "today", key: "30d" };
+  }
+}
+
 async function refreshToken(row: typeof googleTokens.$inferSelect): Promise<string | null> {
   if (!row.refreshTokenEnc) return null;
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -62,14 +106,24 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const bypass = req.nextUrl.searchParams.get("bypass") === "1";
+  const sp = req.nextUrl.searchParams;
+  const bypass = sp.get("bypass") === "1";
+  const preset = sp.get("preset") ?? "30d";
+  const start = sp.get("start") ?? undefined;
+  const end = sp.get("end") ?? undefined;
+  const { startDate, endDate, key } = computeRange(preset, start ?? undefined, end ?? undefined);
+  const cacheId = `ga4_${key}`;
+
+  // Shorter TTL for "today"/"yesterday" which can still change
+  const sameDay = startDate === "today" || startDate === "yesterday" || startDate === endDate;
+  const ttl = sameDay ? 60 * 60 * 1000 : CACHE_TTL;
 
   // Serve cache if fresh (unless bypass requested)
   if (!bypass) {
-    const cached = db.select().from(analyticsCache).where(eq(analyticsCache.id, "ga4")).get();
+    const cached = db.select().from(analyticsCache).where(eq(analyticsCache.id, cacheId)).get();
     if (cached) {
       const age = Date.now() - new Date(cached.cachedAt).getTime();
-      if (age < CACHE_TTL) return NextResponse.json(JSON.parse(cached.data));
+      if (age < ttl) return NextResponse.json(JSON.parse(cached.data));
     }
   }
 
@@ -82,32 +136,40 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [overview, pages, sources, daily] = await Promise.all([
+    const dr = [{ startDate, endDate }];
+    const [overview, pages, sources, devices, daily] = await Promise.all([
       runGA4Report(accessToken, {
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dateRanges: dr,
         metrics: [
           { name: "sessions" }, { name: "screenPageViews" },
           { name: "activeUsers" }, { name: "bounceRate" }, { name: "newUsers" },
+          { name: "averageSessionDuration" },
         ],
       }),
       runGA4Report(accessToken, {
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dateRanges: dr,
         dimensions: [{ name: "pagePath" }],
         metrics: [{ name: "screenPageViews" }],
         orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
         limit: 10,
       }),
       runGA4Report(accessToken, {
-        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dateRanges: dr,
         dimensions: [{ name: "sessionSource" }],
         metrics: [{ name: "sessions" }],
         orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
         limit: 8,
       }),
       runGA4Report(accessToken, {
-        dateRanges: [{ startDate: "29daysAgo", endDate: "today" }],
+        dateRanges: dr,
+        dimensions: [{ name: "deviceCategory" }],
+        metrics: [{ name: "sessions" }],
+        orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      }),
+      runGA4Report(accessToken, {
+        dateRanges: dr,
         dimensions: [{ name: "date" }],
-        metrics: [{ name: "sessions" }, { name: "screenPageViews" }],
+        metrics: [{ name: "sessions" }, { name: "screenPageViews" }, { name: "activeUsers" }],
         orderBys: [{ dimension: { dimensionName: "date" } }],
       }),
     ]);
@@ -119,6 +181,7 @@ export async function GET(req: NextRequest) {
       activeUsers: parseInt(row0?.metricValues?.[2]?.value ?? "0", 10),
       bounceRate: parseFloat(row0?.metricValues?.[3]?.value ?? "0"),
       newUsers: parseInt(row0?.metricValues?.[4]?.value ?? "0", 10),
+      avgSessionDuration: parseFloat(row0?.metricValues?.[5]?.value ?? "0"),
       topPages: (pages.rows ?? []).map((r: any) => ({
         page: r.dimensionValues?.[0]?.value ?? "/",
         views: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
@@ -127,16 +190,22 @@ export async function GET(req: NextRequest) {
         source: r.dimensionValues?.[0]?.value ?? "(direct)",
         sessions: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
       })),
+      deviceBreakdown: (devices.rows ?? []).map((r: any) => ({
+        device: r.dimensionValues?.[0]?.value ?? "unknown",
+        sessions: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
+      })),
       daily: (daily.rows ?? []).map((r: any) => ({
         date: r.dimensionValues?.[0]?.value ?? "",
         sessions: parseInt(r.metricValues?.[0]?.value ?? "0", 10),
         pageviews: parseInt(r.metricValues?.[1]?.value ?? "0", 10),
+        users: parseInt(r.metricValues?.[2]?.value ?? "0", 10),
       })),
+      range: { startDate, endDate, preset },
       fetchedAt: new Date().toISOString(),
     };
 
     db.insert(analyticsCache)
-      .values({ id: "ga4", data: JSON.stringify(report) })
+      .values({ id: cacheId, data: JSON.stringify(report) })
       .onConflictDoUpdate({ target: analyticsCache.id, set: { data: JSON.stringify(report), cachedAt: new Date() } })
       .run();
 

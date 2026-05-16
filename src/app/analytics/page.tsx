@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { GA4Detail } from "@/components/analytics/ga4-detail";
+import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 
 const GOLD = "#C39A4C";
 
@@ -55,6 +57,8 @@ export default function AnalyticsPage() {
   const [brevoLoading, setBrevoLoading] = useState(true);
   const [ga4, setGa4] = useState<GA4Data | null>(null);
   const [ga4Loading, setGa4Loading] = useState(true);
+  const [showBrevo, setShowBrevo] = useState(false);
+  const [showGA4, setShowGA4] = useState(false);
 
   useEffect(() => {
     fetch("/api/brevo/campaigns")
@@ -128,9 +132,9 @@ export default function AnalyticsPage() {
                 </div>
               )}
               <button
-                onClick={() => window.open("/marketing", "_blank")}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver datos →
+                onClick={() => setShowBrevo(v => !v)}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: showBrevo ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                {showBrevo ? "Ocultar datos Brevo ↑" : "Ver todos los datos de Brevo ↓"}
               </button>
             </>
           )}
@@ -171,9 +175,9 @@ export default function AnalyticsPage() {
                 </div>
               )}
               <button
-                onClick={() => window.open("/marketing", "_blank")}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver Analytics →
+                onClick={() => setShowGA4(v => !v)}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(195,154,76,0.3)", background: showGA4 ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                {showGA4 ? "Ocultar Analytics ↑" : "Ver Analytics detallado ↓"}
               </button>
             </>
           ) : (
@@ -217,6 +221,28 @@ export default function AnalyticsPage() {
         </div>
 
       </div>
+
+      {/* Inline Brevo data hub */}
+      {showBrevo && (
+        <div style={{
+          borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)",
+          background: "rgba(195,154,76,0.03)",
+          padding: "20px 22px",
+        }}>
+          <MktBrevoHub />
+        </div>
+      )}
+
+      {/* Inline GA4 detail with date filters */}
+      {showGA4 && (
+        <div style={{
+          borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)",
+          background: "rgba(195,154,76,0.03)",
+          padding: "20px 22px",
+        }}>
+          <GA4Detail />
+        </div>
+      )}
     </div>
   );
 }

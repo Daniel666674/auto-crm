@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
+import { GA4Detail } from "@/components/analytics/ga4-detail";
 
 const GOLD = "#C39A4C";
 
@@ -57,6 +58,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
   const [ga4, setGa4] = useState<GA4Data | null>(null);
   const [ga4Loading, setGa4Loading] = useState(true);
   const [showHub, setShowHub] = useState(false);
+  const [showGA4, setShowGA4] = useState(false);
 
   useEffect(() => {
     fetch("/api/brevo/campaigns")
@@ -174,9 +176,9 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
                 </div>
               )}
               <button
-                onClick={() => window.open("/analytics", "_blank")}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                Ver Analytics →
+                onClick={() => setShowGA4(v => !v)}
+                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: showGA4 ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                {showGA4 ? "Ocultar Analytics ↑" : "Ver Analytics detallado ↓"}
               </button>
             </>
           ) : (
@@ -229,6 +231,17 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
           padding: "20px 22px",
         }}>
           <MktBrevoHub />
+        </div>
+      )}
+
+      {/* Inline GA4 detail panel — toggled by "Ver Analytics detallado" button */}
+      {showGA4 && (
+        <div style={{
+          borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)",
+          background: "rgba(195,154,76,0.03)",
+          padding: "20px 22px",
+        }}>
+          <GA4Detail />
         </div>
       )}
     </div>
