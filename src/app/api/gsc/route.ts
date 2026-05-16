@@ -89,7 +89,19 @@ async function gscQuery(accessToken: string, body: object) {
       body: JSON.stringify(body),
     }
   );
-  return res.json();
+  const data = await res.json();
+  return { data, status: res.status };
+}
+
+async function listSites(accessToken: string): Promise<string[]> {
+  try {
+    const res = await fetch("https://www.googleapis.com/webmasters/v3/sites", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.siteEntry ?? []).map((s: any) => `${s.siteUrl} (${s.permissionLevel})`);
+  } catch { return []; }
 }
 
 export async function GET(req: NextRequest) {
@@ -135,12 +147,37 @@ export async function GET(req: NextRequest) {
       gscQuery(accessToken, { startDate, endDate, dimensions: ["date"],  orderBy: [{ fieldName: "date", sortOrder: "ASCENDING" }], rowLimit: 90 }),
     ]);
 
-    if (overview.error) {
-      const code = overview.error.code;
-      if (code === 401 || code === 403) {
-        return NextResponse.json({ error: "gsc_not_connected", message: "El token de Google no tiene acceso a Search Console. Cierra sesión y vuelve a entrar para re-autorizar." }, { status: 403 });
+    if (overview.data?.error) {
+      const code = overview.data.error.code ?? overview.status;
+      const reason = overview.data.error.errors?.[0]?.reason ?? "";
+      const rawMsg = overview.data.error.message ?? "GSC error";
+
+      // Inspect actual scopes/sites so the panel surfaces the root cause
+      const sites = await listSites(accessToken);
+      const hasSiteAccess = sites.some(s => s.startsWith(SITE_URL));
+
+      let friendly = rawMsg;
+      if (reason === "insufficientPermissions" || rawMsg.toLowerCase().includes("permission")) {
+        friendly = sites.length === 0
+          ? `El token funciona pero ninguna propiedad de Search Console está disponible para este usuario. Agrega tu correo (con permiso 'Restricted' o 'Full') a la propiedad ${SITE_URL} en https://search.google.com/search-console.`
+          : !hasSiteAccess
+            ? `Este usuario no tiene acceso a "${SITE_URL}". Propiedades disponibles: ${sites.join(" · ")}. Configura GSC_SITE_URL con una de estas, o agrega el usuario a la propiedad.`
+            : rawMsg;
+      } else if (code === 401 || reason === "authError" || rawMsg.toLowerCase().includes("invalid_grant")) {
+        friendly = "Token Google inválido o expirado. Cierra sesión y vuelve a entrar.";
+      } else if (rawMsg.toLowerCase().includes("api") && rawMsg.toLowerCase().includes("disabled")) {
+        friendly = "La Search Console API no está habilitada en el proyecto de Google Cloud. Actívala en https://console.cloud.google.com/apis/library/searchconsole.googleapis.com.";
       }
-      return NextResponse.json({ error: overview.error.message ?? "GSC error" }, { status: 502 });
+
+      return NextResponse.json({
+        error: "gsc_error",
+        message: friendly,
+        code,
+        reason,
+        siteUrl: SITE_URL,
+        availableSites: sites,
+        rawMessage: rawMsg,
+      }, { status: code === 401 || code === 403 ? 403 : 502 });
     }
 
     const mapRow = (r: any) => ({
@@ -152,18 +189,18 @@ export async function GET(req: NextRequest) {
     });
 
     const totals = {
-      clicks: overview.rows?.[0]?.clicks ?? 0,
-      impressions: overview.rows?.[0]?.impressions ?? 0,
-      ctr: overview.rows?.[0]?.ctr ?? 0,
-      position: overview.rows?.[0]?.position ?? 0,
+      clicks: overview.data.rows?.[0]?.clicks ?? 0,
+      impressions: overview.data.rows?.[0]?.impressions ?? 0,
+      ctr: overview.data.rows?.[0]?.ctr ?? 0,
+      position: overview.data.rows?.[0]?.position ?? 0,
     };
 
     const report = {
       totals,
-      queries: (queries.rows ?? []).map(mapRow),
-      pages: (pages.rows ?? []).map(mapRow),
-      countries: (countries.rows ?? []).map(mapRow),
-      daily: (daily.rows ?? []).map(mapRow),
+      queries: (queries.data.rows ?? []).map(mapRow),
+      pages: (pages.data.rows ?? []).map(mapRow),
+      countries: (countries.data.rows ?? []).map(mapRow),
+      daily: (daily.data.rows ?? []).map(mapRow),
       range: { startDate, endDate, preset },
       siteUrl: SITE_URL,
       fetchedAt: new Date().toISOString(),

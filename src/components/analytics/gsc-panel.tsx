@@ -143,6 +143,7 @@ export function GSCPanel() {
   const [report, setReport] = useState<GSCReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [diagnostics, setDiagnostics] = useState<{ availableSites?: string[]; siteUrl?: string; reason?: string; rawMessage?: string } | null>(null);
 
   const load = useCallback(() => {
     if (preset === "custom" && (!customStart || !customEnd)) return;
@@ -151,10 +152,20 @@ export function GSCPanel() {
     const url = preset === "custom"
       ? `/api/gsc?start=${customStart}&end=${customEnd}`
       : `/api/gsc?preset=${preset}`;
+    setDiagnostics(null);
     fetch(url)
       .then(r => r.json())
       .then(d => {
-        if (d.error) { setError(d.message || d.error); return; }
+        if (d.error) {
+          setError(d.message || d.error);
+          setDiagnostics({
+            availableSites: d.availableSites,
+            siteUrl: d.siteUrl,
+            reason: d.reason,
+            rawMessage: d.rawMessage,
+          });
+          return;
+        }
         setReport(d);
       })
       .catch(() => setError("Error de red al conectar con Search Console"))
@@ -245,9 +256,24 @@ export function GSCPanel() {
           {error && !loading && (
             <div style={{ ...card, borderColor: "rgba(248,113,113,0.35)", fontSize: 12, color: "#f87171" }}>
               {error}
-              {notConnected && (
-                <div style={{ marginTop: 8, fontSize: 11, color: "var(--mkt-text-muted, var(--muted-foreground))" }}>
-                  Cierra sesión y vuelve a entrar — el servidor otorgará acceso a Search Console automáticamente.
+              {diagnostics && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(248,113,113,0.2)", fontSize: 11, color: "var(--mkt-text-muted, var(--muted-foreground))", display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div><strong style={{ color: "var(--mkt-text, var(--foreground))" }}>Propiedad consultada:</strong> {diagnostics.siteUrl}</div>
+                  {diagnostics.availableSites && diagnostics.availableSites.length > 0 ? (
+                    <div>
+                      <strong style={{ color: "var(--mkt-text, var(--foreground))" }}>Propiedades disponibles para tu cuenta:</strong>
+                      <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
+                        {diagnostics.availableSites.map(s => <li key={s}>{s}</li>)}
+                      </ul>
+                    </div>
+                  ) : diagnostics.availableSites && diagnostics.availableSites.length === 0 ? (
+                    <div style={{ color: "#f59e0b" }}>
+                      Tu cuenta Google no tiene <strong>ninguna propiedad</strong> de Search Console asignada. Verifica en search.google.com/search-console que tu correo aparezca como usuario en la propiedad.
+                    </div>
+                  ) : null}
+                  {diagnostics.rawMessage && (
+                    <div style={{ marginTop: 4, opacity: 0.7 }}>Detalle: {diagnostics.rawMessage}</div>
+                  )}
                 </div>
               )}
             </div>
