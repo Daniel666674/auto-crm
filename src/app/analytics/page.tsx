@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { GA4Detail } from "@/components/analytics/ga4-detail";
+import { GSCPanel } from "@/components/analytics/gsc-panel";
 import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 
 const GOLD = "#C39A4C";
@@ -243,6 +244,9 @@ export default function AnalyticsPage() {
           <GA4Detail />
         </div>
       )}
+
+      {/* Google Search Console — self-contained expandable panel */}
+      <GSCPanel />
     </div>
   );
 }

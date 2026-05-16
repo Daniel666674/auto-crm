@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
           prompt: "select_account",
           hd: ALLOWED_DOMAIN,
           access_type: "offline",
-          scope: "openid email profile https://www.googleapis.com/auth/analytics.readonly",
+          scope: "openid email profile https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
         },
       },
     }),

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 import { GA4Detail } from "@/components/analytics/ga4-detail";
+import { GSCPanel } from "@/components/analytics/gsc-panel";
 
 const GOLD = "#C39A4C";
 
@@ -244,6 +245,9 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
           <GA4Detail />
         </div>
       )}
+
+      {/* Search Console — always shown, self-expanding */}
+      <GSCPanel />
     </div>
   );
 }
