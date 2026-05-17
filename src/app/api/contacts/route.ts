@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { contacts } from "@/db/schema";
 import { eq, like, or, desc } from "drizzle-orm";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -69,6 +70,18 @@ export async function POST(request: NextRequest) {
       })
       .returning()
       .get();
+
+    fireTriggers({
+      event: "lead_created",
+      data: {
+        contactId: result.id,
+        name: result.name,
+        email: result.email ?? "",
+        company: result.company ?? "",
+        source: result.source,
+        temperature: result.temperature,
+      },
+    }).catch(() => {});
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

@@ -146,6 +146,24 @@ if (existing.count === 0) {
 }
 
 // ---------------------------------------------------------------------------
+// Migration 5: workflow_triggers table
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking workflow_triggers table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS workflow_triggers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    conditions TEXT NOT NULL DEFAULT '{}',
+    actions TEXT NOT NULL DEFAULT '[]',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+`);
+console.log("[migrate] workflow_triggers table: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

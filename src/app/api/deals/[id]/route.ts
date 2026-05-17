@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { deals, pipelineStages, contacts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notifySlackDealClosed } from "@/lib/slack";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function GET(
   _request: NextRequest,
@@ -74,6 +75,19 @@ export async function PUT(
         value: body.value ?? existing.value,
       };
       notifySlackDealClosed(dealForSlack, newStage, contact?.name ?? "—").catch(() => {});
+      fireTriggers({
+        event: "deal_stage_changed",
+        data: {
+          dealId: existing.id,
+          dealTitle: body.title ?? existing.title,
+          stageId: body.stageId,
+          stageName: newStage.name,
+          isWon: newStage.isWon ? "true" : "false",
+          isLost: newStage.isLost ? "true" : "false",
+          contactName: contact?.name ?? "",
+          value: String(body.value ?? existing.value),
+        },
+      }).catch(() => {});
     } else if (newStage && !newStage.isWon && !newStage.isLost) {
       // Moving back to an active stage — clear closure
       updateData.closedAt = null;

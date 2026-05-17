@@ -194,3 +194,16 @@ export const notifications = sqliteTable("notifications", {
   read: integer("read", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
+
+// Workflow automation triggers
+export const workflowTriggers = sqliteTable("workflow_triggers", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  // "deal_stage_changed" | "contact_score_reached" | "lead_created" | "deal_created" | "followup_overdue"
+  eventType: text("event_type").notNull(),
+  conditions: text("conditions").notNull().default("{}"),   // JSON object
+  actions: text("actions").notNull().default("[]"),          // JSON array of action objects
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
