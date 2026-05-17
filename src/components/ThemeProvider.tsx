@@ -32,6 +32,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .then(prefs => {
         if (!prefs) return;
         const root = document.documentElement;
+        // Apply dark/light theme
+        if (prefs.theme === "light") {
+          root.classList.remove("dark");
+          root.classList.add("light");
+        } else {
+          root.classList.remove("light");
+          root.classList.add("dark");
+        }
         root.style.setProperty("--accent-primary", prefs.accentPrimary ?? "#C39A4C");
         root.style.setProperty("--accent-secondary", prefs.accentSecondary ?? "#6D1F2E");
         root.style.setProperty("--text-primary", prefs.textColor ?? "#e2e8f0");

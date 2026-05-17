@@ -231,12 +231,15 @@ function TabApariencia() {
         body: JSON.stringify(prefs),
       });
       // Apply immediately
-      document.documentElement.style.setProperty("--accent-primary", prefs.accentPrimary);
-      document.documentElement.style.setProperty("--accent-secondary", prefs.accentSecondary);
-      document.documentElement.style.setProperty("--text-primary", prefs.textColor);
-      document.documentElement.style.setProperty("--sidebar-bg-custom", prefs.sidebarBg);
+      const root = document.documentElement;
+      if (prefs.theme === "light") { root.classList.remove("dark"); root.classList.add("light"); }
+      else { root.classList.remove("light"); root.classList.add("dark"); }
+      root.style.setProperty("--accent-primary", prefs.accentPrimary);
+      root.style.setProperty("--accent-secondary", prefs.accentSecondary);
+      root.style.setProperty("--text-primary", prefs.textColor);
+      root.style.setProperty("--sidebar-bg-custom", prefs.sidebarBg);
       const radiusMap: Record<string, string> = { sharp: "2px", rounded: "8px", pill: "999px" };
-      document.documentElement.style.setProperty("--border-radius-base", radiusMap[prefs.borderRadius] ?? "8px");
+      root.style.setProperty("--border-radius-base", radiusMap[prefs.borderRadius] ?? "8px");
       toast.success("Apariencia guardada");
     } catch { toast.error("Error al guardar"); }
     finally { setSaving(false); }
@@ -668,12 +671,17 @@ function TabIntegraciones({ role }: { role: string }) {
 
   const [ga4Connected, setGa4Connected] = useState<boolean | null>(null);
   const [ga4Checking, setGa4Checking] = useState(false);
+  const [envStatus, setEnvStatus] = useState<{ brevo: boolean; apollo: boolean; ga4Property: string | null; gscSiteUrl: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/ga4")
       .then(r => r.json())
       .then(d => setGa4Connected(d.error !== "ga4_not_connected"))
       .catch(() => setGa4Connected(false));
+    fetch("/api/settings/integrations-status")
+      .then(r => r.json())
+      .then(d => setEnvStatus(d))
+      .catch(() => {});
   }, []);
 
   const [brevoKey, setBrevoKey] = useState("");
@@ -776,11 +784,17 @@ function TabIntegraciones({ role }: { role: string }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Brevo */}
       <IntSection title="Brevo — Email Marketing" icon={<span style={{ fontSize: 14, color: "#0070f3" }}>✉</span>}>
+        {envStatus !== null && (
+          <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>BREVO_API_KEY en servidor:</span>
+            <StatusBadge connected={envStatus.brevo} />
+          </div>
+        )}
         {isSuperadmin ? (
           <>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <div style={{ position: "relative", flex: 1 }}>
-                <input type={brevoVisible ? "text" : "password"} placeholder="xkeysib-…" value={brevoKey} onChange={e => setBrevoKey(e.target.value)}
+                <input type={brevoVisible ? "text" : "password"} placeholder="xkeysib-… (verificar clave)" value={brevoKey} onChange={e => setBrevoKey(e.target.value)}
                   style={{ ...S.input, paddingRight: 36 }} />
                 <button onClick={() => setBrevoVisible(v => !v)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", display: "flex" }}>
                   {brevoVisible ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -828,6 +842,12 @@ function TabIntegraciones({ role }: { role: string }) {
 
       {/* Apollo */}
       <IntSection title="Apollo — Lead Intelligence" icon={<span style={{ fontSize: 14, color: "#6366f1" }}>◉</span>}>
+        {envStatus !== null && (
+          <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>APOLLO_API_KEY en servidor:</span>
+            <StatusBadge connected={envStatus.apollo} />
+          </div>
+        )}
         {isSuperadmin ? (
           <>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -932,30 +952,157 @@ function TabIntegraciones({ role }: { role: string }) {
 
 // ─── Tab: Pipeline ─────────────────────────────────────────────────────────────
 
-function TabPipeline() {
-  const [stages, setStages] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
+type Stage = { id: string; name: string; color: string; order: number; isWon: boolean; isLost: boolean };
 
-  useEffect(() => {
-    fetch("/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
-  }, []);
+function TabPipeline({ role }: { role: string }) {
+  const canEdit = role === "superadmin";
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("#64748b");
+  const [saving, setSaving] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#64748b");
+  const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const load = () => {
+    fetch("/api/pipeline").then(r => r.json()).then((data: Stage[]) => {
+      const sorted = Array.isArray(data) ? [...data].sort((a, b) => a.order - b.order) : [];
+      setStages(sorted);
+    }).catch(() => {});
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const startEdit = (stage: Stage) => {
+    setEditId(stage.id);
+    setEditName(stage.name);
+    setEditColor(stage.color);
+  };
+
+  const cancelEdit = () => setEditId(null);
+
+  const saveEdit = async (id: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pipeline/stages/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName, color: editColor }),
+      });
+      const d = await res.json();
+      if (d.error) { toast.error(d.error); return; }
+      toast.success("Etapa actualizada");
+      setEditId(null);
+      load();
+    } catch { toast.error("Error al guardar"); }
+    finally { setSaving(false); }
+  };
+
+  const deleteStage = async (id: string) => {
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/pipeline/stages/${id}`, { method: "DELETE" });
+      const d = await res.json();
+      if (d.error) { toast.error(d.error); return; }
+      toast.success("Etapa eliminada");
+      load();
+    } catch { toast.error("Error al eliminar"); }
+    finally { setDeleting(null); }
+  };
+
+  const addStage = async () => {
+    if (!newName.trim()) return;
+    setAdding(true);
+    try {
+      const res = await fetch("/api/pipeline/stages", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), color: newColor }),
+      });
+      const d = await res.json();
+      if (d.error) { toast.error(d.error); return; }
+      toast.success("Etapa creada");
+      setShowAdd(false); setNewName(""); setNewColor("#64748b");
+      load();
+    } catch { toast.error("Error al crear etapa"); }
+    finally { setAdding(false); }
+  };
 
   return (
-    <div style={S.card}>
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-        <Kanban size={15} /> Etapas del pipeline
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {stages.map((stage) => (
-          <div key={stage.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13 }}>{stage.name}</span>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 4 }}>#{stage.order}</span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {canEdit && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button style={S.btn("primary")} onClick={() => setShowAdd(v => !v)}>+ Nueva etapa</button>
+        </div>
+      )}
+
+      {showAdd && (
+        <div style={{ ...S.card, background: "rgba(195,154,76,0.05)", border: "1px solid rgba(195,154,76,0.2)" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Nueva etapa del pipeline</div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
+              style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
+            <input style={{ ...S.input, flex: 1 }} placeholder="Nombre de la etapa" value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addStage()} />
+            <button style={S.btn("primary")} onClick={addStage} disabled={adding || !newName.trim()}>
+              {adding ? <RefreshCw size={13} className="animate-spin" /> : "Crear"}
+            </button>
+            <button style={S.btn("ghost")} onClick={() => setShowAdd(false)}>Cancelar</button>
           </div>
-        ))}
+        </div>
+      )}
+
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <Kanban size={15} /> Etapas del pipeline
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {stages.map((stage) => (
+            <div key={stage.id}>
+              {editId === stage.id ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--primary)", background: "rgba(195,154,76,0.05)" }}>
+                  <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
+                    style={{ width: 30, height: 30, border: "none", background: "none", cursor: "pointer", borderRadius: 6, flexShrink: 0 }} />
+                  <input style={{ ...S.input, flex: 1, padding: "5px 10px" }} value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") saveEdit(stage.id); if (e.key === "Escape") cancelEdit(); }} />
+                  <button style={S.btn("primary")} onClick={() => saveEdit(stage.id)} disabled={saving}>
+                    {saving ? <RefreshCw size={12} className="animate-spin" /> : "Guardar"}
+                  </button>
+                  <button style={S.btn("ghost")} onClick={cancelEdit}>Cancelar</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 13 }}>{stage.name}</span>
+                  {stage.isWon && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>Ganado</span>}
+                  {stage.isLost && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 10, background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>Perdido</span>}
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 4 }}>#{stage.order}</span>
+                  {canEdit && (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button style={{ ...S.btn("ghost"), padding: "3px 8px", fontSize: 11 }} onClick={() => startEdit(stage)}>Editar</button>
+                      <button
+                        style={{ ...S.btn("danger"), padding: "3px 8px", fontSize: 11, opacity: deleting === stage.id ? 0.6 : 1 }}
+                        onClick={() => deleteStage(stage.id)}
+                        disabled={deleting === stage.id}
+                      >
+                        {deleting === stage.id ? <RefreshCw size={11} className="animate-spin" /> : "Eliminar"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {!canEdit && (
+          <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 14 }}>
+            Solo superadmin puede editar las etapas del pipeline.
+          </p>
+        )}
       </div>
-      <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 14 }}>
-        Usa <code style={{ background: "rgba(255,255,255,0.07)", padding: "1px 5px", borderRadius: 3 }}>/customize</code> en Claude Code para modificar las etapas.
-      </p>
     </div>
   );
 }
@@ -1157,7 +1304,7 @@ export default function SettingsPage() {
       {current === "negocio"        && <TabNegocio role={userRole} />}
       {current === "usuarios"       && <TabUsuarios currentUserId={userId} />}
       {current === "integraciones"  && <TabIntegraciones role={userRole} />}
-      {current === "pipeline"       && <TabPipeline />}
+      {current === "pipeline"       && <TabPipeline role={userRole} />}
       {current === "notificaciones" && <TabNotificaciones />}
       {current === "cliente"        && <TabCliente />}
     </div>
