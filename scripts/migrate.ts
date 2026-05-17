@@ -5,7 +5,7 @@
  * Safe to run multiple times on existing VPS databases.
  *
  * Usage:
- *   npx tsx src/scripts/migrate.ts
+ *   npx tsx scripts/migrate.ts
  */
 
 import Database from "better-sqlite3";
