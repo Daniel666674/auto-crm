@@ -49,7 +49,7 @@ export type MktSection =
   | "engagement" | "campaigns" | "contacts" | "attribution" | "handoff"
   | "segment-health" | "icp-insights" | "lists"
   | "pipeline-view" | "lead-velocity"
-  | "mkt-analytics"
+  | "mkt-analytics" | "intelligence"
   | "calendar" | "abm"
   | "digest" | "roi" | "export"
   | "integrations"

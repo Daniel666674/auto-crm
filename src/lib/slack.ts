@@ -10,6 +10,8 @@ export interface SlackConfig {
   notifyDealLost: boolean;
   notifyLeadHot: boolean;
   notifyDealAged: boolean;
+  notifyCampaignLaunched: boolean;
+  notifyMktHandoff: boolean;
 }
 
 const DEFAULT_SLACK_CONFIG: SlackConfig = {
@@ -18,6 +20,8 @@ const DEFAULT_SLACK_CONFIG: SlackConfig = {
   notifyDealLost: true,
   notifyLeadHot: true,
   notifyDealAged: false,
+  notifyCampaignLaunched: true,
+  notifyMktHandoff: true,
 };
 
 export async function getSlackConfig(): Promise<SlackConfig | null> {
@@ -106,6 +110,57 @@ export async function notifySlackDealClosed(
     },
   ];
 
+  await sendSlackNotification(config.webhookUrl, text, attachments);
+}
+
+// Marketing: campaign launched (status -> active)
+export async function notifySlackCampaignLaunched(
+  campaign: { id: string; name: string; channel: string; targetSegment: string; totalContacts: number }
+): Promise<void> {
+  const config = await getSlackConfig();
+  if (!config) return;
+  if (!config.notifyCampaignLaunched) return;
+
+  const text = `📣 *Campaña lanzada*`;
+  const attachments = [
+    {
+      color: "#6366f1",
+      fields: [
+        { title: "Campaña", value: campaign.name, short: true },
+        { title: "Canal", value: campaign.channel, short: true },
+        { title: "Segmento", value: campaign.targetSegment || "—", short: true },
+        { title: "Contactos", value: String(campaign.totalContacts), short: true },
+      ],
+      footer: "BLACKSCALE NEXUS — Marketing",
+      ts: Math.floor(Date.now() / 1000),
+    },
+  ];
+  await sendSlackNotification(config.webhookUrl, text, attachments);
+}
+
+// Marketing: contact handed off to sales (ready_for_sales flips true)
+export async function notifySlackMktHandoff(
+  contact: { id: string; name: string; company: string; tier: number; score: number; email: string }
+): Promise<void> {
+  const config = await getSlackConfig();
+  if (!config) return;
+  if (!config.notifyMktHandoff) return;
+
+  const text = `🤝 *Handoff a ventas*`;
+  const attachments = [
+    {
+      color: "#22c55e",
+      fields: [
+        { title: "Contacto", value: contact.name, short: true },
+        { title: "Empresa", value: contact.company || "—", short: true },
+        { title: "Tier", value: `T${contact.tier}`, short: true },
+        { title: "Score", value: `${contact.score}`, short: true },
+        { title: "Email", value: contact.email || "—", short: false },
+      ],
+      footer: "BLACKSCALE NEXUS — Marketing",
+      ts: Math.floor(Date.now() / 1000),
+    },
+  ];
   await sendSlackNotification(config.webhookUrl, text, attachments);
 }
 

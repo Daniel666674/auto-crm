@@ -7,7 +7,12 @@ export type TriggerEvent =
   | "contact_score_reached"
   | "lead_created"
   | "deal_created"
-  | "followup_overdue";
+  | "followup_overdue"
+  // Marketing events
+  | "campaign_created"
+  | "campaign_completed"
+  | "mkt_handoff"
+  | "mkt_engagement_changed";
 
 export interface TriggerPayload {
   event: TriggerEvent;

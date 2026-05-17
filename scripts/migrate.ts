@@ -194,6 +194,123 @@ db.exec(`
 console.log("[migrate] workflow_triggers table: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 8: campaign_outcomes table (marketing analog of close_reasons)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking campaign_outcomes table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS campaign_outcomes (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    label TEXT NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+  )
+`);
+console.log("[migrate] campaign_outcomes table: OK");
+
+// Seed default campaign outcomes if empty
+const outcomeCount = db.prepare("SELECT COUNT(*) as count FROM campaign_outcomes").get() as { count: number };
+if (outcomeCount.count === 0) {
+  const seedOutcomes = [
+    { type: "success",        label: "Cumplió objetivo de leads",     order: 1 },
+    { type: "success",        label: "Generó handoffs de calidad",    order: 2 },
+    { type: "underperformed", label: "Open rate por debajo de meta",  order: 1 },
+    { type: "underperformed", label: "Baja conversión a handoff",     order: 2 },
+    { type: "cancelled",      label: "Pausada por presupuesto",       order: 1 },
+    { type: "cancelled",      label: "Pivote estratégico",            order: 2 },
+  ];
+  const insertOutcome = db.prepare(
+    `INSERT INTO campaign_outcomes (id, type, label, "order", active, created_at) VALUES (?, ?, ?, ?, 1, ?)`
+  );
+  const seedTx = db.transaction(() => {
+    const now = Date.now();
+    for (const o of seedOutcomes) {
+      insertOutcome.run(crypto.randomUUID(), o.type, o.label, o.order, now);
+    }
+  });
+  seedTx();
+  console.log(`[migrate] Seeded ${seedOutcomes.length} default campaign outcomes`);
+}
+
+// ---------------------------------------------------------------------------
+// Migration 9: marketing_targets table (per-user marketing goals)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking marketing_targets table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS marketing_targets (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    metric TEXT NOT NULL,
+    period TEXT NOT NULL,
+    year INTEGER NOT NULL,
+    month INTEGER,
+    quarter INTEGER,
+    target_value INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+`);
+console.log("[migrate] marketing_targets table: OK");
+
+// ---------------------------------------------------------------------------
+// Migration 10: mkt_campaigns columns — owner, outcome reason, outcome notes
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking mkt_campaigns columns...");
+// Ensure base table exists (mkt-db.ts also creates it, but be safe for fresh installs)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mkt_campaigns (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    start_date INTEGER NOT NULL,
+    target_segment TEXT NOT NULL DEFAULT '',
+    cadence_type TEXT NOT NULL DEFAULT 'outreach',
+    open_rate REAL NOT NULL DEFAULT 0,
+    click_rate REAL NOT NULL DEFAULT 0,
+    reply_rate REAL NOT NULL DEFAULT 0,
+    total_contacts INTEGER NOT NULL DEFAULT 0,
+    conversions INTEGER NOT NULL DEFAULT 0,
+    last_sent INTEGER
+  )
+`);
+for (const col of [
+  ["owner_id", "TEXT"],
+  ["outcome_reason_id", "TEXT"],
+  ["outcome_notes", "TEXT"],
+  ["closed_at", "INTEGER"],
+]) {
+  if (!hasColumn("mkt_campaigns", col[0])) {
+    db.exec(`ALTER TABLE mkt_campaigns ADD COLUMN ${col[0]} ${col[1]}`);
+    console.log(`[migrate] Added mkt_campaigns.${col[0]}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Migration 11: mkt_contacts.owner_id (contact owner / assignment)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking mkt_contacts.owner_id...");
+// Ensure base table exists
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mkt_contacts (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    company TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'website',
+    tier INTEGER NOT NULL DEFAULT 3,
+    temperature TEXT NOT NULL DEFAULT 'cold',
+    score INTEGER NOT NULL DEFAULT 0,
+    last_activity INTEGER NOT NULL
+  )
+`);
+if (!hasColumn("mkt_contacts", "owner_id")) {
+  db.exec(`ALTER TABLE mkt_contacts ADD COLUMN owner_id TEXT`);
+  console.log("[migrate] Added mkt_contacts.owner_id");
+}
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

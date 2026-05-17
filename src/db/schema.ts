@@ -212,6 +212,32 @@ export const apiTokens = sqliteTable("api_tokens", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+// Marketing campaign outcomes (analog of close_reasons, for campaigns)
+export const campaignOutcomes = sqliteTable("campaign_outcomes", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  type: text("type").notNull(), // "success" | "underperformed" | "cancelled"
+  label: text("label").notNull(),
+  order: integer("order").notNull().default(0),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// Marketing targets per user (leads, handoffs, qualified opportunities)
+export const marketingTargets = sqliteTable("marketing_targets", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),
+  // "leads" | "handoffs" | "qualified" | "engagement_rate"
+  metric: text("metric").notNull(),
+  period: text("period").notNull(),
+  year: integer("year").notNull(),
+  month: integer("month"),
+  quarter: integer("quarter"),
+  // For "engagement_rate" stored as basis points (e.g., 2500 = 25%). For counts, raw count.
+  targetValue: integer("target_value").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 // Workflow automation triggers
 export const workflowTriggers = sqliteTable("workflow_triggers", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

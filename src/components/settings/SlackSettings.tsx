@@ -23,6 +23,8 @@ interface SlackConfig {
   notifyDealLost: boolean;
   notifyLeadHot: boolean;
   notifyDealAged: boolean;
+  notifyCampaignLaunched: boolean;
+  notifyMktHandoff: boolean;
 }
 
 const EMPTY_CONFIG: SlackConfig = {
@@ -31,6 +33,8 @@ const EMPTY_CONFIG: SlackConfig = {
   notifyDealLost: false,
   notifyLeadHot: true,
   notifyDealAged: false,
+  notifyCampaignLaunched: true,
+  notifyMktHandoff: true,
 };
 
 interface NotifyToggleProps {
@@ -311,6 +315,20 @@ export function SlackSettings({ role }: Props) {
                 description="Notifica cuando un deal no tiene movimiento por N dias"
                 checked={config.notifyDealAged}
                 onChange={v => setConfig(c => ({ ...c, notifyDealAged: v }))}
+                disabled={!isSuperadmin}
+              />
+              <NotifyToggle
+                label="Campaña lanzada"
+                description="Notifica cuando se lanza una campaña de marketing (status activa)"
+                checked={config.notifyCampaignLaunched}
+                onChange={v => setConfig(c => ({ ...c, notifyCampaignLaunched: v }))}
+                disabled={!isSuperadmin}
+              />
+              <NotifyToggle
+                label="Handoff a ventas"
+                description="Notifica cuando marketing entrega un contacto a ventas"
+                checked={config.notifyMktHandoff}
+                onChange={v => setConfig(c => ({ ...c, notifyMktHandoff: v }))}
                 disabled={!isSuperadmin}
               />
             </div>

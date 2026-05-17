@@ -17,6 +17,8 @@ import { MktAnalytics } from "@/components/marketing/mkt-analytics";
 import { MktCalendar } from "@/components/marketing/mkt-calendar";
 import { MktDigest } from "@/components/marketing/mkt-digest";
 import { MktROI } from "@/components/marketing/mkt-roi";
+import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
+import { MktAdvancedSettings } from "@/components/marketing/mkt-advanced-settings";
 import { MKT_THEME_VARS } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -34,6 +36,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   "pipeline-view": "Vista Pipeline",
   "lead-velocity": "Lead Velocity",
   "mkt-analytics": "Analytics",
+  intelligence: "Intelligence",
   calendar: "Calendario",
   abm: "ABM Board",
   digest: "Digest Semanal",
@@ -197,7 +200,8 @@ function MktContacts() {
 function MktSettings() {
   const { syncFromBrevo } = useMkt();
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<"perfil" | "apariencia" | "integraciones" | "notificaciones">("perfil");
+  const [activeTab, setActiveTab] = useState<"perfil" | "apariencia" | "integraciones" | "notificaciones" | "avanzado">("perfil");
+  const userRoleForAdvanced = (session?.user as { role?: string })?.role ?? "marketing";
 
   // ── shared styles ──
   const card: React.CSSProperties = { background: "var(--mkt-card)", border: "1px solid var(--mkt-border)", borderRadius: 12, padding: 24 };
@@ -336,10 +340,10 @@ function MktSettings() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--mkt-border)", marginBottom: 24 }}>
-        {(["perfil", "apariencia", "integraciones", "notificaciones"] as const).map(t => (
+      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--mkt-border)", marginBottom: 24, flexWrap: "wrap" }}>
+        {(["perfil", "apariencia", "integraciones", "notificaciones", "avanzado"] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)} style={tabStyle(t)}>
-            {{ perfil: "Perfil", apariencia: "Apariencia", integraciones: "Integraciones", notificaciones: "Notificaciones" }[t]}
+            {{ perfil: "Perfil", apariencia: "Apariencia", integraciones: "Integraciones", notificaciones: "Notificaciones", avanzado: "Avanzado" }[t]}
           </button>
         ))}
       </div>
@@ -495,6 +499,11 @@ function MktSettings() {
           <button style={btn("primary")} onClick={handleSaveNotif} disabled={savingNotif}>{savingNotif ? "Guardando…" : "Guardar notificaciones"}</button>
         </div>
       )}
+
+      {/* ── AVANZADO ── */}
+      {activeTab === "avanzado" && (
+        <MktAdvancedSettings role={userRoleForAdvanced} />
+      )}
     </div>
   );
 }
@@ -538,6 +547,7 @@ function MarketingContent() {
       case "handoff": return <MktHandoffCenter />;
       case "lists": return <MktLists onNavigate={setSection as any} />;
       case "mkt-analytics": return <MktAnalytics onNavigate={setSection as any} />;
+      case "intelligence": return <MktIntelligence />;
       case "pipeline-view": return <MktPipelineView />;
       case "lead-velocity": return <MktLeadVelocity />;
       case "calendar": return <MktCalendar />;
