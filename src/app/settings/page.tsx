@@ -18,6 +18,7 @@ import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { DigestScheduleSettings } from "@/components/settings/DigestScheduleSettings";
 import { ApiTokensSettings } from "@/components/settings/ApiTokensSettings";
+import { applyCrmTheme } from "@/lib/apply-theme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -212,6 +213,7 @@ const FONTS = [
   { id: "mono", label: "JetBrains Mono", preview: "Aa" },
 ];
 
+
 function TabApariencia() {
   const DEFAULTS: UserPrefs = {
     theme: "dark", accentPrimary: "#C39A4C", accentSecondary: "#6D1F2E",
@@ -239,26 +241,7 @@ function TabApariencia() {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prefs),
       });
-      // Apply immediately
-      const root = document.documentElement;
-      if (prefs.theme === "light") { root.classList.remove("dark"); root.classList.add("light"); }
-      else { root.classList.remove("light"); root.classList.add("dark"); }
-      root.style.setProperty("--accent-primary", prefs.accentPrimary);
-      root.style.setProperty("--accent-secondary", prefs.accentSecondary);
-      root.style.setProperty("--text-primary", prefs.textColor);
-      root.style.setProperty("--sidebar-bg-custom", prefs.sidebarBg);
-      const radiusMap: Record<string, string> = { sharp: "2px", rounded: "8px", pill: "999px" };
-      root.style.setProperty("--border-radius-base", radiusMap[prefs.borderRadius] ?? "8px");
-      root.style.setProperty("--primary", prefs.accentPrimary);
-      const fontMap: Record<string, string> = {
-        inter: "'Inter', -apple-system, sans-serif",
-        merriweather: "'Merriweather', Georgia, serif",
-        playfair: "'Playfair Display', Georgia, serif",
-        mono: "'JetBrains Mono', monospace",
-      };
-      document.body.style.fontFamily = fontMap[prefs.fontFamily] ?? fontMap.inter;
-      const densityMap: Record<string, string> = { compact: "0.75", comfortable: "1", spacious: "1.25" };
-      root.style.setProperty("--ui-spacing-factor", densityMap[prefs.uiDensity] ?? "1");
+      applyCrmTheme(prefs);
       toast.success("Apariencia guardada");
     } catch { toast.error("Error al guardar"); }
     finally { setSaving(false); }

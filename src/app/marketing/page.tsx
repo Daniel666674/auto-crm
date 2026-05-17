@@ -253,27 +253,28 @@ function MktSettings() {
   };
   const rc = roleCfg[userRole] ?? roleCfg.sales;
 
-  // ── apariencia state ──
-  const DFLT = { theme: "dark", accentPrimary: "#C39A4C", accentSecondary: "#6D1F2E", textColor: "#e2e8f0", fontFamily: "inter", sidebarBg: "#0a0a0a", sidebarBgType: "solid", uiDensity: "comfortable", borderRadius: "rounded" };
+  // ── apariencia state ── (marketing-only, independent from CRM)
+  const DFLT = { theme: "dark-luxury", accentPrimary: "#D19C15", accentSecondary: "#551C25", textColor: "#D7D2CB", fontFamily: "inter", sidebarBg: "#0c0c0b", sidebarBgType: "solid", uiDensity: "comfortable", borderRadius: "rounded" };
   const [prefs, setPrefs] = useState(DFLT);
   const [savingPrefs, setSavingPrefs] = useState(false);
   useEffect(() => {
-    fetch("/api/settings/preferences").then(r => r.json()).then(d => { if (d && !d.error) setPrefs(p => ({ ...p, ...d })); }).catch(() => {});
+    fetch("/api/settings/mkt-preferences").then(r => r.json()).then(d => { if (d && !d.error) setPrefs(p => ({ ...p, ...d })); }).catch(() => {});
   }, []);
   const setP = (k: string, v: string) => setPrefs(p => ({ ...p, [k]: v }));
   const handleSavePrefs = async () => {
     setSavingPrefs(true);
     try {
-      await fetch("/api/settings/preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(prefs) });
+      await fetch("/api/settings/mkt-preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(prefs) });
       const vars = getMktThemeVars(prefs.theme, prefs.accentPrimary);
-      window.dispatchEvent(new CustomEvent("mkt-theme-change", { detail: vars }));
       const fontMap: Record<string, string> = {
         inter: "'Inter', -apple-system, sans-serif",
         merriweather: "'Merriweather', Georgia, serif",
         playfair: "'Playfair Display', Georgia, serif",
-        mono: "'JetBrains Mono', monospace",
+        mono: "'JetBrains Mono', 'Fira Code', monospace",
       };
-      document.body.style.fontFamily = fontMap[prefs.fontFamily] ?? fontMap.inter;
+      window.dispatchEvent(new CustomEvent("mkt-theme-change", {
+        detail: { themeVars: vars, font: fontMap[prefs.fontFamily] ?? fontMap.inter },
+      }));
     } finally { setSavingPrefs(false); }
   };
   const Toggle3 = ({ options, value, onChange }: { options: { id: string; label: string }[]; value: string; onChange: (v: string) => void }) => (
@@ -512,7 +513,7 @@ function MktSettings() {
               setPrefs(DFLT);
               const defaultVars = getMktThemeVars("dark-luxury");
               window.dispatchEvent(new CustomEvent("mkt-theme-change", { detail: defaultVars }));
-              fetch("/api/settings/preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(DFLT) });
+              fetch("/api/settings/mkt-preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(DFLT) });
             }}>Restaurar defaults</button>
           </div>
         </div>
@@ -599,25 +600,41 @@ function MktPlaceholder({ label }: { label: string }) {
 }
 
 // ── Main content ─────────────────────────────────────────────────────────────
+const MKT_FONT_MAP: Record<string, string> = {
+  inter: "'Inter', -apple-system, sans-serif",
+  merriweather: "'Merriweather', Georgia, serif",
+  playfair: "'Playfair Display', Georgia, serif",
+  mono: "'JetBrains Mono', 'Fira Code', monospace",
+};
+
 function MarketingContent() {
   const [section, setSection] = useState<MktSection>("engagement");
   const { notifications, loading, contacts } = useMkt();
   const lastNotification = notifications[notifications.length - 1];
   const [themeVars, setThemeVars] = useState<Record<string, string>>(MKT_THEME_VARS);
+  const [mktFont, setMktFont] = useState<string>(MKT_FONT_MAP.inter);
 
   useEffect(() => {
-    fetch("/api/settings/preferences").then(r => r.json()).then(d => {
+    fetch("/api/settings/mkt-preferences").then(r => r.json()).then(d => {
       if (d && !d.error) {
-        const vars = getMktThemeVars(d.theme ?? "dark-luxury", d.accentPrimary && d.accentPrimary !== "#C39A4C" ? d.accentPrimary : undefined);
+        const vars = getMktThemeVars(d.theme ?? "dark-luxury", d.accentPrimary);
         setThemeVars(vars);
+        setMktFont(MKT_FONT_MAP[d.fontFamily] ?? MKT_FONT_MAP.inter);
       }
     }).catch(() => {});
   }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const vars = (e as CustomEvent<Record<string, string>>).detail;
-      if (vars && typeof vars === "object") setThemeVars(vars);
+      const detail = (e as CustomEvent<{ themeVars?: Record<string, string>; font?: string } | Record<string, string>>).detail;
+      if (!detail || typeof detail !== "object") return;
+      if ("themeVars" in detail || "font" in detail) {
+        const d = detail as { themeVars?: Record<string, string>; font?: string };
+        if (d.themeVars) setThemeVars(d.themeVars);
+        if (d.font) setMktFont(d.font);
+      } else {
+        setThemeVars(detail as Record<string, string>);
+      }
     };
     window.addEventListener("mkt-theme-change", handler);
     return () => window.removeEventListener("mkt-theme-change", handler);
@@ -662,7 +679,7 @@ function MarketingContent() {
         ...themeVars,
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", background: "var(--mkt-bg)",
-        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontFamily: mktFont,
         overflow: "hidden",
       } as React.CSSProperties}
     >
