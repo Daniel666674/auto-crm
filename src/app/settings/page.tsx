@@ -7,12 +7,17 @@ import { useSession, signOut } from "next-auth/react";
 import {
   RefreshCw, CheckCircle, AlertCircle, LogOut, Copy,
   User, Palette, Briefcase, Users, Plug, Kanban, Bell, Lock,
-  Upload, Eye, EyeOff,
+  Upload, Eye, EyeOff, Target, BarChart2,
 } from "lucide-react";
+import { CloseReasonsSettings } from "@/components/settings/CloseReasonsSettings";
+import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings";
+import { DealAgingSettings } from "@/components/settings/DealAgingSettings";
+import { ScoringWeightsSettings } from "@/components/settings/ScoringWeightsSettings";
+import { SlackSettings } from "@/components/settings/SlackSettings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "cliente";
+type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente";
 
 interface UserPrefs {
   theme: string; accentPrimary: string; accentSecondary: string;
@@ -946,6 +951,8 @@ function TabIntegraciones({ role }: { role: string }) {
           )}
         </div>
       </IntSection>
+
+      <SlackSettings role={role} />
     </div>
   );
 }
@@ -1103,6 +1110,8 @@ function TabPipeline({ role }: { role: string }) {
           </p>
         )}
       </div>
+
+      <CloseReasonsSettings role={role} />
     </div>
   );
 }
@@ -1207,6 +1216,7 @@ function TabNotificaciones() {
       </div>
 
       <SaveBtn saving={saving} onClick={handleSave} label="Guardar notificaciones" />
+      <DealAgingSettings />
     </div>
   );
 }
@@ -1252,6 +1262,8 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode; roles?: string[] }[
   { id: "apariencia",     label: "Apariencia",       icon: <Palette size={14} /> },
   { id: "negocio",        label: "Negocio",          icon: <Briefcase size={14} />, roles: ["superadmin","marketing"] },
   { id: "usuarios",       label: "Usuarios",         icon: <Users size={14} />,    roles: ["superadmin"] },
+  { id: "objetivos",      label: "Objetivos",        icon: <Target size={14} />,   roles: ["superadmin","marketing"] },
+  { id: "scoring",        label: "Scoring ICP",      icon: <BarChart2 size={14} />, roles: ["superadmin","marketing"] },
   { id: "integraciones",  label: "Integraciones",    icon: <Plug size={14} /> },
   { id: "pipeline",       label: "Pipeline",         icon: <Kanban size={14} /> },
   { id: "notificaciones", label: "Notificaciones",   icon: <Bell size={14} /> },
@@ -1303,6 +1315,8 @@ export default function SettingsPage() {
       {current === "apariencia"     && <TabApariencia />}
       {current === "negocio"        && <TabNegocio role={userRole} />}
       {current === "usuarios"       && <TabUsuarios currentUserId={userId} />}
+      {current === "objetivos"      && <SalesTargetsSettings currentUserId={userId} />}
+      {current === "scoring"        && <ScoringWeightsSettings role={userRole} />}
       {current === "integraciones"  && <TabIntegraciones role={userRole} />}
       {current === "pipeline"       && <TabPipeline role={userRole} />}
       {current === "notificaciones" && <TabNotificaciones />}
