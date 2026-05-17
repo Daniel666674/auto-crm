@@ -249,6 +249,16 @@ function TabApariencia() {
       root.style.setProperty("--sidebar-bg-custom", prefs.sidebarBg);
       const radiusMap: Record<string, string> = { sharp: "2px", rounded: "8px", pill: "999px" };
       root.style.setProperty("--border-radius-base", radiusMap[prefs.borderRadius] ?? "8px");
+      root.style.setProperty("--primary", prefs.accentPrimary);
+      const fontMap: Record<string, string> = {
+        inter: "'Inter', -apple-system, sans-serif",
+        merriweather: "'Merriweather', Georgia, serif",
+        playfair: "'Playfair Display', Georgia, serif",
+        mono: "'JetBrains Mono', monospace",
+      };
+      document.body.style.fontFamily = fontMap[prefs.fontFamily] ?? fontMap.inter;
+      const densityMap: Record<string, string> = { compact: "0.75", comfortable: "1", spacious: "1.25" };
+      root.style.setProperty("--ui-spacing-factor", densityMap[prefs.uiDensity] ?? "1");
       toast.success("Apariencia guardada");
     } catch { toast.error("Error al guardar"); }
     finally { setSaving(false); }

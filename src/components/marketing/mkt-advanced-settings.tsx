@@ -32,10 +32,12 @@ function StaleContactsCard() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/marketing/stale");
-    const d = await r.json();
-    setStaleDays(d.staleDays ?? 30);
-    setContacts(d.contacts ?? []);
+    try {
+      const r = await fetch("/api/marketing/stale");
+      const d = await r.json();
+      setStaleDays(d.staleDays ?? 30);
+      setContacts(Array.isArray(d.contacts) ? d.contacts : []);
+    } catch { setContacts([]); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -99,9 +101,11 @@ function DuplicatesCard() {
   const [merging, setMerging] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/marketing/duplicates");
-    const d = await r.json();
-    setGroups(d.groups ?? []);
+    try {
+      const r = await fetch("/api/marketing/duplicates");
+      const d = await r.json();
+      setGroups(Array.isArray(d.groups) ? d.groups : []);
+    } catch { setGroups([]); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -225,8 +229,11 @@ function OutcomesCard({ canEdit }: { canEdit: boolean }) {
   const [newType, setNewType] = useState("success");
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/settings/campaign-outcomes");
-    setOutcomes(await r.json());
+    try {
+      const r = await fetch("/api/settings/campaign-outcomes");
+      const d = await r.json();
+      setOutcomes(Array.isArray(d) ? d : []);
+    } catch { setOutcomes([]); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -302,13 +309,17 @@ function TargetsCard({ canEdit }: { canEdit: boolean }) {
   const [form, setForm] = useState({ userId: "", metric: "leads", period: "monthly", year: new Date().getFullYear(), month: new Date().getMonth() + 1, targetValue: 0 });
 
   const load = useCallback(async () => {
-    const [tRes, uRes] = await Promise.all([
-      fetch("/api/settings/marketing-targets").then((r) => r.json()),
-      fetch("/api/settings/users").then((r) => r.json()).catch(() => []),
-    ]);
-    setTargets(tRes ?? []);
-    setUsers(uRes ?? []);
-    if (uRes?.[0]?.id && !form.userId) setForm((f) => ({ ...f, userId: uRes[0].id }));
+    try {
+      const [tRes, uRes] = await Promise.all([
+        fetch("/api/settings/marketing-targets").then((r) => r.json()).catch(() => []),
+        fetch("/api/settings/users").then((r) => r.json()).catch(() => []),
+      ]);
+      const tList = Array.isArray(tRes) ? tRes : [];
+      const uList = Array.isArray(uRes) ? uRes : [];
+      setTargets(tList);
+      setUsers(uList);
+      if (uList[0]?.id && !form.userId) setForm((f) => ({ ...f, userId: uList[0].id }));
+    } catch { setTargets([]); setUsers([]); }
   }, [form.userId]);
 
   useEffect(() => { load(); }, [load]);

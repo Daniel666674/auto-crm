@@ -19,7 +19,7 @@ import { MktDigest } from "@/components/marketing/mkt-digest";
 import { MktROI } from "@/components/marketing/mkt-roi";
 import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
 import { MktAdvancedSettings } from "@/components/marketing/mkt-advanced-settings";
-import { MKT_THEME_VARS } from "@/components/marketing/mkt-utils";
+import { MKT_THEME_VARS, MKT_PRESETS, getMktThemeVars } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
 const SECTION_LABELS: Record<MktSection, string> = {
@@ -265,8 +265,15 @@ function MktSettings() {
     setSavingPrefs(true);
     try {
       await fetch("/api/settings/preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(prefs) });
-      document.documentElement.style.setProperty("--accent-primary", prefs.accentPrimary);
-      document.documentElement.style.setProperty("--accent-secondary", prefs.accentSecondary);
+      const vars = getMktThemeVars(prefs.theme, prefs.accentPrimary);
+      window.dispatchEvent(new CustomEvent("mkt-theme-change", { detail: vars }));
+      const fontMap: Record<string, string> = {
+        inter: "'Inter', -apple-system, sans-serif",
+        merriweather: "'Merriweather', Georgia, serif",
+        playfair: "'Playfair Display', Georgia, serif",
+        mono: "'JetBrains Mono', monospace",
+      };
+      document.body.style.fontFamily = fontMap[prefs.fontFamily] ?? fontMap.inter;
     } finally { setSavingPrefs(false); }
   };
   const Toggle3 = ({ options, value, onChange }: { options: { id: string; label: string }[]; value: string; onChange: (v: string) => void }) => (
@@ -394,49 +401,119 @@ function MktSettings() {
       {/* ── APARIENCIA ── */}
       {activeTab === "apariencia" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Theme presets */}
           <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: "var(--mkt-text)" }}>Tema</div>
-            <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-              {[{ id: "dark", label: "Oscuro", bg: "#0a0a0a" }, { id: "light", label: "Claro", bg: "#f8fafc" }, { id: "custom", label: "Personalizado", bg: "linear-gradient(135deg,#1a1a2e,#6D1F2E)" }].map(t => (
-                <button key={t.id} onClick={() => setP("theme", t.id)} style={{ flex: 1, padding: 14, borderRadius: 10, cursor: "pointer", border: `2px solid ${prefs.theme === t.id ? "var(--mkt-accent)" : "var(--mkt-border)"}`, background: t.bg, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 28, height: 16, borderRadius: 3, background: t.id === "light" ? "#0f172a" : "#C39A4C", opacity: 0.8 }} />
-                  <span style={{ fontSize: 11, color: t.id === "light" ? "#0f172a" : "#e2e8f0", fontWeight: 500 }}>{t.label}</span>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, color: "var(--mkt-text)" }}>Tema de interfaz</div>
+            <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginBottom: 16, lineHeight: 1.5 }}>Selecciona un preset o personaliza el color de acento. Los cambios se aplican al guardar.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+              {([
+                { id: "dark-luxury", label: "Dark Luxury", bg: "#0a0a09", accent: "#D19C15", text: "#D7D2CB" },
+                { id: "midnight",    label: "Midnight",    bg: "#0d1117", accent: "#58a6ff", text: "#c9d1d9" },
+                { id: "forest",      label: "Forest",      bg: "#0a0f0b", accent: "#4ade80", text: "#d4e8d4" },
+                { id: "light",       label: "Light",       bg: "#f8fafc", accent: "#D19C15", text: "#0f172a" },
+              ] as const).map(t => (
+                <button key={t.id} onClick={() => setP("theme", t.id)} style={{
+                  padding: "12px 8px", borderRadius: 10, cursor: "pointer",
+                  border: `2px solid ${prefs.theme === t.id ? t.accent : "rgba(255,255,255,0.06)"}`,
+                  background: t.bg, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, transition: "all 0.15s",
+                }}>
+                  {/* Mini sidebar+content preview */}
+                  <div style={{ display: "flex", gap: 2, width: 48, height: 28 }}>
+                    <div style={{ width: 12, borderRadius: "3px 0 0 3px", background: t.id === "light" ? "#e2e8f0" : "rgba(0,0,0,0.4)" }} />
+                    <div style={{ flex: 1, borderRadius: "0 3px 3px 0", background: t.id === "light" ? "#ffffff" : "rgba(255,255,255,0.04)" }}>
+                      <div style={{ height: 3, borderRadius: 2, background: t.accent, margin: "4px 3px", opacity: 0.9 }} />
+                      <div style={{ height: 2, borderRadius: 2, background: t.text, margin: "2px 3px", opacity: 0.3 }} />
+                      <div style={{ height: 2, borderRadius: 2, background: t.text, margin: "2px 3px", opacity: 0.2 }} />
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 10, color: t.text, fontWeight: prefs.theme === t.id ? 700 : 400, opacity: prefs.theme === t.id ? 1 : 0.7 }}>{t.label}</span>
                 </button>
               ))}
             </div>
-            {prefs.theme === "custom" && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
-                {[["Accent primario", "accentPrimary"], ["Accent secundario", "accentSecondary"], ["Color texto", "textColor"]].map(([lbl, key]) => (
-                  <div key={key}><span style={label}>{lbl}</span>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <input type="color" value={(prefs as Record<string, string>)[key]} onChange={e => setP(key, e.target.value)} style={{ width: 34, height: 34, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
-                      <input style={{ ...input, flex: 1 }} value={(prefs as Record<string, string>)[key]} onChange={e => setP(key, e.target.value)} />
-                    </div>
-                  </div>
-                ))}
+
+            {/* Custom accent override */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 16, borderTop: "1px solid var(--mkt-border)" }}>
+              <div>
+                <span style={label}>Color de acento (override)</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="color" value={prefs.accentPrimary} onChange={e => setP("accentPrimary", e.target.value)}
+                    style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
+                  <input style={input} value={prefs.accentPrimary} onChange={e => setP("accentPrimary", e.target.value)} />
+                </div>
+                <p style={{ fontSize: 10, color: "var(--mkt-text-muted)", marginTop: 4 }}>Deja el valor del preset para usar el acento nativo.</p>
               </div>
-            )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <div><span style={label}>Tipografía</span>
+              <div>
+                <span style={label}>Tipografía</span>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {[["inter","Inter"],["merriweather","Merriweather"],["playfair","Playfair"],["mono","Mono"]].map(([id, lbl]) => (
-                    <button key={id} onClick={() => setP("fontFamily", id)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: `1px solid ${prefs.fontFamily === id ? "var(--mkt-accent)" : "var(--mkt-border)"}`, background: prefs.fontFamily === id ? "rgba(195,154,76,0.1)" : "transparent", color: prefs.fontFamily === id ? "var(--mkt-accent)" : "var(--mkt-text-muted)" }}>{lbl}</button>
+                  {([["inter","Inter"],["merriweather","Merriweather"],["playfair","Playfair"],["mono","Mono"]] as const).map(([id, lbl]) => (
+                    <button key={id} onClick={() => setP("fontFamily", id)} style={{
+                      padding: "4px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer",
+                      border: `1px solid ${prefs.fontFamily === id ? "var(--mkt-accent)" : "var(--mkt-border)"}`,
+                      background: prefs.fontFamily === id ? "rgba(195,154,76,0.1)" : "transparent",
+                      color: prefs.fontFamily === id ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
+                    }}>{lbl}</button>
                   ))}
                 </div>
               </div>
-              <div><span style={label}>Sidebar</span>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="color" value={prefs.sidebarBg} onChange={e => setP("sidebarBg", e.target.value)} style={{ width: 34, height: 34, border: "none", background: "none", cursor: "pointer" }} />
-                  <input style={input} value={prefs.sidebarBg} onChange={e => setP("sidebarBg", e.target.value)} />
-                </div>
+            </div>
+
+            {/* Density + radius */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--mkt-border)" }}>
+              <div>
+                <span style={label}>Densidad UI</span>
+                <Toggle3 options={[{id:"compact",label:"Compacta"},{id:"comfortable",label:"Normal"},{id:"spacious",label:"Espaciada"}]} value={prefs.uiDensity} onChange={v => setP("uiDensity", v)} />
               </div>
-              <div><span style={label}>Densidad UI</span><Toggle3 options={[{id:"compact",label:"Compacta"},{id:"comfortable",label:"Normal"},{id:"spacious",label:"Espaciada"}]} value={prefs.uiDensity} onChange={v => setP("uiDensity", v)} /></div>
-              <div><span style={label}>Border radius</span><Toggle3 options={[{id:"sharp",label:"Sharp"},{id:"rounded",label:"Redondeado"},{id:"pill",label:"Pill"}]} value={prefs.borderRadius} onChange={v => setP("borderRadius", v)} /></div>
+              <div>
+                <span style={label}>Border radius</span>
+                <Toggle3 options={[{id:"sharp",label:"Sharp"},{id:"rounded",label:"Redondeado"},{id:"pill",label:"Pill"}]} value={prefs.borderRadius} onChange={v => setP("borderRadius", v)} />
+              </div>
             </div>
           </div>
+
+          {/* Live preview */}
+          <div style={card}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--mkt-text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Vista previa</div>
+            {(() => {
+              const previewVars = getMktThemeVars(prefs.theme, prefs.accentPrimary);
+              const pBg = previewVars["--mkt-bg"];
+              const pSurface = previewVars["--mkt-surface"];
+              const pSidebar = previewVars["--mkt-sidebar"];
+              const pAccent = previewVars["--mkt-accent"];
+              const pText = previewVars["--mkt-text"];
+              const pMuted = previewVars["--mkt-text-muted"];
+              const pBorder = previewVars["--mkt-border"];
+              return (
+                <div style={{ display: "flex", height: 120, borderRadius: 10, overflow: "hidden", border: `1px solid ${pBorder}` }}>
+                  <div style={{ width: 80, background: pSidebar, borderRight: `1px solid ${pBorder}`, padding: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ width: "100%", height: 8, borderRadius: 4, background: pAccent, opacity: 0.9 }} />
+                    {[0.5, 0.3, 0.3].map((op, i) => <div key={i} style={{ width: "100%", height: 5, borderRadius: 3, background: pText, opacity: op }} />)}
+                  </div>
+                  <div style={{ flex: 1, background: pBg, padding: 12 }}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                      {[pAccent, "rgba(255,255,255,0.15)", "rgba(255,255,255,0.08)"].map((c, i) => (
+                        <div key={i} style={{ flex: 1, height: 36, borderRadius: 6, background: pSurface, border: `1px solid ${pBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ width: "60%", height: 5, borderRadius: 3, background: i === 0 ? pAccent : pText, opacity: i === 0 ? 0.9 : 0.3 }} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ height: 42, borderRadius: 6, background: pSurface, border: `1px solid ${pBorder}`, padding: "8px 10px" }}>
+                      <div style={{ width: "40%", height: 5, borderRadius: 3, background: pText, opacity: 0.7, marginBottom: 5 }} />
+                      <div style={{ width: "70%", height: 4, borderRadius: 3, background: pMuted, opacity: 0.4 }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
           <div style={{ display: "flex", gap: 10 }}>
-            <button style={btn("primary")} onClick={handleSavePrefs} disabled={savingPrefs}>{savingPrefs ? "Guardando…" : "Guardar apariencia"}</button>
-            <button style={btn()} onClick={() => { setPrefs(DFLT); fetch("/api/settings/preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(DFLT) }); }}>Restaurar defaults</button>
+            <button style={btn("primary")} onClick={handleSavePrefs} disabled={savingPrefs}>{savingPrefs ? "Guardando…" : "Aplicar y guardar"}</button>
+            <button style={btn()} onClick={() => {
+              setPrefs(DFLT);
+              const defaultVars = getMktThemeVars("dark-luxury");
+              window.dispatchEvent(new CustomEvent("mkt-theme-change", { detail: defaultVars }));
+              fetch("/api/settings/preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(DFLT) });
+            }}>Restaurar defaults</button>
           </div>
         </div>
       )}
@@ -526,6 +603,25 @@ function MarketingContent() {
   const [section, setSection] = useState<MktSection>("engagement");
   const { notifications, loading, contacts } = useMkt();
   const lastNotification = notifications[notifications.length - 1];
+  const [themeVars, setThemeVars] = useState<Record<string, string>>(MKT_THEME_VARS);
+
+  useEffect(() => {
+    fetch("/api/settings/preferences").then(r => r.json()).then(d => {
+      if (d && !d.error) {
+        const vars = getMktThemeVars(d.theme ?? "dark-luxury", d.accentPrimary && d.accentPrimary !== "#C39A4C" ? d.accentPrimary : undefined);
+        setThemeVars(vars);
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const vars = (e as CustomEvent<Record<string, string>>).detail;
+      if (vars && typeof vars === "object") setThemeVars(vars);
+    };
+    window.addEventListener("mkt-theme-change", handler);
+    return () => window.removeEventListener("mkt-theme-change", handler);
+  }, []);
 
   const renderSection = () => {
     if (loading) {
@@ -563,7 +659,7 @@ function MarketingContent() {
   return (
     <div
       style={{
-        ...MKT_THEME_VARS,
+        ...themeVars,
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", background: "var(--mkt-bg)",
         fontFamily: "'Inter', -apple-system, sans-serif",
