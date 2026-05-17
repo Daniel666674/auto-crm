@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
 import { deals, contacts, pipelineStages } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function GET() {
   const results = db
@@ -14,6 +17,7 @@ export async function GET() {
       expectedClose: deals.expectedClose,
       probability: deals.probability,
       notes: deals.notes,
+      ownerId: deals.ownerId,
       createdAt: deals.createdAt,
       updatedAt: deals.updatedAt,
       contactName: contacts.name,
@@ -35,13 +39,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
   let body;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "JSON invalido" }, { status: 400 });
   }
-  const { title, value, stageId, contactId, expectedClose, probability, notes } = body;
+  const { title, value, stageId, contactId, expectedClose, probability, notes, ownerId } = body;
 
   if (!title || !contactId) {
     return NextResponse.json(
@@ -81,11 +86,17 @@ export async function POST(request: NextRequest) {
         expectedClose: expectedClose ? new Date(expectedClose) : null,
         probability: Math.max(0, Math.min(100, Number(probability) || 0)),
         notes: notes || null,
+        ownerId: ownerId || session?.user?.id || null,
         createdAt: now,
         updatedAt: now,
       })
       .returning()
       .get();
+
+    fireTriggers({
+      event: "deal_created",
+      data: { dealId: result.id, dealTitle: result.title, value: String(result.value) },
+    }).catch(() => {});
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

@@ -49,6 +49,7 @@ export async function PUT(
   if (body.value !== undefined) updateData.value = body.value;
   if (body.contactId !== undefined) updateData.contactId = body.contactId;
   if (body.closeReasonId !== undefined) updateData.closeReasonId = body.closeReasonId || null;
+  if (body.ownerId !== undefined) updateData.ownerId = body.ownerId || null;
   if (body.expectedClose !== undefined) {
     updateData.expectedClose = body.expectedClose ? new Date(body.expectedClose) : null;
   }

@@ -57,6 +57,7 @@ export const deals = sqliteTable("deals", {
   closedAt: integer("closed_at", { mode: "timestamp" }),
   closedBy: text("closed_by"),
   closeReasonId: text("close_reason_id"),
+  ownerId: text("owner_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -192,6 +193,22 @@ export const notifications = sqliteTable("notifications", {
   resourceType: text("resource_type"),
   resourceId: text("resource_id"),
   read: integer("read", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// API tokens for external integrations (bearer auth on /api/v1/*)
+export const apiTokens = sqliteTable("api_tokens", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  // Stored as sha256 hex — plaintext only shown once on creation
+  tokenHash: text("token_hash").notNull().unique(),
+  // Last 4 chars of plaintext for display
+  tokenPreview: text("token_preview").notNull(),
+  // CSV of scopes: "read:contacts,write:deals" etc.
+  scopes: text("scopes").notNull().default("read:all"),
+  createdBy: text("created_by").notNull().references(() => users.id),
+  lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  revokedAt: integer("revoked_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

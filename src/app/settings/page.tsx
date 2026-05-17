@@ -17,6 +17,7 @@ import { SlackSettings } from "@/components/settings/SlackSettings";
 import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { DigestScheduleSettings } from "@/components/settings/DigestScheduleSettings";
+import { ApiTokensSettings } from "@/components/settings/ApiTokensSettings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -956,6 +957,12 @@ function TabIntegraciones({ role }: { role: string }) {
       </IntSection>
 
       <SlackSettings role={role} />
+
+      {role === "superadmin" && (
+        <div style={S.card}>
+          <ApiTokensSettings />
+        </div>
+      )}
     </div>
   );
 }

@@ -146,7 +146,37 @@ if (existing.count === 0) {
 }
 
 // ---------------------------------------------------------------------------
-// Migration 5: workflow_triggers table
+// Migration 5: deals.owner_id column (deal assignments)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking deals.owner_id column...");
+if (!hasColumn("deals", "owner_id")) {
+  db.exec(`ALTER TABLE deals ADD COLUMN owner_id TEXT`);
+  console.log("[migrate] Added deals.owner_id column");
+} else {
+  console.log("[migrate] deals.owner_id already exists, skipping");
+}
+
+// ---------------------------------------------------------------------------
+// Migration 6: api_tokens table
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking api_tokens table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_tokens (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    token_preview TEXT NOT NULL,
+    scopes TEXT NOT NULL DEFAULT 'read:all',
+    created_by TEXT NOT NULL REFERENCES users(id),
+    last_used_at INTEGER,
+    revoked_at INTEGER,
+    created_at INTEGER NOT NULL
+  )
+`);
+console.log("[migrate] api_tokens table: OK");
+
+// ---------------------------------------------------------------------------
+// Migration 7: workflow_triggers table
 // ---------------------------------------------------------------------------
 console.log("[migrate] Checking workflow_triggers table...");
 db.exec(`
