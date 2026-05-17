@@ -53,3 +53,4 @@ data/crm.db-wal
 
 # drizzle
 /drizzle/
+.claude/worktrees/
