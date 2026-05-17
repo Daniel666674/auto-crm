@@ -56,6 +56,7 @@ export const deals = sqliteTable("deals", {
   notes: text("notes"),
   closedAt: integer("closed_at", { mode: "timestamp" }),
   closedBy: text("closed_by"),
+  closeReasonId: text("close_reason_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -140,6 +141,27 @@ export const userPreferences = sqliteTable("user_preferences", {
   sidebarBgImage: text("sidebar_bg_image"),
   uiDensity: text("ui_density").notNull().default("comfortable"),
   borderRadius: text("border_radius").notNull().default("rounded"),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const closeReasons = sqliteTable("close_reasons", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  type: text("type").notNull(), // "won" | "lost"
+  label: text("label").notNull(),
+  order: integer("order").notNull().default(0),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const salesTargets = sqliteTable("sales_targets", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),
+  period: text("period").notNull(), // "monthly" | "quarterly" | "annual"
+  year: integer("year").notNull(),
+  month: integer("month"), // 1-12, null if quarterly/annual
+  quarter: integer("quarter"), // 1-4, null if monthly/annual
+  targetValue: integer("target_value").notNull().default(0), // cents
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
