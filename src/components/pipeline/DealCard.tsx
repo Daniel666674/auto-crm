@@ -23,6 +23,7 @@ interface DealCardProps {
   contactId?: string;
   stageUpdatedAt?: Date | string | null;
   expectedClose?: Date | string | null;
+  lastActivityAt?: Date | string | null;
   onReturnToMarketing?: (args: { dealId: string; dealTitle: string; contactId: string; contactName: string | null }) => void;
 }
 
@@ -53,12 +54,13 @@ function closeBadge(days: number): { bg: string; color: string; label: string } 
   return { bg: "rgba(34,197,94,0.10)", color: "#22c55e", label: `${days}d` };
 }
 
-export function DealCard({ id, title, value, contactName, contactTemperature, probability, stageColor, contactId, stageUpdatedAt, expectedClose, onReturnToMarketing }: DealCardProps) {
+export function DealCard({ id, title, value, contactName, contactTemperature, probability, stageColor, contactId, stageUpdatedAt, expectedClose, lastActivityAt, onReturnToMarketing }: DealCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const ageDays   = daysSince(stageUpdatedAt);
-  const closeDays = daysUntil(expectedClose);
+  const ageDays     = daysSince(stageUpdatedAt);
+  const closeDays   = daysUntil(expectedClose);
+  const actDays     = daysSince(lastActivityAt);
   const age   = ageDays !== null ? ageBadge(ageDays) : null;
   const close = closeDays !== null ? closeBadge(closeDays) : null;
 
@@ -96,7 +98,7 @@ export function DealCard({ id, title, value, contactName, contactTemperature, pr
           <div style={{ width: `${probability}%`, height: "100%", borderRadius: 2, background: stageColor, transition: "width 0.3s" }} />
         </div>
 
-        {(age || close) && (
+        {(age || close || actDays !== null) && (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
             {age && (
               <span title="Días en esta etapa" style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: age.bg, color: age.color }}>
@@ -108,6 +110,11 @@ export function DealCard({ id, title, value, contactName, contactTemperature, pr
               <span title="Días hasta cierre esperado" style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: close.bg, color: close.color }}>
                 <Calendar size={9} />
                 {close.label}
+              </span>
+            )}
+            {actDays !== null && (
+              <span title="Última actividad registrada" style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: "rgba(59,130,246,0.12)", color: "#3b82f6" }}>
+                ↺ {actDays === 0 ? "Hoy" : `${actDays}d`}
               </span>
             )}
           </div>

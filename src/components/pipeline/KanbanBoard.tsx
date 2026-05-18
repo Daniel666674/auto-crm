@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { List, LayoutGrid, AlertTriangle } from "lucide-react";
+import { formatCurrency } from "@/lib/constants";
 import {
   DndContext,
   DragOverlay,
@@ -39,6 +41,7 @@ export function KanbanBoard({ initialColumns, contactOptions }: KanbanBoardProps
   const [columns, setColumns] = useState(initialColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [returnTarget, setReturnTarget] = useState<ReturnTarget | null>(null);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const columnsSnapshot = useRef<PipelineColumn[]>(initialColumns);
 
   const handleReturnToMarketing = useCallback((args: ReturnTarget) => {
@@ -142,6 +145,21 @@ export function KanbanBoard({ initialColumns, contactOptions }: KanbanBoardProps
     <div style={{ width: 6, height: 6, borderRadius: 3, background: color, display: "inline-block" }} />
   );
 
+  // Stuck deals: open (not won/lost) deals with updatedAt > 14 days ago
+  const stuckCount = columns
+    .filter(col => !col.isWon && !col.isLost)
+    .flatMap(col => col.deals)
+    .filter(d => {
+      const updated = d.updatedAt ?? (d as { stageUpdatedAt?: Date | string | null }).stageUpdatedAt;
+      if (!updated) return false;
+      return Math.floor((Date.now() - new Date(updated).getTime()) / 86400000) >= 14;
+    }).length;
+
+  // All open deals for list view
+  const allOpenDeals = columns.flatMap(col =>
+    col.deals.map(d => ({ ...d, stageName: col.name, stageColor: col.color, isWon: col.isWon, isLost: col.isLost }))
+  );
+
   return (
     <DndContext
       sensors={sensors}
@@ -153,39 +171,117 @@ export function KanbanBoard({ initialColumns, contactOptions }: KanbanBoardProps
       {/* Metrics bar */}
       <PipelineMetricsBar columns={columns} />
 
-      {/* Temperature legend */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#ef4444" /> Caliente</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#f59e0b" /> Tibio</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="var(--muted-foreground)" /> Frío</span>
+      {/* Toolbar: legend + view toggle */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12, color: "var(--muted-foreground)" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#ef4444" /> Caliente</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#f59e0b" /> Tibio</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="var(--muted-foreground)" /> Frío</span>
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {(["kanban", "list"] as const).map(mode => (
+            <button key={mode} onClick={() => setViewMode(mode)} style={{
+              padding: "5px 10px", borderRadius: 7, border: "1px solid var(--border)", cursor: "pointer",
+              background: viewMode === mode ? "var(--primary)" : "var(--card)",
+              color: viewMode === mode ? "var(--primary-foreground)" : "var(--muted-foreground)",
+              display: "flex", alignItems: "center", gap: 5, fontSize: 12,
+            }}>
+              {mode === "kanban" ? <LayoutGrid size={13} /> : <List size={13} />}
+              {mode === "kanban" ? "Kanban" : "Lista"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {columns.map((column) => (
-          <KanbanColumn
-            key={column.id}
-            id={column.id}
-            name={column.name}
-            color={column.color}
-            contactOptions={contactOptions}
-            onCreated={() => router.refresh()}
-            onReturnToMarketing={handleReturnToMarketing}
-            deals={column.deals.map((d) => ({
-              id: d.id,
-              title: d.title,
-              value: d.value,
-              contactId: d.contactId,
-              contactName: d.contactName || (d.contact?.name ?? null),
-              contactTemperature:
-                d.contactTemperature ||
-                (d.contact?.temperature ?? null),
-              probability: d.probability,
-              stageUpdatedAt: d.updatedAt,
-              expectedClose: d.expectedClose,
-            }))}
-          />
-        ))}
-      </div>
+      {/* Stuck deals banner */}
+      {stuckCount > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+          borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
+          marginBottom: 12, fontSize: 13,
+        }}>
+          <AlertTriangle size={16} style={{ color: "#f59e0b", flexShrink: 0 }} />
+          <span>
+            <strong style={{ color: "#f59e0b" }}>{stuckCount} deal{stuckCount !== 1 ? "s" : ""}</strong>
+            {" "}lleva{stuckCount !== 1 ? "n" : ""} más de 14 días sin avanzar
+          </span>
+        </div>
+      )}
+
+      {/* List view */}
+      {viewMode === "list" && (
+        <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden", marginBottom: 16 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--card)" }}>
+                {["Deal", "Contacto", "Valor", "Etapa", "Prob.", "Cierre"].map(h => (
+                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {allOpenDeals.map((d, i) => {
+                const closeDate = d.expectedClose ? new Date(d.expectedClose) : null;
+                const closeDays = closeDate ? Math.ceil((closeDate.getTime() - Date.now()) / 86400000) : null;
+                const closeColor = closeDays === null ? "var(--muted-foreground)" : closeDays < 0 ? "#ef4444" : closeDays <= 7 ? "#ef4444" : closeDays <= 30 ? "#f59e0b" : "#22c55e";
+                return (
+                  <tr key={d.id} style={{ borderBottom: i < allOpenDeals.length - 1 ? "1px solid var(--border)" : "none", background: "var(--card)" }}>
+                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500 }}>{d.title}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--muted-foreground)" }}>{d.contactName || "—"}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>{formatCurrency(d.value)}</td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: d.stageColor, flexShrink: 0 }} />
+                        {d.stageName}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 14px", fontSize: 12 }}>
+                      <span style={{ color: d.probability >= 70 ? "#22c55e" : d.probability >= 40 ? "#f59e0b" : "var(--muted-foreground)" }}>
+                        {d.probability}%
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 14px", fontSize: 12, color: closeColor }}>
+                      {closeDays === null ? "—" : closeDays < 0 ? `Vencido ${Math.abs(closeDays)}d` : `${closeDays}d`}
+                    </td>
+                  </tr>
+                );
+              })}
+              {allOpenDeals.length === 0 && (
+                <tr><td colSpan={6} style={{ padding: "30px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>Sin deals</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Kanban view */}
+      {viewMode === "kanban" && (
+        <div className="flex gap-3 overflow-x-auto pb-4">
+          {columns.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              id={column.id}
+              name={column.name}
+              color={column.color}
+              contactOptions={contactOptions}
+              onCreated={() => router.refresh()}
+              onReturnToMarketing={handleReturnToMarketing}
+              deals={column.deals.map((d) => ({
+                id: d.id,
+                title: d.title,
+                value: d.value,
+                contactId: d.contactId,
+                contactName: d.contactName || (d.contact?.name ?? null),
+                contactTemperature: d.contactTemperature || (d.contact?.temperature ?? null),
+                probability: d.probability,
+                stageUpdatedAt: d.updatedAt,
+                expectedClose: d.expectedClose,
+                lastActivityAt: (d as { lastActivityAt?: Date | null }).lastActivityAt ?? null,
+              }))}
+            />
+          ))}
+        </div>
+      )}
 
       <DragOverlay>
         {activeDeal ? (
@@ -194,14 +290,8 @@ export function KanbanBoard({ initialColumns, contactOptions }: KanbanBoardProps
             title={activeDeal.title}
             value={activeDeal.value}
             stageColor="var(--primary)"
-            contactName={
-              activeDeal.contactName ||
-              (activeDeal.contact?.name ?? null)
-            }
-            contactTemperature={
-              activeDeal.contactTemperature ||
-              (activeDeal.contact?.temperature ?? null)
-            }
+            contactName={activeDeal.contactName || (activeDeal.contact?.name ?? null)}
+            contactTemperature={activeDeal.contactTemperature || (activeDeal.contact?.temperature ?? null)}
             probability={activeDeal.probability}
           />
         ) : null}

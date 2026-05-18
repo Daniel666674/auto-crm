@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Deliverable = {
-  id: string; clientId: string; title: string; client: string;
-  status: string; dueDate: number | null; owner: string;
+  id: string; clientId: string; title: string; status: string;
+  dueDate: string | number | null; owner: string; notes: string | null;
+  createdAt: string | number;
 };
+
+type Client = { id: string; company: string; name: string; };
 
 const STATUS_COLORS: Record<string, string> = {
   "Pendiente": "#7a756e",
@@ -16,73 +19,77 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_ORDER = ["Vencido", "En progreso", "Pendiente", "Entregado"];
 
-const SEED: Deliverable[] = [
-  { id: "dv1", clientId: "cl1", title: "Informe mensual de métricas CRM", client: "Agencia Creativa", status: "En progreso", dueDate: Date.now() + 3*86400000, owner: "Daniel" },
-  { id: "dv2", clientId: "cl1", title: "Setup campaña email Q2", client: "Agencia Creativa", status: "Pendiente", dueDate: Date.now() + 10*86400000, owner: "Julian" },
-  { id: "dv3", clientId: "cl2", title: "Migración de datos históricos", client: "Inmobiliaria Rodríguez", status: "Vencido", dueDate: Date.now() - 5*86400000, owner: "Daniel" },
-  { id: "dv4", clientId: "cl2", title: "Capacitación equipo comercial", client: "Inmobiliaria Rodríguez", status: "Pendiente", dueDate: Date.now() + 1*86400000, owner: "Daniel" },
-  { id: "dv5", clientId: "cl2", title: "Integración WhatsApp Business", client: "Inmobiliaria Rodríguez", status: "Vencido", dueDate: Date.now() - 8*86400000, owner: "Julian" },
-  { id: "dv6", clientId: "cl2", title: "Dashboard personalizado", client: "Inmobiliaria Rodríguez", status: "En progreso", dueDate: Date.now() + 2*86400000, owner: "Daniel" },
-  { id: "dv7", clientId: "cl3", title: "Onboarding CRM personalizado", client: "TechStartup MX", status: "Entregado", dueDate: Date.now() - 20*86400000, owner: "Julian" },
-  { id: "dv8", clientId: "cl5", title: "Configuración automatizaciones", client: "FoodTech CO", status: "Vencido", dueDate: Date.now() - 2*86400000, owner: "Daniel" },
-  { id: "dv9", clientId: "cl5", title: "Reporte Q1 pipeline", client: "FoodTech CO", status: "Vencido", dueDate: Date.now() - 15*86400000, owner: "Julian" },
-  { id: "dv10", clientId: "cl5", title: "Revisión estrategia de contenidos", client: "FoodTech CO", status: "Pendiente", dueDate: Date.now() + 4*86400000, owner: "Daniel" },
-  { id: "dv11", clientId: "cl5", title: "Análisis de conversión mensual", client: "FoodTech CO", status: "Pendiente", dueDate: Date.now() + 6*86400000, owner: "Julian" },
-  { id: "dv12", clientId: "cl5", title: "Setup de métricas Brevo", client: "FoodTech CO", status: "Vencido", dueDate: Date.now() - 7*86400000, owner: "Daniel" },
-];
-
-const CLIENTS = ["Agencia Creativa", "Inmobiliaria Rodríguez", "TechStartup MX", "Martínez Consultores", "FoodTech CO"];
-const CLIENT_IDS: Record<string, string> = {
-  "Agencia Creativa": "cl1", "Inmobiliaria Rodríguez": "cl2",
-  "TechStartup MX": "cl3", "Martínez Consultores": "cl4", "FoodTech CO": "cl5",
-};
-
-function fDate(ts: number) {
+function fDate(ts: string | number) {
   const d = new Date(ts);
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
-const emptyForm = { title: "", clientName: "Agencia Creativa", status: "Pendiente", dueDate: "", owner: "Daniel" };
-
 export default function DeliverablesPage() {
   const [items, setItems] = useState<Deliverable[]>([]);
+  const [clientsData, setClientsData] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [clientFilter, setClientFilter] = useState("Todos");
-  const [ownerFilter, setOwnerFilter] = useState("Todos");
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState({ title: "", clientId: "", status: "Pendiente", dueDate: "", owner: "" });
 
-  const now = Date.now();
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/deliverables").then(r => r.json()),
+      fetch("/api/clients").then(r => r.json()),
+    ]).then(([delivs, cls]) => {
+      setItems(Array.isArray(delivs) ? delivs : []);
+      setClientsData(Array.isArray(cls) ? cls : []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
-  const updateStatus = (id: string, status: string) =>
+  const updateStatus = async (id: string, status: string) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
-
-  const addDeliverable = () => {
-    if (!form.title.trim()) return;
-    const dueTs = form.dueDate ? new Date(form.dueDate).getTime() : null;
-    const newItem: Deliverable = {
-      id: `dv${Date.now()}`,
-      clientId: CLIENT_IDS[form.clientName] || "cl1",
-      title: form.title.trim(),
-      client: form.clientName,
-      status: form.status,
-      dueDate: dueTs,
-      owner: form.owner,
-    };
-    setItems(prev => [newItem, ...prev]);
-    setForm(emptyForm);
-    setShowAdd(false);
+    await fetch(`/api/deliverables/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
   };
 
+  const addDeliverable = async () => {
+    if (!form.title.trim() || !form.clientId) return;
+    const res = await fetch("/api/deliverables", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: form.clientId,
+        title: form.title.trim(),
+        status: form.status,
+        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : null,
+        owner: form.owner,
+      }),
+    });
+    if (res.ok) {
+      const newItem = await res.json();
+      setItems(prev => [newItem, ...prev]);
+      setForm({ title: "", clientId: "", status: "Pendiente", dueDate: "", owner: "" });
+      setShowAdd(false);
+    }
+  };
+
+  const deleteDeliverable = async (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+    await fetch(`/api/deliverables/${id}`, { method: "DELETE" });
+  };
+
+  const clientMap = new Map(clientsData.map(c => [c.id, c.company]));
+  const now = Date.now();
+
   const filtered = items
-    .filter(i => clientFilter === "Todos" || i.client === clientFilter)
-    .filter(i => ownerFilter === "Todos" || i.owner === ownerFilter)
+    .filter(i => clientFilter === "Todos" || clientMap.get(i.clientId) === clientFilter)
     .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
 
   const overdueCount = filtered.filter(i => i.status === "Vencido").length;
+  const clientNames = [...new Set(clientsData.map(c => c.company))];
 
   return (
     <div style={{ padding: "28px 32px", maxWidth: 1100 }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>Entregables</h1>
@@ -94,38 +101,31 @@ export default function DeliverablesPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowAdd(true)}
+          onClick={() => { setForm(f => ({ ...f, clientId: clientsData[0]?.id || "" })); setShowAdd(true); }}
+          disabled={clientsData.length === 0}
           style={{
             padding: "9px 18px", borderRadius: 8, border: "none",
-            background: "var(--primary)", color: "var(--primary-foreground)",
-            fontSize: 13, fontWeight: 600, cursor: "pointer",
+            background: clientsData.length === 0 ? "var(--border)" : "var(--primary)",
+            color: "var(--primary-foreground)",
+            fontSize: 13, fontWeight: 600, cursor: clientsData.length === 0 ? "not-allowed" : "pointer",
           }}
         >
           + Nuevo entregable
         </button>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {[
-          { label: "Cliente", value: clientFilter, setter: setClientFilter, options: ["Todos", ...CLIENTS] },
-          { label: "Responsable", value: ownerFilter, setter: setOwnerFilter, options: ["Todos", "Daniel", "Julian"] },
-        ].map(f => (
+      {clientsData.length > 0 && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
           <select
-            key={f.label}
-            value={f.value}
-            onChange={e => f.setter(e.target.value)}
-            style={{
-              padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)",
-              background: "var(--card)", color: "var(--foreground)", fontSize: 12, cursor: "pointer",
-            }}
+            value={clientFilter}
+            onChange={e => setClientFilter(e.target.value)}
+            style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: 12, cursor: "pointer" }}
           >
-            {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+            {["Todos", ...clientNames].map(o => <option key={o} value={o}>{o}</option>)}
           </select>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {/* Add modal */}
       {showAdd && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ width: 440, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 24 }}>
@@ -143,23 +143,21 @@ export default function DeliverablesPage() {
               <div>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 5 }}>Cliente</label>
                 <select
-                  value={form.clientName}
-                  onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))}
+                  value={form.clientId}
+                  onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))}
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)", fontSize: 13 }}
                 >
-                  {CLIENTS.map(c => <option key={c}>{c}</option>)}
+                  {clientsData.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 5 }}>Responsable</label>
-                <select
+                <input
                   value={form.owner}
                   onChange={e => setForm(p => ({ ...p, owner: e.target.value }))}
+                  placeholder="Nombre..."
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)", fontSize: 13 }}
-                >
-                  <option>Daniel</option>
-                  <option>Julian</option>
-                </select>
+                />
               </div>
             </div>
 
@@ -172,34 +170,32 @@ export default function DeliverablesPage() {
             />
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => { setShowAdd(false); setForm(emptyForm); }}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 13, cursor: "pointer" }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={addDeliverable}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "var(--primary)", color: "var(--primary-foreground)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-              >
-                Guardar
-              </button>
+              <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
+              <button onClick={addDeliverable} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "var(--primary)", color: "var(--primary-foreground)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Guardar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      {filtered.length === 0 ? (
-        <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-          Sin entregables con este filtro
+      {loading && <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>Cargando…</div>}
+
+      {!loading && clientsData.length === 0 && (
+        <div style={{ padding: "48px 24px", textAlign: "center", borderRadius: 12, border: "1px dashed var(--border)" }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Sin clientes activos</div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Los entregables se crean una vez que tienes clientes activos desde el Pipeline.</div>
         </div>
-      ) : (
+      )}
+
+      {!loading && clientsData.length > 0 && filtered.length === 0 && (
+        <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>Sin entregables con este filtro</div>
+      )}
+
+      {!loading && filtered.length > 0 && (
         <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--card)" }}>
-                {["Entregable", "Cliente", "Estado", "Fecha límite", "Responsable"].map(h => (
+                {["Entregable", "Cliente", "Estado", "Fecha límite", "Responsable", ""].map(h => (
                   <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                 ))}
               </tr>
@@ -207,36 +203,20 @@ export default function DeliverablesPage() {
             <tbody>
               {filtered.map((item, i) => {
                 const isOverdue = item.status === "Vencido";
-                const daysLeft = item.dueDate ? Math.ceil((item.dueDate - now) / 86400000) : null;
+                const daysLeft = item.dueDate ? Math.ceil((new Date(item.dueDate).getTime() - now) / 86400000) : null;
                 const statusColor = STATUS_COLORS[item.status] || "var(--muted-foreground)";
 
                 return (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
-                      background: isOverdue ? "rgba(239,68,68,0.03)" : "var(--card)",
-                    }}
-                  >
-                    <td style={{ padding: "11px 14px", fontSize: 13, fontWeight: isOverdue ? 600 : 400, color: isOverdue ? "#ef4444" : "var(--foreground)" }}>
-                      {item.title}
-                    </td>
-                    <td style={{ padding: "11px 14px", fontSize: 12, color: "var(--muted-foreground)" }}>
-                      {item.client}
-                    </td>
+                  <tr key={item.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none", background: isOverdue ? "rgba(239,68,68,0.03)" : "var(--card)" }}>
+                    <td style={{ padding: "11px 14px", fontSize: 13, fontWeight: isOverdue ? 600 : 400, color: isOverdue ? "#ef4444" : "var(--foreground)" }}>{item.title}</td>
+                    <td style={{ padding: "11px 14px", fontSize: 12, color: "var(--muted-foreground)" }}>{clientMap.get(item.clientId) || "—"}</td>
                     <td style={{ padding: "11px 14px" }}>
                       <select
                         value={item.status}
                         onChange={e => updateStatus(item.id, e.target.value)}
-                        style={{
-                          padding: "4px 8px", borderRadius: 20, border: "none",
-                          fontSize: 11, fontWeight: 600, cursor: "pointer",
-                          background: `${statusColor}18`, color: statusColor,
-                        }}
+                        style={{ padding: "4px 8px", borderRadius: 20, border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer", background: `${statusColor}18`, color: statusColor }}
                       >
-                        {["Pendiente", "En progreso", "Entregado", "Vencido"].map(s => (
-                          <option key={s}>{s}</option>
-                        ))}
+                        {["Pendiente", "En progreso", "Entregado", "Vencido"].map(s => <option key={s}>{s}</option>)}
                       </select>
                     </td>
                     <td style={{ padding: "11px 14px", fontSize: 12, color: isOverdue ? "#ef4444" : "var(--muted-foreground)" }}>
@@ -246,13 +226,15 @@ export default function DeliverablesPage() {
                       )}
                     </td>
                     <td style={{ padding: "11px 14px" }}>
-                      <span style={{
-                        fontSize: 11, padding: "2px 8px", borderRadius: 10,
-                        background: item.owner === "Daniel" ? "rgba(209,156,21,0.1)" : "rgba(59,130,246,0.1)",
-                        color: item.owner === "Daniel" ? "var(--primary)" : "#3b82f6",
-                      }}>
-                        {item.owner}
-                      </span>
+                      {item.owner ? (
+                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "rgba(209,156,21,0.1)", color: "var(--primary)" }}>{item.owner}</span>
+                      ) : <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>—</span>}
+                    </td>
+                    <td style={{ padding: "11px 14px" }}>
+                      <button
+                        onClick={() => deleteDeliverable(item.id)}
+                        style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 11, cursor: "pointer" }}
+                      >✕</button>
                     </td>
                   </tr>
                 );

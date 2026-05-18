@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, Bell, Menu, LogOut, Settings, User } from "lucide-react";
+import { Search, Menu, LogOut, Settings, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MobileNav } from "./MobileNav";
+import { NotificationsHub } from "./NotificationsHub";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 
@@ -55,9 +56,7 @@ export function Header() {
         </div>
       </div>
 
-      <Button variant="ghost" size="icon" className="relative cursor-pointer">
-        <Bell className="h-5 w-5" />
-      </Button>
+      <NotificationsHub />
 
       {/* User dropdown */}
       <div ref={dropdownRef} style={{ position: "relative" }}>

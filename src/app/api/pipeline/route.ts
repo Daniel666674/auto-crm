@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { pipelineStages, deals, contacts } from "@/db/schema";
+import { pipelineStages, deals, contacts, clients } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 
 export async function GET() {
@@ -52,12 +52,48 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Deal no encontrado" }, { status: 404 });
     }
 
+    const stage = db.select().from(pipelineStages).where(eq(pipelineStages.id, body.stageId)).get();
+
     const result = db
       .update(deals)
-      .set({ stageId: body.stageId, updatedAt: new Date() })
+      .set({
+        stageId: body.stageId,
+        probability: stage?.defaultProbability ?? existing.probability,
+        updatedAt: new Date(),
+      })
       .where(eq(deals.id, body.dealId))
       .returning()
       .get();
+
+    // Auto-create client when deal moves to a won stage
+    if (stage?.isWon) {
+      try {
+        const alreadyClient = db.select({ id: clients.id })
+          .from(clients).where(eq(clients.dealId, body.dealId)).get();
+        if (!alreadyClient) {
+          const deal = db.select().from(deals).where(eq(deals.id, body.dealId)).get();
+          const contact = deal
+            ? db.select().from(contacts).where(eq(contacts.id, deal.contactId)).get()
+            : null;
+          const now = new Date();
+          db.insert(clients).values({
+            id: crypto.randomUUID(),
+            dealId: body.dealId,
+            contactId: deal?.contactId || null,
+            company: contact?.company || deal?.title || "—",
+            name: contact?.name || "—",
+            contractValue: deal?.value || 0,
+            startDate: now,
+            endDate: new Date(now.getTime() + 365 * 86400000),
+            healthScore: 8,
+            renewalStage: "Saludable",
+            notes: null,
+            createdAt: now,
+            updatedAt: now,
+          }).run();
+        }
+      } catch { /* skip on error */ }
+    }
 
     return NextResponse.json(result);
   }

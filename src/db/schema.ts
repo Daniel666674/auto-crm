@@ -50,6 +50,7 @@ export const pipelineStages = sqliteTable("pipeline_stages", {
   color: text("color").notNull().default("#64748b"),
   isWon: integer("is_won", { mode: "boolean" }).notNull().default(false),
   isLost: integer("is_lost", { mode: "boolean" }).notNull().default(false),
+  defaultProbability: integer("default_probability").notNull().default(0),
 });
 
 export const deals = sqliteTable("deals", {
@@ -241,6 +242,47 @@ export const marketingTargets = sqliteTable("marketing_targets", {
   quarter: integer("quarter"),
   // For "engagement_rate" stored as basis points (e.g., 2500 = 25%). For counts, raw count.
   targetValue: integer("target_value").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const clients = sqliteTable("clients", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  dealId: text("deal_id").references(() => deals.id),
+  contactId: text("contact_id").references(() => contacts.id),
+  company: text("company").notNull(),
+  name: text("name").notNull(),
+  contractValue: integer("contract_value").notNull().default(0),
+  startDate: integer("start_date", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  endDate: integer("end_date", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  healthScore: integer("health_score").notNull().default(8),
+  renewalStage: text("renewal_stage").notNull().default("Saludable"),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const deliverables = sqliteTable("deliverables", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  clientId: text("client_id").notNull().references(() => clients.id),
+  title: text("title").notNull(),
+  status: text("status").notNull().default("Pendiente"),
+  dueDate: integer("due_date", { mode: "timestamp" }),
+  owner: text("owner").notNull().default(""),
+  notes: text("notes"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const proposals = sqliteTable("proposals", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  dealId: text("deal_id").references(() => deals.id),
+  contactName: text("contact_name").notNull().default(""),
+  dealTitle: text("deal_title").notNull(),
+  value: integer("value").notNull().default(0),
+  status: text("status").notNull().default("Borrador"),
+  sentDate: integer("sent_date", { mode: "timestamp" }),
+  notes: text("notes"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

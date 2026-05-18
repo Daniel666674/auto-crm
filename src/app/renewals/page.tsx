@@ -1,19 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Client = {
-  id: string; name: string; company: string; contractValue: number;
-  endDate: number; healthScore: number; renewalStage: string;
+  id: string; company: string; name: string; contractValue: number;
+  endDate: string | number; healthScore: number; renewalStage: string;
 };
-
-const CLIENTS_SEED: Client[] = [
-  { id: "cl1", name: "Laura Hernández", company: "Agencia Creativa", contractValue: 45000000, endDate: Date.now() + 305*86400000, healthScore: 8, renewalStage: "Saludable" },
-  { id: "cl2", name: "Carlos Rodríguez", company: "Inmobiliaria Rodríguez", contractValue: 18000000, endDate: Date.now() + 25*86400000, healthScore: 5, renewalStage: "Conversación de Renovación" },
-  { id: "cl3", name: "María García", company: "TechStartup MX", contractValue: 25000000, endDate: Date.now() + 50*86400000, healthScore: 7, renewalStage: "Check-in Pendiente" },
-  { id: "cl4", name: "Ana Martínez", company: "Martínez Consultores", contractValue: 32000000, endDate: Date.now() + 335*86400000, healthScore: 9, renewalStage: "Renovado" },
-  { id: "cl5", name: "FoodTech CO", company: "FoodTech CO", contractValue: 19000000, endDate: Date.now() + 10*86400000, healthScore: 4, renewalStage: "En Riesgo" },
-];
 
 const STAGES = ["Saludable", "Check-in Pendiente", "Conversación de Renovación", "Renovado", "Expandido", "En Riesgo"];
 
@@ -32,8 +24,16 @@ function fmt(cents: number) {
 
 export default function RenewalsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/clients").then(r => r.json()).then(data => {
+      setClients(Array.isArray(data) ? data : []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDragId(id);
@@ -46,11 +46,17 @@ export default function RenewalsPage() {
     setOverStage(stage);
   };
 
-  const handleDrop = (e: React.DragEvent, stage: string) => {
+  const handleDrop = async (e: React.DragEvent, stage: string) => {
     e.preventDefault();
-    if (dragId) setClients(prev => prev.map(c => c.id === dragId ? { ...c, renewalStage: stage } : c));
+    if (!dragId) return;
+    setClients(prev => prev.map(c => c.id === dragId ? { ...c, renewalStage: stage } : c));
     setDragId(null);
     setOverStage(null);
+    await fetch(`/api/clients/${dragId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ renewalStage: stage }),
+    });
   };
 
   const handleDragEnd = () => { setDragId(null); setOverStage(null); };
@@ -67,92 +73,106 @@ export default function RenewalsPage() {
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }}>
-        {STAGES.map(stage => {
-          const items = clients.filter(c => c.renewalStage === stage);
-          const color = STAGE_COLOR[stage] || "var(--muted-foreground)";
-          const isOver = overStage === stage;
+      {loading && (
+        <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
+          Cargando…
+        </div>
+      )}
 
-          return (
-            <div
-              key={stage}
-              style={{ minWidth: 220, maxWidth: 240, flexShrink: 0 }}
-              onDragOver={e => handleDragOver(e, stage)}
-              onDrop={e => handleDrop(e, stage)}
-            >
-              {/* Column header */}
-              <div style={{
-                borderRadius: "10px 10px 0 0", padding: "10px 14px",
-                borderBottom: `2px solid ${color}`,
-                background: `${color}0a`, marginBottom: 8,
-              }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                  {stage}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                    {items.length} cliente{items.length !== 1 ? "s" : ""}
-                  </span>
-                  {items.length > 0 && (
-                    <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>
-                      {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(totalByStage(stage) / 100)}
-                    </span>
-                  )}
-                </div>
-              </div>
+      {!loading && clients.length === 0 && (
+        <div style={{ padding: "48px 24px", textAlign: "center", borderRadius: 12, border: "1px dashed var(--border)" }}>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Sin clientes aún</div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+            Los clientes aparecen aquí al cerrar deals como <strong>Ganado</strong> en el Pipeline.
+          </div>
+        </div>
+      )}
 
-              {/* Drop zone */}
-              <div style={{
-                minHeight: 140, padding: "4px 0", borderRadius: 8,
-                background: isOver ? "rgba(209,156,21,0.04)" : "transparent",
-                border: isOver ? "1px dashed rgba(209,156,21,0.35)" : "1px dashed transparent",
-                transition: "all 0.12s",
-              }}>
-                {items.length === 0 && (
-                  <div style={{ textAlign: "center", padding: "28px 12px", fontSize: 12, color: "var(--muted-foreground)", opacity: 0.4 }}>
-                    Arrastra aquí
+      {!loading && clients.length > 0 && (
+        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }}>
+          {STAGES.map(stage => {
+            const items = clients.filter(c => c.renewalStage === stage);
+            const color = STAGE_COLOR[stage] || "var(--muted-foreground)";
+            const isOver = overStage === stage;
+
+            return (
+              <div
+                key={stage}
+                style={{ minWidth: 220, maxWidth: 240, flexShrink: 0 }}
+                onDragOver={e => handleDragOver(e, stage)}
+                onDrop={e => handleDrop(e, stage)}
+              >
+                <div style={{
+                  borderRadius: "10px 10px 0 0", padding: "10px 14px",
+                  borderBottom: `2px solid ${color}`,
+                  background: `${color}0a`, marginBottom: 8,
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    {stage}
                   </div>
-                )}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      {items.length} cliente{items.length !== 1 ? "s" : ""}
+                    </span>
+                    {items.length > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>
+                        {fmt(totalByStage(stage))}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                {items.map(c => {
-                  const days = Math.ceil((c.endDate - Date.now()) / 86400000);
-                  const dColor = days < 30 ? "#ef4444" : days < 60 ? "#f59e0b" : "#22c55e";
-                  const hc = c.healthScore >= 7 ? "#22c55e" : c.healthScore >= 4 ? "#f59e0b" : "#ef4444";
-
-                  return (
-                    <div
-                      key={c.id}
-                      draggable
-                      onDragStart={e => handleDragStart(e, c.id)}
-                      onDragEnd={handleDragEnd}
-                      style={{
-                        borderRadius: 8, padding: 12, marginBottom: 8,
-                        background: "var(--card)", border: "1px solid var(--border)",
-                        cursor: "grab", opacity: dragId === c.id ? 0.4 : 1,
-                        transition: "opacity 0.15s",
-                        userSelect: "none",
-                      }}
-                    >
-                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{c.company}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
-                        {fmt(c.contractValue)}
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 11, color: dColor, fontWeight: 600 }}>
-                          {days < 0 ? "Vencido" : `${days}d`}
-                        </span>
-                        <span style={{ fontSize: 11, color: hc, fontWeight: 600 }}>
-                          ♥ {c.healthScore}/10
-                        </span>
-                      </div>
+                <div style={{
+                  minHeight: 140, padding: "4px 0", borderRadius: 8,
+                  background: isOver ? "rgba(209,156,21,0.04)" : "transparent",
+                  border: isOver ? "1px dashed rgba(209,156,21,0.35)" : "1px dashed transparent",
+                  transition: "all 0.12s",
+                }}>
+                  {items.length === 0 && (
+                    <div style={{ textAlign: "center", padding: "28px 12px", fontSize: 12, color: "var(--muted-foreground)", opacity: 0.4 }}>
+                      Arrastra aquí
                     </div>
-                  );
-                })}
+                  )}
+
+                  {items.map(c => {
+                    const days = Math.ceil((new Date(c.endDate).getTime() - Date.now()) / 86400000);
+                    const dColor = days < 30 ? "#ef4444" : days < 60 ? "#f59e0b" : "#22c55e";
+                    const hc = c.healthScore >= 7 ? "#22c55e" : c.healthScore >= 4 ? "#f59e0b" : "#ef4444";
+
+                    return (
+                      <div
+                        key={c.id}
+                        draggable
+                        onDragStart={e => handleDragStart(e, c.id)}
+                        onDragEnd={handleDragEnd}
+                        style={{
+                          borderRadius: 8, padding: 12, marginBottom: 8,
+                          background: "var(--card)", border: "1px solid var(--border)",
+                          cursor: "grab", opacity: dragId === c.id ? 0.4 : 1,
+                          transition: "opacity 0.15s", userSelect: "none",
+                        }}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{c.company}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
+                          {fmt(c.contractValue)}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, color: dColor, fontWeight: 600 }}>
+                            {days < 0 ? "Vencido" : `${days}d`}
+                          </span>
+                          <span style={{ fontSize: 11, color: hc, fontWeight: 600 }}>
+                            ♥ {c.healthScore}/10
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

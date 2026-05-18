@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { pipelineStages, deals, contacts } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { pipelineStages, deals, contacts, activities } from "@/db/schema";
+import { eq, asc, isNotNull, sql } from "drizzle-orm";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import type { PipelineColumn } from "@/types";
 
@@ -49,6 +49,7 @@ export default function PipelinePage() {
         updatedAt: d.updatedAt,
         contactName: d.contactName,
         contactTemperature: d.contactTemperature,
+        lastActivityAt: lastActMap.has(d.id) ? new Date(lastActMap.get(d.id)!) : null,
       })) as PipelineColumn["deals"],
   }));
 
@@ -57,6 +58,16 @@ export default function PipelinePage() {
     .from(contacts)
     .orderBy(asc(contacts.name))
     .all();
+
+  // Last activity per deal
+  const lastActRows = db.select({
+    dealId: activities.dealId,
+    lastAt: sql<number>`MAX(${activities.createdAt})`,
+  }).from(activities)
+    .where(isNotNull(activities.dealId))
+    .groupBy(activities.dealId)
+    .all() as Array<{ dealId: string | null; lastAt: number }>;
+  const lastActMap = new Map(lastActRows.map(r => [r.dealId!, r.lastAt]));
 
   return (
     <div className="space-y-6">

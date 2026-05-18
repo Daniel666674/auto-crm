@@ -57,6 +57,7 @@ export interface PipelineStage {
   color: string;
   isWon: boolean;
   isLost: boolean;
+  defaultProbability?: number;
 }
 
 export interface Activity {
@@ -98,6 +99,7 @@ export interface DealWithContact extends Deal {
   stage?: PipelineStage;
   contactName?: string | null;
   contactTemperature?: string | null;
+  lastActivityAt?: Date | null;
 }
 
 export interface ContactWithDeals extends Contact {

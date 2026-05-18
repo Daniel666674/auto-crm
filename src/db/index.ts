@@ -139,6 +139,44 @@ function initTables(db: Database.Database): void {
       data TEXT NOT NULL,
       cached_at INTEGER NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS clients (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT REFERENCES deals(id),
+      contact_id TEXT REFERENCES contacts(id),
+      company TEXT NOT NULL,
+      name TEXT NOT NULL,
+      contract_value INTEGER NOT NULL DEFAULT 0,
+      start_date INTEGER NOT NULL,
+      end_date INTEGER NOT NULL,
+      health_score INTEGER NOT NULL DEFAULT 8,
+      renewal_stage TEXT NOT NULL DEFAULT 'Saludable',
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS deliverables (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES clients(id),
+      title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pendiente',
+      due_date INTEGER,
+      owner TEXT NOT NULL DEFAULT '',
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS proposals (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT REFERENCES deals(id),
+      contact_name TEXT NOT NULL DEFAULT '',
+      deal_title TEXT NOT NULL,
+      value INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'Borrador',
+      sent_date INTEGER,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
   ];
 
   for (const sql of tables) {
@@ -166,6 +204,12 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE contacts ADD COLUMN tags TEXT`,
     `ALTER TABLE contacts ADD COLUMN apollo_id TEXT`,
     `CREATE INDEX IF NOT EXISTS idx_contacts_apollo_id ON contacts(apollo_id)`,
+    `ALTER TABLE pipeline_stages ADD COLUMN default_probability INTEGER NOT NULL DEFAULT 0`,
+    `UPDATE pipeline_stages SET default_probability = 100 WHERE is_won = 1 AND default_probability = 0`,
+    `UPDATE pipeline_stages SET default_probability = 10 WHERE is_won = 0 AND is_lost = 0 AND "order" = 1 AND default_probability = 0`,
+    `UPDATE pipeline_stages SET default_probability = 25 WHERE is_won = 0 AND is_lost = 0 AND "order" = 2 AND default_probability = 0`,
+    `UPDATE pipeline_stages SET default_probability = 50 WHERE is_won = 0 AND is_lost = 0 AND "order" = 3 AND default_probability = 0`,
+    `UPDATE pipeline_stages SET default_probability = 75 WHERE is_won = 0 AND is_lost = 0 AND "order" = 4 AND default_probability = 0`,
   ];
 
   for (const sql of migrations) {
@@ -179,20 +223,20 @@ function seedDefaultStages(db: Database.Database): void {
     if (!result || result.count > 0) return;
 
     const defaultStages = [
-      { name: "Prospecto", order: 1, color: "#64748b", isWon: 0, isLost: 0 },
-      { name: "Contactado", order: 2, color: "#2563eb", isWon: 0, isLost: 0 },
-      { name: "Propuesta", order: 3, color: "#8b5cf6", isWon: 0, isLost: 0 },
-      { name: "Negociacion", order: 4, color: "#ea580c", isWon: 0, isLost: 0 },
-      { name: "Cerrado Ganado", order: 5, color: "#16a34a", isWon: 1, isLost: 0 },
-      { name: "Cerrado Perdido", order: 6, color: "#dc2626", isWon: 0, isLost: 1 },
+      { name: "Prospecto",       order: 1, color: "#64748b", isWon: 0, isLost: 0, prob: 10 },
+      { name: "Contactado",      order: 2, color: "#2563eb", isWon: 0, isLost: 0, prob: 25 },
+      { name: "Propuesta",       order: 3, color: "#8b5cf6", isWon: 0, isLost: 0, prob: 50 },
+      { name: "Negociacion",     order: 4, color: "#ea580c", isWon: 0, isLost: 0, prob: 75 },
+      { name: "Cerrado Ganado",  order: 5, color: "#16a34a", isWon: 1, isLost: 0, prob: 100 },
+      { name: "Cerrado Perdido", order: 6, color: "#dc2626", isWon: 0, isLost: 1, prob: 0 },
     ];
 
     const insert = db.prepare(
-      `INSERT OR IGNORE INTO pipeline_stages (id, name, "order", color, is_won, is_lost) VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT OR IGNORE INTO pipeline_stages (id, name, "order", color, is_won, is_lost, default_probability) VALUES (?, ?, ?, ?, ?, ?, ?)`
     );
     const seedAll = db.transaction(() => {
       for (const stage of defaultStages) {
-        insert.run(crypto.randomUUID(), stage.name, stage.order, stage.color, stage.isWon, stage.isLost);
+        insert.run(crypto.randomUUID(), stage.name, stage.order, stage.color, stage.isWon, stage.isLost, stage.prob);
       }
     });
     seedAll();

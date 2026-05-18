@@ -16,6 +16,7 @@ interface Deal {
   contactId?: string;
   stageUpdatedAt?: Date | string | null;
   expectedClose?: Date | string | null;
+  lastActivityAt?: Date | string | null;
 }
 
 interface ContactOption { id: string; name: string; company: string | null; }
@@ -74,7 +75,7 @@ export function KanbanColumn({ id, name, color, deals, contactOptions, onCreated
       <SortableContext items={deals.map(d => d.id)} strategy={verticalListSortingStrategy}>
         <div style={{ flex: 1, padding: 8, display: "flex", flexDirection: "column", gap: 6, minHeight: 100, overflowY: "auto" }}>
           {deals.map(deal => (
-            <DealCard key={deal.id} {...deal} stageColor={color} onReturnToMarketing={onReturnToMarketing} />
+            <DealCard key={deal.id} {...deal} stageColor={color} lastActivityAt={deal.lastActivityAt} onReturnToMarketing={onReturnToMarketing} />
           ))}
           {deals.length === 0 && (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--muted-foreground)", opacity: 0.5, minHeight: 80 }}>
