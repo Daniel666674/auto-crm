@@ -204,7 +204,7 @@ function MktContacts() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Ubicación", "Teléfono", "Score", "Fuente", "Tier"].map(h => (
+              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Teléfono", "Score", "LinkedIn", "Fuente", "Tier"].map(h => (
                 <th key={h} style={hcell}>{h}</th>
               ))}
             </tr>
@@ -214,6 +214,7 @@ function MktContacts() {
               <tr><td colSpan={10} style={{ ...cell, textAlign: "center", color: "var(--mkt-text-muted)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
               const isBrevo = !!c.brevoId;
+              const liUrl = c.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(c.name + (c.company ? " " + c.company : ""))}`;
               return (
                 <tr
                   key={c.id}
@@ -230,10 +231,9 @@ function MktContacts() {
                   <td style={cell}>{c.company || "—"}</td>
                   <td style={cell}>{c.industry || "—"}</td>
                   <td style={cell}>{c.jobTitle || "—"}</td>
-                  <td style={cell}>{c.location || "—"}</td>
                   <td style={cell}>
                     {c.phone ? (
-                      <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()} style={{ color: "var(--mkt-text)", textDecoration: "none", fontVariantNumeric: "tabular-nums" }}>{c.phone}</a>
+                      <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()} style={{ color: "var(--mkt-text)", textDecoration: "none", fontVariantNumeric: "tabular-nums", fontSize: 11 }}>{c.phone}</a>
                     ) : "—"}
                   </td>
                   <td style={cell}>
@@ -243,6 +243,12 @@ function MktContacts() {
                       </div>
                       <span style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>{c.score}</span>
                     </div>
+                  </td>
+                  <td style={cell}>
+                    <a href={liUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 5, background: c.linkedinUrl ? "#0a66c220" : "transparent", color: c.linkedinUrl ? "#0a66c2" : "var(--mkt-text-muted)", border: `1px solid ${c.linkedinUrl ? "#0a66c230" : "var(--mkt-border)"}`, fontSize: 10, fontWeight: 700, textDecoration: "none" }}
+                      title={c.linkedinUrl ? "Ver LinkedIn" : "Buscar en LinkedIn"}
+                    >in</a>
                   </td>
                   <td style={cell}>
                     <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: isBrevo ? "#3b82f620" : "#8b5cf620", color: isBrevo ? "#3b82f6" : "#8b5cf6" }}>

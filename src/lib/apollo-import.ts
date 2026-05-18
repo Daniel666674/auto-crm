@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { db } from "@/db";
 import { contacts, crmSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const CSV_PATH = path.join(process.cwd(), "apollo-contacts-export (4).csv");
 
@@ -138,11 +139,10 @@ export async function runApolloImport(): Promise<ImportResult> {
     apolloId: contacts.apolloId,
   }).from(contacts).all();
 
-  const existingApolloIds = new Set(existing.filter(c => c.apolloId).map(c => c.apolloId!.toLowerCase()));
-  const existingEmails    = new Set(existing.filter(c => c.email).map(c => c.email!.toLowerCase()));
-  const existingNameCo    = new Set(
-    existing.map(c => `${(c.name || "").toLowerCase()}|${(c.company || "").toLowerCase()}`)
-  );
+  // Maps for UPDATE lookups
+  const byApolloId = new Map(existing.filter(c => c.apolloId).map(c => [c.apolloId!.toLowerCase(), c.id]));
+  const byEmail    = new Map(existing.filter(c => c.email).map(c => [c.email!.toLowerCase(), c.id]));
+  const byNameCo   = new Map(existing.map(c => [`${(c.name||"").toLowerCase()}|${(c.company||"").toLowerCase()}`, c.id]));
 
   let inserted = 0, skipped = 0, updated = 0;
 
@@ -152,59 +152,79 @@ export async function runApolloImport(): Promise<ImportResult> {
     const name       = [firstName, lastName].filter(Boolean).join(" ");
     if (!name) { skipped++; continue; }
 
-    const apolloId  = (row["Apollo Contact Id"] || "").trim().toLowerCase();
-    const email     = (row["Email"] || "").trim().toLowerCase();
-    const nameCoKey = `${name.toLowerCase()}|${(row["Company Name"] || "").trim().toLowerCase()}`;
-
-    // 3-layer dedup check
-    if (apolloId && existingApolloIds.has(apolloId)) { skipped++; continue; }
-    if (email     && existingEmails.has(email))       { skipped++; continue; }
-    if (!email    && existingNameCo.has(nameCoKey))   { skipped++; continue; }
+    const apolloId   = (row["Apollo Contact Id"] || "").trim().toLowerCase();
+    const email      = (row["Email"] || "").trim().toLowerCase();
+    const company    = (row["Company Name"] || "").trim();
+    const nameCoKey  = `${name.toLowerCase()}|${company.toLowerCase()}`;
 
     // Phone: prefer Work Direct, then Mobile, then Home
     const phone = (
       row["Work Direct Phone"] || row["Mobile Phone"] || row["Home Phone"] || ""
     ).replace(/^'+/, "").trim();
 
-    // WhatsApp: use Mobile if it differs from work phone
-    const mobileRaw  = (row["Mobile Phone"] || "").replace(/^'+/, "").trim();
-    const workRaw    = (row["Work Direct Phone"] || "").replace(/^'+/, "").trim();
-    const whatsapp   = mobileRaw && mobileRaw !== workRaw ? mobileRaw : null;
-
-    const company    = (row["Company Name"] || "").trim();
-    const title      = (row["Title"] || "").trim();
-    const industry   = (row["Industry"] || "").trim();
-    const location   = buildLocation(row);
+    const mobileRaw   = (row["Mobile Phone"] || "").replace(/^'+/, "").trim();
+    const workRaw     = (row["Work Direct Phone"] || "").replace(/^'+/, "").trim();
+    const whatsapp    = mobileRaw && mobileRaw !== workRaw ? mobileRaw : null;
+    const title       = (row["Title"] || "").trim();
+    const industry    = (row["Industry"] || "").trim();
+    const location    = buildLocation(row);
     const linkedinUrl = (row["Person Linkedin Url"] || row["LinkedIn Url"] || "").trim();
-    const notes      = buildNotes(row);
-
+    const notes       = buildNotes(row);
     const { score, temperature } = scoreApollo(row);
 
+    // Check if contact already exists (3-layer lookup)
+    let existingId: string | undefined;
+    if (apolloId)    existingId = byApolloId.get(apolloId);
+    if (!existingId && email)  existingId = byEmail.get(email);
+    if (!existingId)           existingId = byNameCo.get(nameCoKey);
+
+    if (existingId) {
+      // UPDATE existing contact with enriched data from CSV
+      db.update(contacts).set({
+        ...(phone       ? { phone }        : {}),
+        ...(title       ? { title }        : {}),
+        ...(industry    ? { industry }     : {}),
+        ...(location    ? { location }     : {}),
+        ...(linkedinUrl ? { linkedinUrl }  : {}),
+        ...(whatsapp    ? { whatsappNumber: whatsapp } : {}),
+        ...(apolloId    ? { apolloId }     : {}),
+        ...(notes       ? { notes }        : {}),
+        score, temperature,
+        updatedAt: new Date(),
+      }).where(eq(contacts.id, existingId)).run();
+
+      // Keep dedup maps current
+      if (apolloId) byApolloId.set(apolloId, existingId);
+      if (email)    byEmail.set(email, existingId);
+      byNameCo.set(nameCoKey, existingId);
+      updated++;
+      continue;
+    }
+
+    // INSERT new contact
     db.insert(contacts).values({
       id: crypto.randomUUID(),
       name,
-      email:         email     || null,
-      phone:         phone     || null,
-      company:       company   || null,
-      title:         title     || null,
-      industry:      industry  || null,
-      location:      location  || null,
-      linkedinUrl:   linkedinUrl || null,
-      whatsappNumber: whatsapp || null,
-      apolloId:      apolloId  || null,
-      source:        "import",
+      email:          email       || null,
+      phone:          phone       || null,
+      company:        company     || null,
+      title:          title       || null,
+      industry:       industry    || null,
+      location:       location    || null,
+      linkedinUrl:    linkedinUrl || null,
+      whatsappNumber: whatsapp    || null,
+      apolloId:       apolloId    || null,
+      source:         "import",
       temperature,
       score,
-      notes:         notes     || null,
-      createdAt:     new Date(),
-      updatedAt:     new Date(),
+      notes:          notes       || null,
+      createdAt:      new Date(),
+      updatedAt:      new Date(),
     }).run();
 
-    // Track in dedup sets so within-CSV duplicates are also skipped
-    if (apolloId) existingApolloIds.add(apolloId);
-    if (email)    existingEmails.add(email);
-    existingNameCo.add(nameCoKey);
-
+    if (apolloId) byApolloId.set(apolloId, "new");
+    if (email)    byEmail.set(email, "new");
+    byNameCo.set(nameCoKey, "new");
     inserted++;
   }
 
