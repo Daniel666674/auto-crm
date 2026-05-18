@@ -12,6 +12,7 @@ type DealRow = {
   stageName: string;
   won: boolean;
   days: number;
+  competitor?: string | null;
 };
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
@@ -70,6 +71,17 @@ export function WinLossClient({ wonDeals, lostDeals }: { wonDeals: DealRow[]; lo
   const filteredLost = lostDeals.filter(d =>
     !search || d.title.toLowerCase().includes(search.toLowerCase())
   );
+
+  const competitorMap = new Map<string, number>();
+  for (const d of lostDeals) {
+    const key = d.competitor || "Sin registrar";
+    competitorMap.set(key, (competitorMap.get(key) ?? 0) + 1);
+  }
+  const competitorData = [...competitorMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([name, count]) => ({ name, count }));
+  const hasCompetitors = competitorData.some(c => c.name !== "Sin registrar");
 
   const lostBySource = [
     { label: "Web", value: lostDeals.filter(d => d.source === "website").length, color: "var(--primary)" },
@@ -134,6 +146,29 @@ export function WinLossClient({ wonDeals, lostDeals }: { wonDeals: DealRow[]; lo
         </div>
       </div>
 
+      {/* Competitor analysis */}
+      {hasCompetitors && (
+        <div style={{ borderRadius: 10, padding: 16, background: "var(--card)", border: "1px solid var(--border)", marginBottom: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Competidores en deals perdidos</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {competitorData.filter(c => c.name !== "Sin registrar").map(c => {
+              const pct = lostDeals.length ? Math.round((c.count / lostDeals.length) * 100) : 0;
+              return (
+                <div key={c.name}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 500 }}>{c.name}</span>
+                    <span style={{ color: "#ef4444", fontWeight: 600 }}>{c.count} deal{c.count !== 1 ? "s" : ""} · {pct}%</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: "var(--border)" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: "#ef4444", transition: "width 0.5s" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Lost deals table */}
       <div style={{ borderRadius: 10, padding: 16, background: "var(--card)", border: "1px solid var(--border)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -158,7 +193,7 @@ export function WinLossClient({ wonDeals, lostDeals }: { wonDeals: DealRow[]; lo
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                {["Deal", "Valor", "Etapa perdida", "Fuente", "Días"].map(h => (
+                {["Deal", "Valor", "Competidor", "Etapa perdida", "Fuente", "Días"].map(h => (
                   <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                 ))}
               </tr>
@@ -168,6 +203,11 @@ export function WinLossClient({ wonDeals, lostDeals }: { wonDeals: DealRow[]; lo
                 <tr key={d.id} style={{ borderBottom: "1px solid var(--border)" }}>
                   <td style={{ padding: "10px 10px", fontSize: 13 }}>{d.title}</td>
                   <td style={{ padding: "10px 10px", fontSize: 13, color: "var(--primary)" }}>{formatCurrency(d.value)}</td>
+                  <td style={{ padding: "10px 10px", fontSize: 12 }}>
+                    {d.competitor ? (
+                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, background: "#ef444418", color: "#ef4444", fontWeight: 600 }}>{d.competitor}</span>
+                    ) : <span style={{ color: "var(--muted-foreground)" }}>—</span>}
+                  </td>
                   <td style={{ padding: "10px 10px", fontSize: 12, color: "var(--muted-foreground)" }}>{d.stageName}</td>
                   <td style={{ padding: "10px 10px", fontSize: 12, color: "var(--muted-foreground)" }}>{d.source}</td>
                   <td style={{ padding: "10px 10px", fontSize: 13 }}>{d.days}d</td>

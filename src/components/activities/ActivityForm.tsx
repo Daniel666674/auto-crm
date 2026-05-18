@@ -39,6 +39,8 @@ interface ActivityFormProps {
   onClose: () => void;
   preselectedContactId?: string;
   preselectedDealId?: string;
+  initialType?: ActivityFormData["type"];
+  initialDescription?: string;
 }
 
 export function ActivityForm({
@@ -46,6 +48,8 @@ export function ActivityForm({
   onClose,
   preselectedContactId,
   preselectedDealId,
+  initialType,
+  initialDescription,
 }: ActivityFormProps) {
   const router = useRouter();
   const [contactsList, setContacts] = useState<Array<{ id: string; name: string }>>([]);
@@ -68,13 +72,25 @@ export function ActivityForm({
   } = useForm<ActivityFormData>({
     resolver: zodResolver(activitySchema),
     defaultValues: {
-      type: "note",
-      description: "",
+      type: initialType || "note",
+      description: initialDescription || "",
       contactId: preselectedContactId || "",
       dealId: preselectedDealId || "",
       scheduledAt: "",
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        type: initialType || "note",
+        description: initialDescription || "",
+        contactId: preselectedContactId || "",
+        dealId: preselectedDealId || "",
+        scheduledAt: "",
+      });
+    }
+  }, [open, initialType, initialDescription, preselectedContactId, preselectedDealId, reset]);
 
   const onSubmit = async (data: ActivityFormData) => {
     try {

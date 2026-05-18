@@ -32,6 +32,9 @@ const dealSchema = z.object({
   probability: z.string(),
   expectedClose: z.string(),
   notes: z.string(),
+  competitor: z.string(),
+  isRecurring: z.boolean(),
+  recurringInterval: z.string(),
 });
 
 type DealFormData = z.infer<typeof dealSchema>;
@@ -70,6 +73,9 @@ export function DealForm({ open, onClose }: DealFormProps) {
       probability: "50",
       expectedClose: "",
       notes: "",
+      competitor: "",
+      isRecurring: false,
+      recurringInterval: "monthly",
     },
   });
 
@@ -82,6 +88,9 @@ export function DealForm({ open, onClose }: DealFormProps) {
           ...data,
           value: Math.round(parseFloat(data.value || "0") * 100),
           probability: parseInt(data.probability || "0"),
+          competitor: data.competitor || null,
+          isRecurring: data.isRecurring,
+          recurringInterval: data.isRecurring ? data.recurringInterval : null,
         }),
       });
 
@@ -184,6 +193,29 @@ export function DealForm({ open, onClose }: DealFormProps) {
           <div className="space-y-2">
             <Label htmlFor="deal-notes">Notas</Label>
             <Textarea id="deal-notes" {...register("notes")} rows={2} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="deal-competitor">Competidor principal</Label>
+            <Input id="deal-competitor" {...register("competitor")} placeholder="ej. HubSpot, Salesforce…" />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input type="checkbox" id="deal-recurring" {...register("isRecurring")}
+              style={{ cursor: "pointer", accentColor: "var(--primary)", width: 16, height: 16 }} />
+            <Label htmlFor="deal-recurring" style={{ cursor: "pointer", marginBottom: 0 }}>Deal recurrente (MRR/ARR)</Label>
+            {watch("isRecurring") && (
+              <Select value={watch("recurringInterval")} onValueChange={v => v && setValue("recurringInterval", v)}>
+                <SelectTrigger className="cursor-pointer" style={{ width: 130, height: 32, fontSize: 12 }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Mensual</SelectItem>
+                  <SelectItem value="quarterly">Trimestral</SelectItem>
+                  <SelectItem value="annual">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

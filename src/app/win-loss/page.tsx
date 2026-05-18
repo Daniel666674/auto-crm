@@ -40,6 +40,7 @@ export default async function WinLossPage() {
       source: contactMap[d.contactId]?.source || "otro",
       stageName: stageMap[d.stageId]?.name || "Perdido",
       won: false,
+      competitor: d.competitor ?? null,
       days: Math.max(0, Math.floor(
         (Date.now() - (d.createdAt instanceof Date ? d.createdAt.getTime() : Number(d.createdAt))) / 86400000
       )),

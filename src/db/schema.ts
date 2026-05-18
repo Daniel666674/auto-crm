@@ -66,6 +66,9 @@ export const deals = sqliteTable("deals", {
   closedBy: text("closed_by"),
   closeReasonId: text("close_reason_id"),
   ownerId: text("owner_id"),
+  competitor: text("competitor"),
+  isRecurring: integer("is_recurring", { mode: "boolean" }).notNull().default(false),
+  recurringInterval: text("recurring_interval"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

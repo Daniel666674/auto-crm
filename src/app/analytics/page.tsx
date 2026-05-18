@@ -17,6 +17,8 @@ interface CrmStats {
   pipelineValue: number;
   actsByType: { type: string; count: number }[];
   stageBreakdown: { stageName: string; stageColor: string; count: number; value: number }[];
+  mrrValue?: number;
+  recurringDeals?: number;
 }
 
 function fmtCOP(v: number) {
@@ -135,6 +137,9 @@ export default function AnalyticsPage() {
             <KPI label="Deals ganados (mes)" value={crm.wonThisMonth} sub={fmtCOP(crm.wonThisMonthValue)} />
             <KPI label="Pipeline activo" value={crm.activeDeals} sub={fmtCOP(crm.pipelineValue)} />
             <KPI label="Actividades (7d)" value={crm.activitiesThisWeek} />
+            {(crm.mrrValue ?? 0) > 0 && (
+              <KPI label="MRR (recurrentes)" value={fmtCOP(crm.mrrValue ?? 0)} sub={`${crm.recurringDeals ?? 0} deal${(crm.recurringDeals ?? 0) !== 1 ? "s" : ""} recurrentes`} />
+            )}
           </div>
           {crm.actsByType.length > 0 && (
             <div>

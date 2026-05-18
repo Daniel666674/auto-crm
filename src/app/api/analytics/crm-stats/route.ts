@@ -54,6 +54,8 @@ export async function GET() {
     stageId: deals.stageId,
     value: deals.value,
     updatedAt: deals.updatedAt,
+    isRecurring: deals.isRecurring,
+    recurringInterval: deals.recurringInterval,
   }).from(deals).all();
 
   const wonThisMonth = allDeals.filter(d => {
@@ -65,6 +67,16 @@ export async function GET() {
   const activeDeals = allDeals.filter(d => !wonStageIds.has(d.stageId) && !lostStageIds.has(d.stageId));
   const pipelineValue = activeDeals.reduce((s, d) => s + d.value, 0);
   const wonThisMonthValue = wonThisMonth.reduce((s, d) => s + d.value, 0);
+
+  // MRR: sum monthly-equivalent value of recurring won deals
+  const recurringWon = allDeals.filter(d => wonStageIds.has(d.stageId) && d.isRecurring);
+  const mrrValue = recurringWon.reduce((s, d) => {
+    const interval = d.recurringInterval;
+    if (interval === "quarterly") return s + Math.round(d.value / 3);
+    if (interval === "annual") return s + Math.round(d.value / 12);
+    return s + d.value; // monthly or unset
+  }, 0);
+  const recurringDeals = recurringWon.length;
 
   // Pipeline stage breakdown
   const stageBreakdown = stages
@@ -94,5 +106,7 @@ export async function GET() {
     activeDeals: activeDeals.length,
     pipelineValue,
     stageBreakdown,
+    mrrValue,
+    recurringDeals,
   });
 }

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Activity,
   Plus,
+  Zap,
 } from "lucide-react";
 import { formatRelativeDate, formatDate } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG } from "@/lib/constants";
@@ -28,6 +29,15 @@ const typeIcons: Record<string, typeof Phone> = {
   note: FileText,
   follow_up: Clock,
 };
+
+const TEMPLATES: Array<{ label: string; type: ActivityType; description: string; color: string }> = [
+  { label: "Discovery call", type: "call", description: "Llamada de descubrimiento: objetivos del cliente, retos actuales y presupuesto disponible.", color: "#3b82f6" },
+  { label: "Demo", type: "meeting", description: "Demo del producto: mostrar funcionalidades clave y propuesta de valor al prospecto.", color: "#8b5cf6" },
+  { label: "Seg. propuesta", type: "follow_up", description: "Seguimiento de propuesta enviada — confirmar recepción y resolver dudas sobre términos.", color: "#f59e0b" },
+  { label: "Negociación", type: "call", description: "Llamada de negociación: discutir condiciones, manejar objeciones y ajustar oferta.", color: "#f97316" },
+  { label: "Cierre", type: "call", description: "Llamada de cierre: confirmar decisión final del cliente y acordar próximos pasos.", color: "#22c55e" },
+  { label: "Check-in", type: "email", description: "Email de check-in: mantener relación activa y preguntar por avances o necesidades.", color: "#ec4899" },
+];
 
 interface ActivityItem {
   id: string;
@@ -52,6 +62,8 @@ export default function ActivitiesPage() {
   const [followUps, setFollowUps] = useState<FollowUps | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [templateType, setTemplateType] = useState<ActivityType | undefined>(undefined);
+  const [templateDesc, setTemplateDesc] = useState<string | undefined>(undefined);
 
   const loadData = () => {
     Promise.all([
@@ -67,6 +79,18 @@ export default function ActivitiesPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  function openTemplate(t: typeof TEMPLATES[0]) {
+    setTemplateType(t.type);
+    setTemplateDesc(t.description);
+    setShowForm(true);
+  }
+
+  function openBlank() {
+    setTemplateType(undefined);
+    setTemplateDesc(undefined);
+    setShowForm(true);
+  }
 
   if (loading) {
     return (
@@ -90,9 +114,9 @@ export default function ActivitiesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Actividades</h1>
           <p className="text-muted-foreground">
             Historial de interacciones y seguimientos pendientes
-        </p>
+          </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="cursor-pointer">
+        <Button onClick={openBlank} className="cursor-pointer">
           <Plus className="h-4 w-4 mr-2" />
           Registrar
         </Button>
@@ -100,11 +124,44 @@ export default function ActivitiesPage() {
 
       <ActivityForm
         open={showForm}
+        initialType={templateType}
+        initialDescription={templateDesc}
         onClose={() => {
           setShowForm(false);
           loadData();
         }}
       />
+
+      {/* Quick templates */}
+      <div style={{ borderRadius: 10, padding: "14px 16px", background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, fontSize: 13, fontWeight: 600 }}>
+          <Zap size={14} style={{ color: "var(--primary)" }} />
+          Registrar rápido
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {TEMPLATES.map(t => {
+            const Icon = typeIcons[t.type] || FileText;
+            return (
+              <button
+                key={t.label}
+                onClick={() => openTemplate(t)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 500,
+                  border: `1px solid ${t.color}40`, background: `${t.color}12`,
+                  color: t.color, cursor: "pointer", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = `${t.color}25`; }}
+                onMouseLeave={e => { e.currentTarget.style.background = `${t.color}12`; }}
+                title={t.description}
+              >
+                <Icon size={11} />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Follow-ups section */}
       {followUps && (followUps.overdue.length > 0 || followUps.today.length > 0) && (

@@ -228,6 +228,13 @@ function initTables(db: Database.Database): void {
     `UPDATE pipeline_stages SET default_probability = 25 WHERE is_won = 0 AND is_lost = 0 AND "order" = 2 AND default_probability = 0`,
     `UPDATE pipeline_stages SET default_probability = 50 WHERE is_won = 0 AND is_lost = 0 AND "order" = 3 AND default_probability = 0`,
     `UPDATE pipeline_stages SET default_probability = 75 WHERE is_won = 0 AND is_lost = 0 AND "order" = 4 AND default_probability = 0`,
+    `ALTER TABLE deals ADD COLUMN closed_at INTEGER`,
+    `ALTER TABLE deals ADD COLUMN closed_by TEXT`,
+    `ALTER TABLE deals ADD COLUMN close_reason_id TEXT`,
+    `ALTER TABLE deals ADD COLUMN owner_id TEXT`,
+    `ALTER TABLE deals ADD COLUMN competitor TEXT`,
+    `ALTER TABLE deals ADD COLUMN is_recurring INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE deals ADD COLUMN recurring_interval TEXT`,
   ];
 
   for (const sql of migrations) {

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { contacts, deals, pipelineStages, activities } from "@/db/schema";
+import { contacts, deals, pipelineStages, activities, users } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import { formatCurrency } from "@/lib/constants";
 import { getServerSession } from "next-auth";
@@ -32,6 +32,7 @@ export default async function DealIntelligencePage() {
   const allDeals = db.select().from(deals).all();
   const allContacts = db.select().from(contacts).all();
   const allActivities = db.select().from(activities).all();
+  const allUsers = db.select({ id: users.id, name: users.name, email: users.email }).from(users).all();
 
   // Industry analysis: avg deal size per industry (from contact.industry or company)
   const industryMap = new Map<string, { count: number; total: number; won: number }>();
@@ -64,6 +65,31 @@ export default async function DealIntelligencePage() {
     const avgVal = stageDeals.length > 0 ? Math.round(stageDeals.reduce((s, d) => s + d.value, 0) / stageDeals.length) : 0;
     return { stageName: s.name, stageColor: s.color, count: stageDeals.length, avgDays, avgVal };
   });
+
+  // Per-rep breakdown
+  const lostStageIds = new Set(allStages.filter(s => s.isLost).map(s => s.id));
+  const userMap = Object.fromEntries(allUsers.map(u => [u.id, u.name || u.email || u.id]));
+  const repMap = new Map<string, { count: number; total: number; won: number; active: number }>();
+  for (const d of allDeals) {
+    const repId = d.ownerId || "sin-asignar";
+    const existing = repMap.get(repId) || { count: 0, total: 0, won: 0, active: 0 };
+    existing.count++;
+    existing.total += d.value;
+    if (wonStageIds.has(d.stageId)) existing.won++;
+    if (!wonStageIds.has(d.stageId) && !lostStageIds.has(d.stageId)) existing.active++;
+    repMap.set(repId, existing);
+  }
+  const repStats = Array.from(repMap.entries())
+    .map(([repId, v]) => ({
+      repId,
+      repName: repId === "sin-asignar" ? "Sin asignar" : (userMap[repId] || repId),
+      count: v.count,
+      total: v.total,
+      wonCount: v.won,
+      activeCount: v.active,
+      winRate: v.count > 0 ? Math.round((v.won / v.count) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
 
   const contactMap = Object.fromEntries(allContacts.map(c => [c.id, c]));
   const stageMap = Object.fromEntries(allStages.map(s => [s.id, s]));
@@ -226,6 +252,53 @@ export default async function DealIntelligencePage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Per-rep breakdown */}
+      {repStats.length > 0 && (
+        <div style={{ borderRadius: 10, padding: 18, background: "var(--card)", border: "1px solid var(--border)", marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Breakdown por responsable</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  {["Responsable", "Deals totales", "Activos", "Ganados", "Win rate", "Valor total"].map(h => (
+                    <th key={h} style={{ padding: "6px 12px", textAlign: "left", fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {repStats.map(rep => {
+                  const maxTotal = Math.max(...repStats.map(r => r.total), 1);
+                  return (
+                    <tr key={rep.repId} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 600 }}>{rep.repName}</td>
+                      <td style={{ padding: "10px 12px", fontSize: 13 }}>{rep.count}</td>
+                      <td style={{ padding: "10px 12px", fontSize: 13, color: "#3b82f6", fontWeight: 600 }}>{rep.activeCount}</td>
+                      <td style={{ padding: "10px 12px", fontSize: 13, color: "#22c55e", fontWeight: 600 }}>{rep.wonCount}</td>
+                      <td style={{ padding: "10px 12px", fontSize: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 60, height: 4, borderRadius: 2, background: "var(--border)" }}>
+                            <div style={{ width: `${rep.winRate}%`, height: "100%", borderRadius: 2, background: rep.winRate >= 50 ? "#22c55e" : rep.winRate >= 25 ? "#f59e0b" : "#ef4444" }} />
+                          </div>
+                          <span style={{ fontWeight: 700, color: rep.winRate >= 50 ? "#22c55e" : rep.winRate >= 25 ? "#f59e0b" : "#ef4444" }}>{rep.winRate}%</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 12px", fontSize: 13 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 60, height: 4, borderRadius: 2, background: "var(--border)" }}>
+                            <div style={{ width: `${(rep.total / maxTotal) * 100}%`, height: "100%", borderRadius: 2, background: "var(--primary)", opacity: 0.7 }} />
+                          </div>
+                          <span style={{ color: "var(--primary)", fontWeight: 600 }}>{formatCurrency(rep.total)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Contact } from "@/types";
 
@@ -16,32 +16,34 @@ function Badge({ text, color }: { text: string; color: string }) {
 }
 
 type Criteria = { industry: string; companySizeMin: number; companySizeMax: number; role: string; geography: string; budgetSignal: string };
-
+type Weights = { industry: number; temperature: number; leadScore: number; source: number; budget: number };
 interface Breakdown { industry: number; temperature: number; leadScore: number; source: number; budget: number }
 
-function scoreContact(c: Contact, criteria: Criteria): { total: number; breakdown: Breakdown } {
+function scoreContact(c: Contact, criteria: Criteria, w: Weights): { total: number; breakdown: Breakdown } {
+  const max = w.industry + w.temperature + w.leadScore + w.source + w.budget || 100;
   let industry = 0, temperature = 0, leadScore = 0, source = 0, budget = 0;
   const nameLC = (c.company || "").toLowerCase();
 
-  if (criteria.industry === "Tecnología" && (nameLC.includes("tech") || nameLC.includes("digital") || nameLC.includes("startup"))) industry = 25;
-  else if (criteria.industry === "Inmobiliaria" && nameLC.includes("inmob")) industry = 25;
-  else if (criteria.industry === "Salud" && (nameLC.includes("dental") || nameLC.includes("salud") || nameLC.includes("med"))) industry = 25;
-  else if (criteria.industry === "Marketing" && (nameLC.includes("agencia") || nameLC.includes("market") || nameLC.includes("creativ"))) industry = 25;
-  else industry = 5;
+  if (criteria.industry === "Tecnología" && (nameLC.includes("tech") || nameLC.includes("digital") || nameLC.includes("startup"))) industry = w.industry;
+  else if (criteria.industry === "Inmobiliaria" && nameLC.includes("inmob")) industry = w.industry;
+  else if (criteria.industry === "Salud" && (nameLC.includes("dental") || nameLC.includes("salud") || nameLC.includes("med"))) industry = w.industry;
+  else if (criteria.industry === "Marketing" && (nameLC.includes("agencia") || nameLC.includes("market") || nameLC.includes("creativ"))) industry = w.industry;
+  else industry = Math.round(w.industry * 0.2);
 
-  if (c.temperature === "hot") temperature = 30;
-  else if (c.temperature === "warm") temperature = 15;
+  if (c.temperature === "hot") temperature = w.temperature;
+  else if (c.temperature === "warm") temperature = Math.round(w.temperature * 0.5);
 
-  if ((c.score ?? 0) >= 70) leadScore = 25;
-  else if ((c.score ?? 0) >= 40) leadScore = 12;
+  if ((c.score ?? 0) >= 70) leadScore = w.leadScore;
+  else if ((c.score ?? 0) >= 40) leadScore = Math.round(w.leadScore * 0.5);
 
-  if (["evento", "referido"].includes(c.source)) source = 15;
-  else if (c.source === "website") source = 10;
-  else source = 3;
+  if (["evento", "referido"].includes(c.source)) source = w.source;
+  else if (c.source === "website") source = Math.round(w.source * 0.67);
+  else source = Math.round(w.source * 0.2);
 
-  if (criteria.budgetSignal && c.notes && c.notes.toLowerCase().includes(criteria.budgetSignal.split(" ")[0].toLowerCase())) budget = 5;
+  if (criteria.budgetSignal && c.notes && c.notes.toLowerCase().includes(criteria.budgetSignal.split(" ")[0].toLowerCase())) budget = w.budget;
 
-  const total = Math.min(100, industry + temperature + leadScore + source + budget);
+  const raw = industry + temperature + leadScore + source + budget;
+  const total = Math.min(100, Math.round((raw / max) * 100));
   return { total, breakdown: { industry, temperature, leadScore, source, budget } };
 }
 
@@ -50,10 +52,12 @@ export default function ICPScorerPage() {
   const [loading, setLoading] = useState(true);
   const [rescoring, setRescoring] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showWeights, setShowWeights] = useState(false);
   const [criteria, setCriteria] = useState<Criteria>({
     industry: "Tecnología", companySizeMin: 5, companySizeMax: 200,
     role: "CEO, Director, Gerente", geography: "Colombia", budgetSignal: "ha preguntado precios",
   });
+  const [weights, setWeights] = useState<Weights>({ industry: 25, temperature: 30, leadScore: 25, source: 15, budget: 5 });
   const [minScore, setMinScore] = useState(0);
 
   useEffect(() => {
@@ -61,9 +65,10 @@ export default function ICPScorerPage() {
   }, []);
 
   const setCrit = (key: keyof Criteria, val: string | number) => setCriteria(prev => ({ ...prev, [key]: val }));
+  const setW = (key: keyof Weights, val: number) => setWeights(prev => ({ ...prev, [key]: Math.max(0, Math.min(100, val)) }));
 
   const scored = contacts
-    .map(c => ({ ...c, ...scoreContact(c, criteria) }))
+    .map(c => ({ ...c, ...scoreContact(c, criteria, weights) }))
     .sort((a, b) => b.total - a.total)
     .filter(c => c.total >= minScore);
 
@@ -83,6 +88,8 @@ export default function ICPScorerPage() {
     const fresh = await fetch("/api/contacts").then(r => r.json());
     setContacts(fresh);
   }
+
+  const totalWeights = Object.values(weights).reduce((s, v) => s + v, 0);
 
   const field = (label: string, node: React.ReactNode) => (
     <div style={{ marginBottom: 14 }}>
@@ -132,7 +139,7 @@ export default function ICPScorerPage() {
             <input value={criteria.budgetSignal} onChange={e => setCrit("budgetSignal", e.target.value)} placeholder="ej. pidió precios" style={inputStyle} />
           )}
 
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, color: "var(--muted-foreground)", textTransform: "uppercase" as const, letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>
               Score mínimo: ≥{minScore}
             </label>
@@ -141,19 +148,62 @@ export default function ICPScorerPage() {
               style={{ width: "100%", accentColor: "var(--primary)" }} />
           </div>
 
+          {/* Weights panel toggle */}
+          <button
+            onClick={() => setShowWeights(v => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: showWeights ? "var(--primary)18" : "transparent", color: showWeights ? "var(--primary)" : "var(--muted-foreground)", fontSize: 12, cursor: "pointer", marginBottom: 10, fontWeight: 500 }}
+          >
+            <Settings2 size={13} />
+            Pesos por categoría
+            <span style={{ marginLeft: "auto", fontSize: 11, color: totalWeights !== 100 ? "#f59e0b" : "var(--muted-foreground)" }}>
+              Σ {totalWeights}
+            </span>
+          </button>
+
+          {showWeights && (
+            <div style={{ borderRadius: 8, padding: "12px 12px", background: "var(--background)", border: "1px solid var(--border)", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
+                Puntos asignables por categoría. Los porcentajes se normalizan automáticamente a 100.
+              </div>
+              {([
+                { key: "industry" as const, label: "Industria" },
+                { key: "temperature" as const, label: "Temperatura" },
+                { key: "leadScore" as const, label: "Lead score" },
+                { key: "source" as const, label: "Fuente" },
+                { key: "budget" as const, label: "Presupuesto" },
+              ]).map(row => (
+                <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <label style={{ fontSize: 11, color: "var(--muted-foreground)", width: 88, flexShrink: 0 }}>{row.label}</label>
+                  <input type="number" min={0} max={100} value={weights[row.key]}
+                    onChange={e => setW(row.key, +e.target.value)}
+                    style={{ width: 54, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: 12, textAlign: "center" }} />
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--border)" }}>
+                    <div style={{ width: `${totalWeights > 0 ? (weights[row.key] / totalWeights) * 100 : 0}%`, height: "100%", borderRadius: 2, background: "var(--primary)", transition: "width 0.3s" }} />
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setWeights({ industry: 25, temperature: 30, leadScore: 25, source: 15, budget: 5 })}
+                style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+              >
+                Restablecer por defecto
+              </button>
+            </div>
+          )}
+
           {/* Score legend */}
           <div style={{ borderRadius: 8, padding: "10px 12px", background: "var(--background)", border: "1px solid var(--border)", fontSize: 11, marginBottom: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 8 }}>Distribución de puntos</div>
             {[
-              { label: "Industria (match)", max: 25 },
-              { label: "Temperatura", max: 30 },
-              { label: "Lead score", max: 25 },
-              { label: "Fuente", max: 15 },
-              { label: "Señal presupuesto", max: 5 },
+              { label: "Industria (match)", key: "industry" as const },
+              { label: "Temperatura", key: "temperature" as const },
+              { label: "Lead score", key: "leadScore" as const },
+              { label: "Fuente", key: "source" as const },
+              { label: "Señal presupuesto", key: "budget" as const },
             ].map(row => (
               <div key={row.label} style={{ display: "flex", justifyContent: "space-between", color: "var(--muted-foreground)", marginBottom: 3 }}>
                 <span>{row.label}</span>
-                <span style={{ fontWeight: 600, color: "var(--foreground)" }}>/{row.max}</span>
+                <span style={{ fontWeight: 600, color: "var(--foreground)" }}>/{weights[row.key]}</span>
               </div>
             ))}
           </div>
@@ -207,13 +257,13 @@ export default function ICPScorerPage() {
                   {expandedId === c.id && (
                     <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 12, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
                       {[
-                        { label: "Industria", val: c.breakdown.industry, max: 25 },
-                        { label: "Temperatura", val: c.breakdown.temperature, max: 30 },
-                        { label: "Lead score", val: c.breakdown.leadScore, max: 25 },
-                        { label: "Fuente", val: c.breakdown.source, max: 15 },
-                        { label: "Presupuesto", val: c.breakdown.budget, max: 5 },
+                        { label: "Industria", val: c.breakdown.industry, max: weights.industry },
+                        { label: "Temperatura", val: c.breakdown.temperature, max: weights.temperature },
+                        { label: "Lead score", val: c.breakdown.leadScore, max: weights.leadScore },
+                        { label: "Fuente", val: c.breakdown.source, max: weights.source },
+                        { label: "Presupuesto", val: c.breakdown.budget, max: weights.budget },
                       ].map(row => {
-                        const pct = (row.val / row.max) * 100;
+                        const pct = row.max > 0 ? (row.val / row.max) * 100 : 0;
                         const color = pct >= 70 ? "#22c55e" : pct >= 30 ? "#f59e0b" : "#ef4444";
                         return (
                           <div key={row.label} style={{ borderRadius: 8, padding: "8px 10px", background: "var(--background)", border: "1px solid var(--border)" }}>

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Users, Download } from "lucide-react";
+import { Users, Download, Trash2, Thermometer } from "lucide-react";
 import { SOURCE_LABELS } from "@/lib/constants";
 import type { Contact, Temperature, LeadSource } from "@/types";
 
@@ -29,15 +29,20 @@ function scoreColor(s: number) {
   return s >= 70 ? "#22c55e" : s >= 40 ? "#f59e0b" : "#ef4444";
 }
 
-interface ContactsTableProps { contacts: Contact[]; }
+interface ContactsTableProps {
+  contacts: Contact[];
+  onRefresh?: () => void;
+}
 
-export function ContactsTable({ contacts }: ContactsTableProps) {
+export function ContactsTable({ contacts, onRefresh }: ContactsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterTemp, setFilterTemp] = useState<Temperature | "">("");
   const [filterTag, setFilterTag] = useState<string>("");
   const [sortBy, setSortBy] = useState<"score" | "name" | "company" | "industry">("score");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const parseTags = (raw: string | null | undefined): string[] => {
     if (!raw) return [];
@@ -63,6 +68,52 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
       else if (sortBy === "industry") diff = (a.industry || "").localeCompare(b.industry || "");
       return sortDir === "desc" ? -diff : diff;
     });
+
+  const allFilteredIds = filtered.map(c => c.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+
+  function toggleSelect(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(allFilteredIds));
+  }
+
+  async function bulkSetTemp(temp: string) {
+    if (!selected.size || bulkLoading) return;
+    setBulkLoading(true);
+    await Promise.all([...selected].map(id =>
+      fetch(`/api/contacts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ temperature: temp }),
+      })
+    ));
+    setBulkLoading(false);
+    setSelected(new Set());
+    onRefresh?.();
+  }
+
+  async function bulkDelete() {
+    if (!selected.size || bulkLoading) return;
+    if (!confirm(`¿Eliminar ${selected.size} contacto(s)? Esta acción no se puede deshacer.`)) return;
+    setBulkLoading(true);
+    await Promise.all([...selected].map(id =>
+      fetch(`/api/contacts/${id}`, { method: "DELETE" })
+    ));
+    setBulkLoading(false);
+    setSelected(new Set());
+    onRefresh?.();
+  }
 
   if (contacts.length === 0) {
     return <EmptyState icon={Users} title="No hay contactos" description="Agrega tu primer contacto para comenzar." actionLabel="Agregar contacto" onAction={() => router.push("/contacts?new=true")} />;
@@ -135,11 +186,48 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
         </button>
       </div>
 
+      {/* Bulk action toolbar */}
+      {selected.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8, background: "var(--card)", border: "1px solid var(--primary)", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", marginRight: 4 }}>
+            {selected.size} seleccionado{selected.size !== 1 ? "s" : ""}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
+            <Thermometer size={12} /> Temperatura:
+          </div>
+          {[
+            { temp: "hot", label: "Caliente", color: "#ef4444" },
+            { temp: "warm", label: "Tibio", color: "#f59e0b" },
+            { temp: "cold", label: "Frío", color: "var(--muted-foreground)" },
+          ].map(({ temp, label, color }) => (
+            <button key={temp} disabled={bulkLoading}
+              onClick={() => bulkSetTemp(temp)}
+              style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: `1px solid ${color}`, background: "transparent", color, cursor: bulkLoading ? "not-allowed" : "pointer", opacity: bulkLoading ? 0.5 : 1 }}>
+              {label}
+            </button>
+          ))}
+          <div style={{ flex: 1 }} />
+          <button disabled={bulkLoading}
+            onClick={bulkDelete}
+            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid #ef4444", background: "transparent", color: "#ef4444", cursor: bulkLoading ? "not-allowed" : "pointer", opacity: bulkLoading ? 0.5 : 1 }}>
+            <Trash2 size={12} /> {bulkLoading ? "Procesando..." : "Eliminar"}
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>
+            Deseleccionar
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
           <thead>
             <tr>
+              <th style={hcell}>
+                <input type="checkbox" checked={allSelected} onChange={() => {}} onClick={toggleAll}
+                  style={{ cursor: "pointer", accentColor: "var(--primary)" }} />
+              </th>
               {["#", "Nombre", "Empresa", "Industria", "Cargo", "Teléfono", "Score", "LinkedIn", "Fuente", "Temperatura"].map(h => (
                 <th key={h} style={hcell}>{h}</th>
               ))}
@@ -147,20 +235,25 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={10} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
+              <tr><td colSpan={11} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
               const temp = TEMP_CFG[c.temperature as keyof typeof TEMP_CFG] ?? TEMP_CFG.cold;
               const sc = scoreColor(c.score ?? 0);
               const src = SRC_COLORS[c.source] ?? { bg: "rgba(255,255,255,0.07)", color: "var(--muted-foreground)" };
               const liUrl = c.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(c.name + (c.company ? " " + c.company : ""))}`;
+              const isSelected = selected.has(c.id);
               return (
                 <tr
                   key={c.id}
-                  style={{ background: i % 2 === 0 ? "transparent" : "var(--card)", cursor: "pointer", transition: "filter 0.1s" }}
+                  style={{ background: isSelected ? "var(--primary)10" : i % 2 === 0 ? "transparent" : "var(--card)", cursor: "pointer", transition: "filter 0.1s", outline: isSelected ? "1px solid var(--primary)" : "none", outlineOffset: -1 }}
                   onClick={() => router.push(`/contacts/${c.id}`)}
                   onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.08)")}
                   onMouseLeave={e => (e.currentTarget.style.filter = "")}
                 >
+                  <td style={{ ...cell, width: 36 }} onClick={e => toggleSelect(c.id, e)}>
+                    <input type="checkbox" checked={isSelected} onChange={() => {}}
+                      style={{ cursor: "pointer", accentColor: "var(--primary)" }} />
+                  </td>
                   <td style={{ ...cell, color: "var(--muted-foreground)", width: 32 }}>{i + 1}</td>
                   <td style={cell}>
                     <div style={{ fontWeight: 600 }}>{c.name}</div>
@@ -207,6 +300,7 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
       </div>
       <p style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center" }}>
         {filtered.length} de {contacts.length} contactos
+        {selected.size > 0 && <span style={{ color: "var(--primary)", fontWeight: 600 }}> · {selected.size} seleccionados</span>}
       </p>
     </div>
   );

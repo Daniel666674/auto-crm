@@ -57,6 +57,9 @@ export async function PUT(
     updateData.probability = Math.max(0, Math.min(100, Number(body.probability)));
   }
   if (body.notes !== undefined) updateData.notes = body.notes;
+  if (body.competitor !== undefined) updateData.competitor = body.competitor || null;
+  if (body.isRecurring !== undefined) updateData.isRecurring = Boolean(body.isRecurring);
+  if (body.recurringInterval !== undefined) updateData.recurringInterval = body.recurringInterval || null;
 
   // Handle stage change — detect won/lost to set closedAt/closedBy
   if (body.stageId !== undefined && body.stageId !== existing.stageId) {

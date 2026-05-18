@@ -52,7 +52,7 @@ export default function ContactsPage() {
           ))}
         </div>
       ) : (
-        <ContactsTable contacts={contacts} />
+        <ContactsTable contacts={contacts} onRefresh={loadContacts} />
       )}
 
       <ContactForm open={showForm} onClose={handleCloseForm} />
