@@ -32,6 +32,23 @@ export default function PipelinePage() {
     .leftJoin(contacts, eq(deals.contactId, contacts.id))
     .all();
 
+  // Last activity per deal — must be before columns map
+  const lastActMap = new Map<string, number>();
+  try {
+    const lastActRows = db.select({
+      dealId: activities.dealId,
+      lastAt: sql<number>`MAX(${activities.createdAt})`,
+    }).from(activities)
+      .where(isNotNull(activities.dealId))
+      .groupBy(activities.dealId)
+      .all() as Array<{ dealId: string | null; lastAt: number }>;
+    for (const r of lastActRows) {
+      if (r.dealId) lastActMap.set(r.dealId, r.lastAt);
+    }
+  } catch (e) {
+    console.error("[pipeline] activities query failed:", e);
+  }
+
   const columns: PipelineColumn[] = stages.map((stage) => ({
     ...stage,
     deals: allDeals
@@ -58,16 +75,6 @@ export default function PipelinePage() {
     .from(contacts)
     .orderBy(asc(contacts.name))
     .all();
-
-  // Last activity per deal
-  const lastActRows = db.select({
-    dealId: activities.dealId,
-    lastAt: sql<number>`MAX(${activities.createdAt})`,
-  }).from(activities)
-    .where(isNotNull(activities.dealId))
-    .groupBy(activities.dealId)
-    .all() as Array<{ dealId: string | null; lastAt: number }>;
-  const lastActMap = new Map(lastActRows.map(r => [r.dealId!, r.lastAt]));
 
   return (
     <div className="space-y-6">
