@@ -47,6 +47,63 @@ const SECTION_LABELS: Record<MktSection, string> = {
 } as Record<MktSection, string>;
 
 // ── Contacts tab ─────────────────────────────────────────────────────────────
+function MktContactDetailModal({ contact, onClose }: { contact: import("@/components/marketing/mkt-types").MktContact; onClose: () => void }) {
+  const isBrevo = !!contact.brevoId;
+  const lastAct = contact.lastActivity ? new Date(contact.lastActivity).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  const row = (label: string, value: React.ReactNode) => (
+    <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--mkt-border)", fontSize: 12 }}>
+      <span style={{ color: "var(--mkt-text-muted)" }}>{label}</span>
+      <span style={{ color: "var(--mkt-text)" }}>{value}</span>
+    </div>
+  );
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 10001, display: "flex", justifyContent: "flex-end" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "min(560px, 100%)", height: "100%", background: "var(--mkt-card)", borderLeft: "1px solid var(--mkt-border)", overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--mkt-text)" }}>{contact.name}</div>
+            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)", marginTop: 2 }}>{contact.jobTitle || "—"}{contact.company ? ` · ${contact.company}` : ""}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--mkt-text-muted)", fontSize: 22, cursor: "pointer", padding: 0, lineHeight: 1 }} aria-label="Cerrar">×</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: isBrevo ? "#3b82f620" : "#8b5cf620", color: isBrevo ? "#3b82f6" : "#8b5cf6" }}>{isBrevo ? "Brevo" : "Apollo"}</span>
+          {contact.tier ? <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 700, background: "var(--mkt-accent)20", color: "var(--mkt-accent)" }}>T{contact.tier}</span> : null}
+          {contact.engagementStatus ? <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.06)", color: "var(--mkt-text-muted)", textTransform: "uppercase" }}>{contact.engagementStatus}</span> : null}
+          {contact.readyForSales ? <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>Ready for sales</span> : null}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          {contact.email ? <a href={`mailto:${contact.email}`} style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, textAlign: "center", background: "#3b82f61a", color: "#3b82f6", border: "1px solid #3b82f633", textDecoration: "none" }}>✉️ Email</a> : <span style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, textAlign: "center", color: "var(--mkt-text-muted)", border: "1px dashed var(--mkt-border)" }}>Sin email</span>}
+          {contact.phone ? <a href={`tel:${contact.phone}`} style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, textAlign: "center", background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)", textDecoration: "none" }}>📞 Llamar</a> : <span style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, textAlign: "center", color: "var(--mkt-text-muted)", border: "1px dashed var(--mkt-border)" }}>Sin teléfono</span>}
+          {contact.phone ? <a href={`https://wa.me/${contact.phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, textAlign: "center", background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", textDecoration: "none" }}>💬 WhatsApp</a> : <span style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, textAlign: "center", color: "var(--mkt-text-muted)", border: "1px dashed var(--mkt-border)" }}>Sin WhatsApp</span>}
+          <a href={contact.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(contact.name + (contact.company ? " " + contact.company : ""))}`} target="_blank" rel="noopener noreferrer" style={{ padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, textAlign: "center", background: "rgba(10,102,194,0.1)", color: "#0a66c2", border: "1px solid rgba(10,102,194,0.25)", textDecoration: "none" }}>in LinkedIn</a>
+        </div>
+        <div>
+          {row("Email", contact.email || "—")}
+          {row("Teléfono", contact.phone || "—")}
+          {row("Empresa", contact.company || "—")}
+          {row("Cargo", contact.jobTitle || "—")}
+          {row("Industria", contact.industry || "—")}
+          {row("Tamaño empresa", contact.companySize || "—")}
+          {row("Ubicación", contact.location || "—")}
+          {row("Score ICP", `${contact.score} / 100`)}
+          {row("Aperturas", contact.emailOpens)}
+          {row("Clics", contact.emailClicks)}
+          {row("Última actividad", lastAct)}
+          {row("Brevo cadence", contact.brevoCadence || "—")}
+          {row("Fuente detalle", contact.leadSourceDetail || "—")}
+        </div>
+        {contact.marketingNotes && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Notas de marketing</div>
+            <div style={{ padding: 10, borderRadius: 8, background: "var(--mkt-bg)", fontSize: 12, color: "var(--mkt-text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{contact.marketingNotes}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MktContacts() {
   const { contacts } = useMkt();
   const [search, setSearch] = useState("");
@@ -54,6 +111,8 @@ function MktContacts() {
   const [tierFilter, setTierFilter] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [sortBy, setSortBy] = useState<"score" | "tier" | "name" | "company" | "activity">("score");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = contacts.find(c => c.id === selectedId) || null;
 
   const filtered = contacts
     .filter(c => {
@@ -156,7 +215,13 @@ function MktContacts() {
             ) : filtered.map((c, i) => {
               const isBrevo = !!c.brevoId;
               return (
-                <tr key={c.id} style={{ background: i % 2 === 0 ? "transparent" : "var(--mkt-surface)" }}>
+                <tr
+                  key={c.id}
+                  onClick={() => setSelectedId(c.id)}
+                  onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.08)")}
+                  onMouseLeave={e => (e.currentTarget.style.filter = "")}
+                  style={{ background: i % 2 === 0 ? "transparent" : "var(--mkt-surface)", cursor: "pointer", transition: "filter 0.1s" }}
+                >
                   <td style={{ ...cell, color: "var(--mkt-text-muted)", width: 32 }}>{i + 1}</td>
                   <td style={cell}>
                     <div style={{ fontWeight: 600, fontSize: 12 }}>{c.name}</div>
@@ -191,6 +256,7 @@ function MktContacts() {
         </table>
       </div>
       <div style={{ fontSize: 11, color: "var(--mkt-text-muted)" }}>{filtered.length} de {contacts.length} contactos</div>
+      {selected && <MktContactDetailModal contact={selected} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }

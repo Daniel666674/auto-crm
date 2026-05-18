@@ -291,15 +291,27 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               {contact.email ? (
                 <EmailButton email={contact.email} contactName={contact.name} companyName={contact.company} title={contact.title} />
-              ) : <span />}
+              ) : (
+                <button onClick={() => setShowEditForm(true)} style={{ ...qaBtn("#3b82f6"), border: "1px dashed #3b82f655", background: "rgba(59,130,246,0.06)" }} title="Agregar email para enviar mensajes">
+                  ✉️ Agregar email
+                </button>
+              )}
               {contact.phone ? (
                 <a href={`https://wa.me/${cleanPhoneForWhatsApp(contact.phone)}`} target="_blank" rel="noopener noreferrer" style={qaBtn("#22c55e")}>
                   💬 WhatsApp
                 </a>
-              ) : <span />}
+              ) : (
+                <button onClick={() => setShowEditForm(true)} style={{ ...qaBtn("#22c55e"), border: "1px dashed #22c55e55", background: "rgba(34,197,94,0.06)" }} title="Agregar teléfono para WhatsApp">
+                  💬 Agregar WhatsApp
+                </button>
+              )}
               {contact.phone ? (
                 <a href={`tel:${contact.phone}`} style={qaBtn("#f59e0b")}>📞 Llamar</a>
-              ) : <span />}
+              ) : (
+                <button onClick={() => setShowEditForm(true)} style={{ ...qaBtn("#f59e0b"), border: "1px dashed #f59e0b55", background: "rgba(245,158,11,0.06)" }} title="Agregar teléfono para llamar">
+                  📞 Agregar teléfono
+                </button>
+              )}
               <a
                 href={contact.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(contact.name + (contact.company ? " " + contact.company : ""))}`}
                 target="_blank" rel="noopener noreferrer"
