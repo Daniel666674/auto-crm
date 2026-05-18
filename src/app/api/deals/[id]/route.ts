@@ -108,6 +108,48 @@ export async function PUT(
     .returning()
     .get();
 
+  // M2: lifecycle auto-promotion — keep the contact's lifecycle stage in sync with deal progress
+  if (body.stageId !== undefined && body.stageId !== existing.stageId) {
+    try {
+      const newStage = db.select().from(pipelineStages).where(eq(pipelineStages.id, body.stageId)).get();
+      if (newStage) {
+        const contact = db.select().from(contacts).where(eq(contacts.id, existing.contactId)).get();
+        if (contact) {
+          const LIFECYCLE = ["subscriber", "lead", "MQL", "SQL", "opportunity", "customer", "evangelist"];
+          const currentIdx = LIFECYCLE.indexOf(contact.lifecycleStage ?? "lead");
+          const contactUpdate: Record<string, unknown> = {};
+
+          if (newStage.isWon) {
+            // Won → promote to customer
+            if (currentIdx < LIFECYCLE.indexOf("customer")) {
+              contactUpdate.lifecycleStage = "customer";
+            }
+          } else if (newStage.isLost) {
+            // Lost → check if no other active deals, then queue for re-engagement
+            const allStages = db.select().from(pipelineStages).all();
+            const closedStageIds = new Set(allStages.filter(s => s.isWon || s.isLost).map(s => s.id));
+            const allDeals = db.select({ stageId: deals.stageId, id: deals.id }).from(deals).where(eq(deals.contactId, contact.id)).all();
+            const hasOtherActiveDeal = allDeals.some(d => d.id !== id && !closedStageIds.has(d.stageId));
+            if (!hasOtherActiveDeal && !contact.reengagementQueuedAt) {
+              contactUpdate.reengagementQueuedAt = new Date();
+            }
+          } else {
+            // Active stage move → promote to at least SQL if not already there
+            const sqlIdx = LIFECYCLE.indexOf("SQL");
+            if (currentIdx < sqlIdx) {
+              contactUpdate.lifecycleStage = "SQL";
+            }
+          }
+
+          if (Object.keys(contactUpdate).length > 0) {
+            contactUpdate.updatedAt = new Date();
+            db.update(contacts).set(contactUpdate).where(eq(contacts.id, contact.id)).run();
+          }
+        }
+      }
+    } catch { /* non-fatal lifecycle sync */ }
+  }
+
   return NextResponse.json(result);
 }
 

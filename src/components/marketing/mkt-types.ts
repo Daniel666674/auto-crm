@@ -53,6 +53,7 @@ export type MktSection =
   | "calendar" | "abm"
   | "digest" | "roi" | "export"
   | "integrations"
+  | "reengagement"
   | "icp" | "segments" // legacy aliases kept for backward compat
   | "settings";
 

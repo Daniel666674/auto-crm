@@ -7,6 +7,16 @@ import { Users, Download, Trash2, Thermometer } from "lucide-react";
 import { SOURCE_LABELS } from "@/lib/constants";
 import type { Contact, Temperature, LeadSource } from "@/types";
 
+const LIFECYCLE_CFG: Record<string, { label: string; color: string; bg: string }> = {
+  subscriber:  { label: "Suscriptor",  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
+  lead:        { label: "Lead",        color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  MQL:         { label: "MQL",         color: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
+  SQL:         { label: "SQL",         color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  opportunity: { label: "Oportunidad", color: "#f97316", bg: "rgba(249,115,22,0.12)" },
+  customer:    { label: "Cliente",     color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
+  evangelist:  { label: "Evangelista", color: "#ec4899", bg: "rgba(236,72,153,0.12)" },
+};
+
 const TEMP_CFG = {
   hot:  { label: "Caliente", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
   warm: { label: "Tibio",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
@@ -32,9 +42,10 @@ function scoreColor(s: number) {
 interface ContactsTableProps {
   contacts: Contact[];
   onRefresh?: () => void;
+  renderBulkActions?: (selectedIds: string[], clearSelection: () => void) => React.ReactNode;
 }
 
-export function ContactsTable({ contacts, onRefresh }: ContactsTableProps) {
+export function ContactsTable({ contacts, onRefresh, renderBulkActions }: ContactsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterTemp, setFilterTemp] = useState<Temperature | "">("");
@@ -212,6 +223,7 @@ export function ContactsTable({ contacts, onRefresh }: ContactsTableProps) {
             style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid #ef4444", background: "transparent", color: "#ef4444", cursor: bulkLoading ? "not-allowed" : "pointer", opacity: bulkLoading ? 0.5 : 1 }}>
             <Trash2 size={12} /> {bulkLoading ? "Procesando..." : "Eliminar"}
           </button>
+          {renderBulkActions?.(Array.from(selected), () => setSelected(new Set()))}
           <button onClick={() => setSelected(new Set())}
             style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>
             Deseleccionar
@@ -228,14 +240,14 @@ export function ContactsTable({ contacts, onRefresh }: ContactsTableProps) {
                 <input type="checkbox" checked={allSelected} onChange={() => {}} onClick={toggleAll}
                   style={{ cursor: "pointer", accentColor: "var(--primary)" }} />
               </th>
-              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Teléfono", "Score", "LinkedIn", "Fuente", "Temperatura"].map(h => (
+              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Teléfono", "Score", "LinkedIn", "Fuente", "Lifecycle", "Temperatura"].map(h => (
                 <th key={h} style={hcell}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={11} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
+              <tr><td colSpan={12} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
               const temp = TEMP_CFG[c.temperature as keyof typeof TEMP_CFG] ?? TEMP_CFG.cold;
               const sc = scoreColor(c.score ?? 0);
@@ -285,6 +297,16 @@ export function ContactsTable({ contacts, onRefresh }: ContactsTableProps) {
                     <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: src.bg, color: src.color }}>
                       {SOURCE_LABELS[c.source as LeadSource] || c.source}
                     </span>
+                  </td>
+                  <td style={cell}>
+                    {(() => {
+                      const lc = LIFECYCLE_CFG[c.lifecycleStage ?? "lead"] ?? LIFECYCLE_CFG.lead;
+                      return (
+                        <span style={{ padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: lc.bg, color: lc.color, whiteSpace: "nowrap" }}>
+                          {lc.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={cell}>
                     <span style={{ padding: "3px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: temp.bg, color: temp.color, display: "inline-flex", alignItems: "center", gap: 4 }}>

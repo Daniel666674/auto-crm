@@ -20,6 +20,7 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   evento: "Evento",
   import: "Importado",
   webhook: "Webhook",
+  marketing_handoff: "Mkt Handoff",
   otro: "Otro",
 };
 

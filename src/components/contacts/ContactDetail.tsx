@@ -65,6 +65,11 @@ interface ContactDetailClientProps {
     linkedinUrl?: string | null;
     whatsappNumber?: string | null;
     tags?: string | null;
+    lifecycleStage?: string | null;
+    returnedToMarketingAt?: number | Date | null;
+    returnedToMarketingReason?: string | null;
+    firstTouchCampaignId?: string | null;
+    lastTouchCampaignId?: string | null;
   };
   deals: Array<{
     id: string;
@@ -581,6 +586,44 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
                     <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
                       Nivel de engagement en campañas de email. Solo disponible para contactos activos en Brevo.
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Marketing Context */}
+              {(contact.lifecycleStage || contact.firstTouchCampaignId || contact.returnedToMarketingAt) && (
+                <div style={{ padding: 16, borderRadius: 10, border: "1px solid rgba(167,139,250,0.25)", background: "rgba(167,139,250,0.05)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "#a78bfa" }}>Contexto de Marketing</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {contact.lifecycleStage && (
+                      <div>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Lifecycle Stage</div>
+                        <span style={{ padding: "3px 9px", borderRadius: 10, fontSize: 12, fontWeight: 600, background: "rgba(167,139,250,0.15)", color: "#a78bfa" }}>
+                          {contact.lifecycleStage}
+                        </span>
+                      </div>
+                    )}
+                    {contact.firstTouchCampaignId && (
+                      <div>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>1ª Campaña</div>
+                        <span style={{ fontSize: 12, color: "var(--foreground)", fontFamily: "monospace" }}>{contact.firstTouchCampaignId}</span>
+                      </div>
+                    )}
+                    {contact.lastTouchCampaignId && (
+                      <div>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Última Campaña</div>
+                        <span style={{ fontSize: 12, color: "var(--foreground)", fontFamily: "monospace" }}>{contact.lastTouchCampaignId}</span>
+                      </div>
+                    )}
+                    {contact.returnedToMarketingAt && (
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Devuelto a Marketing</div>
+                        <div style={{ fontSize: 12, color: "#f59e0b" }}>
+                          {new Date(contact.returnedToMarketingAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}
+                          {contact.returnedToMarketingReason && <span style={{ color: "var(--muted-foreground)" }}> — {contact.returnedToMarketingReason}</span>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

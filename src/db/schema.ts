@@ -41,6 +41,11 @@ export const contacts = sqliteTable("contacts", {
   apolloId: text("apollo_id"),
   returnedToMarketingAt: integer("returned_to_marketing_at", { mode: "timestamp" }),
   returnedToMarketingReason: text("returned_to_marketing_reason"),
+  lifecycleStage: text("lifecycle_stage").notNull().default("lead"),
+  firstTouchCampaignId: text("first_touch_campaign_id"),
+  lastTouchCampaignId: text("last_touch_campaign_id"),
+  assistingCampaignIds: text("assisting_campaign_ids"),
+  reengagementQueuedAt: integer("reengagement_queued_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

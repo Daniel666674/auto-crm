@@ -237,6 +237,11 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE deals ADD COLUMN recurring_interval TEXT`,
     `ALTER TABLE contacts ADD COLUMN returned_to_marketing_at INTEGER`,
     `ALTER TABLE contacts ADD COLUMN returned_to_marketing_reason TEXT`,
+    `ALTER TABLE contacts ADD COLUMN lifecycle_stage TEXT NOT NULL DEFAULT 'lead'`,
+    `ALTER TABLE contacts ADD COLUMN first_touch_campaign_id TEXT`,
+    `ALTER TABLE contacts ADD COLUMN last_touch_campaign_id TEXT`,
+    `ALTER TABLE contacts ADD COLUMN assisting_campaign_ids TEXT`,
+    `ALTER TABLE contacts ADD COLUMN reengagement_queued_at INTEGER`,
   ];
 
   for (const sql of migrations) {

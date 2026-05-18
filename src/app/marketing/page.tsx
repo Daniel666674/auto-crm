@@ -19,6 +19,8 @@ import { MktDigest } from "@/components/marketing/mkt-digest";
 import { MktROI } from "@/components/marketing/mkt-roi";
 import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
 import { MktAdvancedSettings } from "@/components/marketing/mkt-advanced-settings";
+import { MktContactsView } from "@/components/marketing/mkt-contacts-view";
+import { MktReengagement } from "@/components/marketing/mkt-reengagement";
 import { MKT_THEME_VARS, MKT_PRESETS, getMktThemeVars } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -28,6 +30,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   "icp-insights": "ICP Insights",
   campaigns: "Campañas",
   contacts: "Contactos",
+  reengagement: "Re-engagement Queue",
   segments: "Segment Health",
   "segment-health": "Segment Health",
   attribution: "Atribución",
@@ -730,7 +733,8 @@ function MarketingContent() {
       case "icp":
       case "icp-insights": return <MktIcpScorer />;
       case "campaigns": return <MktCampaignWall />;
-      case "contacts": return <MktContacts />;
+      case "contacts": return <MktContactsView />;
+      case "reengagement": return <MktReengagement />;
       case "segments":
       case "segment-health": return <MktSegmentHealth />;
       case "attribution": return <MktAttributionDashboard />;

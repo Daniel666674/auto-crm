@@ -83,6 +83,7 @@ export async function PUT(
   if (body.linkedinUrl !== undefined) updateData.linkedinUrl = body.linkedinUrl || null;
   if (body.whatsappNumber !== undefined) updateData.whatsappNumber = body.whatsappNumber || null;
   if (body.tags !== undefined) updateData.tags = body.tags || null;
+  if (body.lifecycleStage !== undefined) updateData.lifecycleStage = body.lifecycleStage || "lead";
 
   const result = db
     .update(contacts)

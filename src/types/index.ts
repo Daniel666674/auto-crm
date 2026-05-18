@@ -13,6 +13,7 @@ export type LeadSource =
   | "evento"
   | "import"
   | "webhook"
+  | "marketing_handoff"
   | "otro";
 
 export interface Contact {
@@ -33,6 +34,12 @@ export interface Contact {
   whatsappNumber?: string | null;
   tags?: string | null;
   apolloId?: string | null;
+  lifecycleStage?: string | null;
+  returnedToMarketingAt?: Date | null;
+  returnedToMarketingReason?: string | null;
+  firstTouchCampaignId?: string | null;
+  lastTouchCampaignId?: string | null;
+  reengagementQueuedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
