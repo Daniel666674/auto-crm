@@ -109,4 +109,6 @@ export interface DashboardStats {
   wonDealsValue: number;
   conversionRate: number;
   hotLeads: number;
+  overdueCount?: number;
+  mtdRevenue?: number;
 }
