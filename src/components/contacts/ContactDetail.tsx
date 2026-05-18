@@ -8,6 +8,8 @@ import { ContactForm } from "./ContactForm";
 import { ActivityForm } from "@/components/activities/ActivityForm";
 import { ContactEngagementCard } from "./ContactEngagementCard";
 import { ContactNextBestAction } from "./ContactNextBestAction";
+import { EmailButton } from "./EmailButton";
+import { TagsEditor } from "./TagsEditor";
 import { formatCurrency, formatDate, formatRelativeDate, cleanPhoneForWhatsApp } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG, SOURCE_LABELS } from "@/lib/constants";
 import { toast } from "sonner";
@@ -62,6 +64,7 @@ interface ContactDetailClientProps {
     location?: string | null;
     linkedinUrl?: string | null;
     whatsappNumber?: string | null;
+    tags?: string | null;
   };
   deals: Array<{
     id: string;
@@ -108,6 +111,9 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
   const [savingConsent, setSavingConsent] = useState(false);
   const [returningToMkt, setReturningToMkt] = useState(false);
   const [returnedToMkt, setReturnedToMkt] = useState(false);
+  const [sendToMktOpen, setSendToMktOpen] = useState(false);
+  const [sendToMktReason, setSendToMktReason] = useState("");
+  const [sendToMktSubmitting, setSendToMktSubmitting] = useState(false);
 
   const temp = TEMP_CONFIG[contact.temperature] ?? TEMP_CONFIG.cold;
   const initials = contact.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -284,7 +290,7 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
           <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               {contact.email ? (
-                <a href={`mailto:${contact.email}`} style={qaBtn("#3b82f6")}>✉️ Email</a>
+                <EmailButton email={contact.email} contactName={contact.name} companyName={contact.company} title={contact.title} />
               ) : <span />}
               {contact.phone ? (
                 <a href={`https://wa.me/${cleanPhoneForWhatsApp(contact.phone)}`} target="_blank" rel="noopener noreferrer" style={qaBtn("#22c55e")}>
@@ -321,6 +327,9 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
             </button>
           </div>
 
+          {/* Tags */}
+          <TagsEditor contactId={contact.id} initial={contact.tags} />
+
           {/* Notes */}
           {contact.notes && (
             <div style={{ padding: 10, borderRadius: 8, background: "var(--background)", fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
@@ -350,6 +359,52 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
             >
               + Registrar actividad
             </button>
+
+            {/* Utilities row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <button
+                onClick={() => {
+                  const lastAct = activities.reduce<number | null>((m, a) => {
+                    const ts = a.completedAt || a.createdAt;
+                    if (!ts) return m;
+                    const ms = ts instanceof Date ? ts.getTime() : (ts as number) < 1e10 ? (ts as number) * 1000 : (ts as number);
+                    return m === null || ms > m ? ms : m;
+                  }, null);
+                  const days = lastAct !== null ? Math.floor((Date.now() - lastAct) / 86400000) : null;
+                  const activeDeals = deals.filter(d => !d.isWon && !d.isLost);
+                  const activeVal = activeDeals.reduce((s, d) => s + d.value, 0);
+                  const summary = [
+                    `${contact.name}${contact.title ? ` · ${contact.title}` : ""}${contact.company ? ` @ ${contact.company}` : ""}`,
+                    `${contact.email || "—"} · ${contact.phone || "—"}`,
+                    `Temp: ${contact.temperature.toUpperCase()} · Score: ${contact.score}`,
+                    `Última actividad: ${days === null ? "ninguna" : days === 0 ? "hoy" : `hace ${days}d`}`,
+                    `Deals activos: ${activeDeals.length} (${formatCurrency(activeVal)})`,
+                  ].join("\n");
+                  navigator.clipboard.writeText(summary).then(
+                    () => toast.success("Resumen copiado"),
+                    () => toast.error("No se pudo copiar")
+                  );
+                }}
+                style={{ padding: "6px 0", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 11, cursor: "pointer" }}
+              >
+                📋 Copiar resumen
+              </button>
+              <a
+                href={`/api/contacts/${contact.id}/vcard`}
+                download
+                style={{ padding: "6px 0", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 11, cursor: "pointer", textAlign: "center", textDecoration: "none" }}
+              >
+                💾 vCard
+              </a>
+            </div>
+
+            <button
+              onClick={() => setSendToMktOpen(true)}
+              style={{ padding: "8px 0", borderRadius: 8, border: "1px solid #D19C15", background: "transparent", color: "#D19C15", fontSize: 12, cursor: "pointer", fontWeight: 500 }}
+            >
+              ↩ Enviar a marketing
+            </button>
+
             <DataDeletionModal
               contactId={contact.id}
               contactName={contact.name}
@@ -755,6 +810,11 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
           email: contact.email || "",
           phone: contact.phone || "",
           company: contact.company || "",
+          title: contact.title || "",
+          industry: contact.industry || "",
+          location: contact.location || "",
+          linkedinUrl: contact.linkedinUrl || "",
+          whatsappNumber: contact.whatsappNumber || "",
           source: contact.source,
           temperature: contact.temperature as "cold" | "warm" | "hot",
           notes: contact.notes || "",
@@ -766,6 +826,76 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
         onClose={() => { setShowActivityForm(false); router.refresh(); }}
         preselectedContactId={contact.id}
       />
+
+      {/* Send to Marketing inline modal */}
+      {sendToMktOpen && (
+        <div
+          onClick={() => !sendToMktSubmitting && setSendToMktOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 480, width: "100%" }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Enviar a marketing</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 16 }}>
+              <strong style={{ color: "var(--foreground)" }}>{contact.name}</strong> volverá al ciclo de nurturing de marketing.
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+              {["No es buen fit", "No está listo todavía", "Mal timing", "Necesita más educación", "Duplicado"].map(r => (
+                <button
+                  key={r}
+                  onClick={() => setSendToMktReason(prev => prev ? `${prev}; ${r}` : r)}
+                  style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)" }}
+                >
+                  + {r}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={sendToMktReason}
+              onChange={e => setSendToMktReason(e.target.value)}
+              placeholder="Razón (opcional)"
+              rows={3}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", marginBottom: 16, boxSizing: "border-box" as const }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setSendToMktOpen(false)}
+                disabled={sendToMktSubmitting}
+                style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, cursor: "pointer", border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  setSendToMktSubmitting(true);
+                  try {
+                    const res = await fetch("/api/return-to-marketing", {
+                      method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ contactId: contact.id, reason: sendToMktReason || undefined }),
+                    });
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      toast.error(data.error || "Error al enviar");
+                    } else {
+                      toast.success("Contacto enviado a marketing");
+                      setSendToMktOpen(false);
+                      setSendToMktReason("");
+                      router.refresh();
+                    }
+                  } catch { toast.error("Error al enviar"); }
+                  finally { setSendToMktSubmitting(false); }
+                }}
+                disabled={sendToMktSubmitting}
+                style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, cursor: "pointer", border: "1px solid #D19C15", background: "#D19C15", color: "#0a0a0a", fontWeight: 600 }}
+              >
+                {sendToMktSubmitting ? "Enviando…" : "Enviar a marketing"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

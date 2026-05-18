@@ -35,15 +35,25 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterTemp, setFilterTemp] = useState<Temperature | "">("");
+  const [filterTag, setFilterTag] = useState<string>("");
   const [sortBy, setSortBy] = useState<"score" | "name" | "company" | "industry">("score");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+
+  const parseTags = (raw: string | null | undefined): string[] => {
+    if (!raw) return [];
+    try { const p = JSON.parse(raw); return Array.isArray(p) ? p.filter((x: unknown) => typeof x === "string") : []; }
+    catch { return []; }
+  };
+
+  const allTags = Array.from(new Set(contacts.flatMap(c => parseTags(c.tags)))).sort();
 
   const filtered = contacts
     .filter(c => {
       const q = search.toLowerCase();
       const ok = !search || c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q)
         || c.company?.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q);
-      return ok && (!filterTemp || c.temperature === filterTemp);
+      const tagOk = !filterTag || parseTags(c.tags).includes(filterTag);
+      return ok && (!filterTemp || c.temperature === filterTemp) && tagOk;
     })
     .sort((a, b) => {
       let diff = 0;
@@ -99,6 +109,19 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
         {([["", "Todos"], ["hot", "Caliente"], ["warm", "Tibio"], ["cold", "Frío"]] as const).map(([v, l]) => (
           <button key={v} style={pill(filterTemp === v)} onClick={() => setFilterTemp(v)}>{l}</button>
         ))}
+        {allTags.length > 0 && (
+          <>
+            <div style={{ width: 1, height: 20, background: "var(--border)" }} />
+            <select
+              value={filterTag}
+              onChange={e => setFilterTag(e.target.value)}
+              style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: filterTag ? "var(--foreground)" : "var(--muted-foreground)", fontSize: 11, cursor: "pointer" }}
+            >
+              <option value="">Todas las etiquetas</option>
+              {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </>
+        )}
         <div style={{ width: 1, height: 20, background: "var(--border)" }} />
         <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)} style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: 11, cursor: "pointer" }}>
           <option value="score">Score</option>
