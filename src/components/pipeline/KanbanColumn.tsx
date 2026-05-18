@@ -3,6 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { DealCard } from "./DealCard";
+import { QuickAddDeal } from "./QuickAddDeal";
 import { formatCurrency } from "@/lib/constants";
 
 interface Deal {
@@ -13,19 +14,26 @@ interface Deal {
   contactTemperature: string | null;
   probability: number;
   contactId?: string;
+  stageUpdatedAt?: Date | string | null;
+  expectedClose?: Date | string | null;
 }
+
+interface ContactOption { id: string; name: string; company: string | null; }
 
 interface KanbanColumnProps {
   id: string;
   name: string;
   color: string;
   deals: Deal[];
+  contactOptions: ContactOption[];
+  onCreated: () => void;
   onReturnToMarketing?: (args: { dealId: string; dealTitle: string; contactId: string; contactName: string | null }) => void;
 }
 
-export function KanbanColumn({ id, name, color, deals, onReturnToMarketing }: KanbanColumnProps) {
+export function KanbanColumn({ id, name, color, deals, contactOptions, onCreated, onReturnToMarketing }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
+  const weightedValue = deals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0);
 
   return (
     <div
@@ -49,7 +57,17 @@ export function KanbanColumn({ id, name, color, deals, onReturnToMarketing }: Ka
             background: "var(--background)", padding: "1px 6px", borderRadius: 10,
           }}>{deals.length}</span>
         </div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{formatCurrency(totalValue)}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{formatCurrency(totalValue)}</span>
+            {weightedValue > 0 && weightedValue !== totalValue && (
+              <span style={{ fontSize: 10, color: "var(--primary)" }} title="Valor ponderado por probabilidad">
+                ≈ {formatCurrency(Math.round(weightedValue))}
+              </span>
+            )}
+          </div>
+          <QuickAddDeal stageId={id} contacts={contactOptions} onCreated={onCreated} />
+        </div>
       </div>
 
       {/* Cards */}

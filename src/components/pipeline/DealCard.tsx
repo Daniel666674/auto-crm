@@ -3,7 +3,7 @@
 import { formatCurrency } from "@/lib/constants";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { MoreVertical, RotateCcw } from "lucide-react";
+import { MoreVertical, RotateCcw, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
 
 const TEMP_COLOR: Record<string, string> = {
@@ -21,12 +21,46 @@ interface DealCardProps {
   probability: number;
   stageColor: string;
   contactId?: string;
+  stageUpdatedAt?: Date | string | null;
+  expectedClose?: Date | string | null;
   onReturnToMarketing?: (args: { dealId: string; dealTitle: string; contactId: string; contactName: string | null }) => void;
 }
 
-export function DealCard({ id, title, value, contactName, contactTemperature, probability, stageColor, contactId, onReturnToMarketing }: DealCardProps) {
+function daysSince(d: Date | string | null | undefined): number | null {
+  if (!d) return null;
+  const t = d instanceof Date ? d.getTime() : new Date(d).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+
+function daysUntil(d: Date | string | null | undefined): number | null {
+  if (!d) return null;
+  const t = d instanceof Date ? d.getTime() : new Date(d).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.ceil((t - Date.now()) / 86400000);
+}
+
+function ageBadge(days: number): { bg: string; color: string; label: string } {
+  if (days >= 14) return { bg: "rgba(239,68,68,0.15)",  color: "#ef4444", label: `${days}d` };
+  if (days >= 7)  return { bg: "rgba(245,158,11,0.15)", color: "#f59e0b", label: `${days}d` };
+  return { bg: "rgba(255,255,255,0.05)", color: "var(--muted-foreground)", label: `${days}d` };
+}
+
+function closeBadge(days: number): { bg: string; color: string; label: string } {
+  if (days < 0)   return { bg: "rgba(239,68,68,0.18)",  color: "#ef4444", label: `Vencido ${Math.abs(days)}d` };
+  if (days <= 7)  return { bg: "rgba(239,68,68,0.12)",  color: "#ef4444", label: `${days}d` };
+  if (days <= 30) return { bg: "rgba(245,158,11,0.12)", color: "#f59e0b", label: `${days}d` };
+  return { bg: "rgba(34,197,94,0.10)", color: "#22c55e", label: `${days}d` };
+}
+
+export function DealCard({ id, title, value, contactName, contactTemperature, probability, stageColor, contactId, stageUpdatedAt, expectedClose, onReturnToMarketing }: DealCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const ageDays   = daysSince(stageUpdatedAt);
+  const closeDays = daysUntil(expectedClose);
+  const age   = ageDays !== null ? ageBadge(ageDays) : null;
+  const close = closeDays !== null ? closeBadge(closeDays) : null;
 
   return (
     <div
@@ -54,13 +88,30 @@ export function DealCard({ id, title, value, contactName, contactTemperature, pr
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{contactName || "—"}</span>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{contactName || "—"}</span>
           <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{probability}%</span>
         </div>
 
-        <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+        <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden", marginBottom: 6 }}>
           <div style={{ width: `${probability}%`, height: "100%", borderRadius: 2, background: stageColor, transition: "width 0.3s" }} />
         </div>
+
+        {(age || close) && (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+            {age && (
+              <span title="Días en esta etapa" style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: age.bg, color: age.color }}>
+                <Clock size={9} />
+                {age.label}
+              </span>
+            )}
+            {close && (
+              <span title="Días hasta cierre esperado" style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: close.bg, color: close.color }}>
+                <Calendar size={9} />
+                {close.label}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {onReturnToMarketing && contactId && (

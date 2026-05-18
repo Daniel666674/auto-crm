@@ -204,14 +204,14 @@ function MktContacts() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Ubicación", "Score", "Fuente", "Tier"].map(h => (
+              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Ubicación", "Teléfono", "Score", "Fuente", "Tier"].map(h => (
                 <th key={h} style={hcell}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={9} style={{ ...cell, textAlign: "center", color: "var(--mkt-text-muted)", padding: "32px 0" }}>Sin resultados</td></tr>
+              <tr><td colSpan={10} style={{ ...cell, textAlign: "center", color: "var(--mkt-text-muted)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
               const isBrevo = !!c.brevoId;
               return (
@@ -231,6 +231,11 @@ function MktContacts() {
                   <td style={cell}>{c.industry || "—"}</td>
                   <td style={cell}>{c.jobTitle || "—"}</td>
                   <td style={cell}>{c.location || "—"}</td>
+                  <td style={cell}>
+                    {c.phone ? (
+                      <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()} style={{ color: "var(--mkt-text)", textDecoration: "none", fontVariantNumeric: "tabular-nums" }}>{c.phone}</a>
+                    ) : "—"}
+                  </td>
                   <td style={cell}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <div style={{ width: 52, height: 5, borderRadius: 3, background: "var(--mkt-border)", overflow: "hidden" }}>

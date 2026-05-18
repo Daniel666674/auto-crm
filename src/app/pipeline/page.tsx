@@ -52,6 +52,12 @@ export default function PipelinePage() {
       })) as PipelineColumn["deals"],
   }));
 
+  const contactOptions = db
+    .select({ id: contacts.id, name: contacts.name, company: contacts.company })
+    .from(contacts)
+    .orderBy(asc(contacts.name))
+    .all();
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,7 +67,7 @@ export default function PipelinePage() {
         </p>
       </div>
 
-      <KanbanBoard initialColumns={columns} />
+      <KanbanBoard initialColumns={columns} contactOptions={contactOptions} />
     </div>
   );
 }

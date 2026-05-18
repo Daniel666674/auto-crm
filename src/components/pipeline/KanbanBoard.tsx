@@ -16,11 +16,15 @@ import {
 import { KanbanColumn } from "./KanbanColumn";
 import { DealCard } from "./DealCard";
 import { ReturnToMarketingModal } from "./ReturnToMarketingModal";
+import { PipelineMetricsBar } from "./PipelineMetricsBar";
 import { toast } from "sonner";
 import type { PipelineColumn } from "@/types";
 
+interface ContactOption { id: string; name: string; company: string | null; }
+
 interface KanbanBoardProps {
   initialColumns: PipelineColumn[];
+  contactOptions: ContactOption[];
 }
 
 interface ReturnTarget {
@@ -30,7 +34,7 @@ interface ReturnTarget {
   contactName: string | null;
 }
 
-export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
+export function KanbanBoard({ initialColumns, contactOptions }: KanbanBoardProps) {
   const router = useRouter();
   const [columns, setColumns] = useState(initialColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -146,6 +150,9 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
+      {/* Metrics bar */}
+      <PipelineMetricsBar columns={columns} />
+
       {/* Temperature legend */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}><TempDot color="#ef4444" /> Caliente</span>
@@ -160,6 +167,8 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
             id={column.id}
             name={column.name}
             color={column.color}
+            contactOptions={contactOptions}
+            onCreated={() => router.refresh()}
             onReturnToMarketing={handleReturnToMarketing}
             deals={column.deals.map((d) => ({
               id: d.id,
@@ -171,6 +180,8 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
                 d.contactTemperature ||
                 (d.contact?.temperature ?? null),
               probability: d.probability,
+              stageUpdatedAt: d.updatedAt,
+              expectedClose: d.expectedClose,
             }))}
           />
         ))}

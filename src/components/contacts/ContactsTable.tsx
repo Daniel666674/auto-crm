@@ -140,14 +140,14 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
           <thead>
             <tr>
-              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Ubicación", "Score", "Fuente", "Temperatura"].map(h => (
+              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Ubicación", "Teléfono", "Score", "Fuente", "Temperatura"].map(h => (
                 <th key={h} style={hcell}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={9} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
+              <tr><td colSpan={10} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
               const temp = TEMP_CFG[c.temperature as keyof typeof TEMP_CFG] ?? TEMP_CFG.cold;
               const sc = scoreColor(c.score ?? 0);
@@ -169,6 +169,11 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                   <td style={cell}>{c.industry || "—"}</td>
                   <td style={cell}>{c.title || "—"}</td>
                   <td style={cell}>{c.location || "—"}</td>
+                  <td style={cell}>
+                    {c.phone ? (
+                      <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()} style={{ color: "var(--foreground)", textDecoration: "none", fontVariantNumeric: "tabular-nums" }}>{c.phone}</a>
+                    ) : "—"}
+                  </td>
                   <td style={cell}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <div style={{ width: 48, height: 4, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
