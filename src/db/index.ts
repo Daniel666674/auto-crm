@@ -177,6 +177,24 @@ function initTables(db: Database.Database): void {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS sequences (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      steps_json TEXT NOT NULL DEFAULT '[]',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS sequence_enrollments (
+      id TEXT PRIMARY KEY,
+      sequence_id TEXT NOT NULL REFERENCES sequences(id),
+      contact_id TEXT NOT NULL REFERENCES contacts(id),
+      current_step INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'active',
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER
+    )`,
   ];
 
   for (const sql of tables) {

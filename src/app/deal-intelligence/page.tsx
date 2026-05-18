@@ -33,6 +33,38 @@ export default async function DealIntelligencePage() {
   const allContacts = db.select().from(contacts).all();
   const allActivities = db.select().from(activities).all();
 
+  // Industry analysis: avg deal size per industry (from contact.industry or company)
+  const industryMap = new Map<string, { count: number; total: number; won: number }>();
+  const wonStageIds = new Set(allStages.filter(s => s.isWon).map(s => s.id));
+  const contactMap2 = Object.fromEntries(allContacts.map(c => [c.id, c]));
+  for (const d of allDeals) {
+    const contact = contactMap2[d.contactId];
+    const industry = contact?.industry || contact?.company?.split(" ").slice(-1)[0] || "General";
+    const existing = industryMap.get(industry) || { count: 0, total: 0, won: 0 };
+    existing.count++;
+    existing.total += d.value;
+    if (wonStageIds.has(d.stageId)) existing.won++;
+    industryMap.set(industry, existing);
+  }
+  const industryStats = Array.from(industryMap.entries())
+    .map(([industry, v]) => ({ industry, count: v.count, avgValue: v.count > 0 ? Math.round(v.total / v.count) : 0, winRate: v.count > 0 ? Math.round((v.won / v.count) * 100) : 0 }))
+    .sort((a, b) => b.avgValue - a.avgValue)
+    .slice(0, 6);
+
+  // Stage analysis: avg days + avg deal size per stage
+  const stageStats = allStages.filter(s => !s.isWon && !s.isLost).map(s => {
+    const stageDeals = allDeals.filter(d => d.stageId === s.id);
+    const now = Date.now();
+    const avgDays = stageDeals.length > 0
+      ? Math.round(stageDeals.reduce((sum, d) => {
+          const ts = d.createdAt instanceof Date ? d.createdAt.getTime() : Number(d.createdAt) * 1000;
+          return sum + Math.floor((now - ts) / 86400000);
+        }, 0) / stageDeals.length)
+      : 0;
+    const avgVal = stageDeals.length > 0 ? Math.round(stageDeals.reduce((s, d) => s + d.value, 0) / stageDeals.length) : 0;
+    return { stageName: s.name, stageColor: s.color, count: stageDeals.length, avgDays, avgVal };
+  });
+
   const contactMap = Object.fromEntries(allContacts.map(c => [c.id, c]));
   const stageMap = Object.fromEntries(allStages.map(s => [s.id, s]));
 
@@ -140,6 +172,61 @@ export default async function DealIntelligencePage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Industry + Stage analysis panels */}
+      {allDeals.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 24 }}>
+          {/* Avg deal size by industry */}
+          <div style={{ borderRadius: 10, padding: 18, background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Deal size promedio por industria</div>
+            {industryStats.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Sin datos suficientes</div>
+            ) : industryStats.map(row => {
+              const maxAvg = Math.max(...industryStats.map(r => r.avgValue), 1);
+              const pct = (row.avgValue / maxAvg) * 100;
+              return (
+                <div key={row.industry} style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span>{row.industry} <span style={{ color: "var(--muted-foreground)", fontSize: 10 }}>({row.count} deals)</span></span>
+                    <span style={{ fontWeight: 600, color: "var(--primary)" }}>{formatCurrency(row.avgValue)}</span>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 3, background: "var(--border)" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: "var(--primary)", opacity: 0.7, transition: "width 0.5s" }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>Win rate: {row.winRate}%</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Time in stage analysis */}
+          <div style={{ borderRadius: 10, padding: 18, background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Días promedio por etapa</div>
+            {stageStats.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Sin deals activos</div>
+            ) : stageStats.map(row => {
+              const maxDays = Math.max(...stageStats.map(r => r.avgDays), 1);
+              const pct = row.avgDays > 0 ? Math.min(100, (row.avgDays / maxDays) * 100) : 0;
+              const color = row.avgDays > 21 ? "#ef4444" : row.avgDays > 10 ? "#f59e0b" : "#22c55e";
+              return (
+                <div key={row.stageName} style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: row.stageColor, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.stageName}</span>
+                      <span style={{ fontWeight: 700, color, flexShrink: 0 }}>{row.avgDays}d avg</span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 3, background: "var(--border)" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 3, background: color, transition: "width 0.5s" }} />
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>{row.count} deal{row.count !== 1 ? "s" : ""} · avg {formatCurrency(row.avgVal)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

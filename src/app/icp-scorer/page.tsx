@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import type { Contact } from "@/types";
 
 const ICP_INDUSTRIES = ["Tecnología", "Inmobiliaria", "Consultoría", "Salud", "Marketing", "Finanzas", "E-commerce", "Logística", "Educación", "Construcción"];
@@ -15,28 +17,39 @@ function Badge({ text, color }: { text: string; color: string }) {
 
 type Criteria = { industry: string; companySizeMin: number; companySizeMax: number; role: string; geography: string; budgetSignal: string };
 
-function scoreContact(c: Contact, criteria: Criteria): number {
-  let score = 0;
+interface Breakdown { industry: number; temperature: number; leadScore: number; source: number; budget: number }
+
+function scoreContact(c: Contact, criteria: Criteria): { total: number; breakdown: Breakdown } {
+  let industry = 0, temperature = 0, leadScore = 0, source = 0, budget = 0;
   const nameLC = (c.company || "").toLowerCase();
-  if (criteria.industry === "Tecnología" && (nameLC.includes("tech") || nameLC.includes("digital") || nameLC.includes("startup"))) score += 25;
-  else if (criteria.industry === "Inmobiliaria" && nameLC.includes("inmob")) score += 25;
-  else if (criteria.industry === "Salud" && (nameLC.includes("dental") || nameLC.includes("salud") || nameLC.includes("med"))) score += 25;
-  else if (criteria.industry === "Marketing" && (nameLC.includes("agencia") || nameLC.includes("market") || nameLC.includes("creativ"))) score += 25;
-  else score += 5;
-  if (c.temperature === "hot") score += 30;
-  else if (c.temperature === "warm") score += 15;
-  if ((c.score ?? 0) >= 70) score += 25;
-  else if ((c.score ?? 0) >= 40) score += 12;
-  if (["evento", "referido"].includes(c.source)) score += 15;
-  else if (c.source === "website") score += 10;
-  else score += 3;
-  if (criteria.budgetSignal && c.notes && c.notes.toLowerCase().includes(criteria.budgetSignal.split(" ")[0].toLowerCase())) score += 5;
-  return Math.min(100, score);
+
+  if (criteria.industry === "Tecnología" && (nameLC.includes("tech") || nameLC.includes("digital") || nameLC.includes("startup"))) industry = 25;
+  else if (criteria.industry === "Inmobiliaria" && nameLC.includes("inmob")) industry = 25;
+  else if (criteria.industry === "Salud" && (nameLC.includes("dental") || nameLC.includes("salud") || nameLC.includes("med"))) industry = 25;
+  else if (criteria.industry === "Marketing" && (nameLC.includes("agencia") || nameLC.includes("market") || nameLC.includes("creativ"))) industry = 25;
+  else industry = 5;
+
+  if (c.temperature === "hot") temperature = 30;
+  else if (c.temperature === "warm") temperature = 15;
+
+  if ((c.score ?? 0) >= 70) leadScore = 25;
+  else if ((c.score ?? 0) >= 40) leadScore = 12;
+
+  if (["evento", "referido"].includes(c.source)) source = 15;
+  else if (c.source === "website") source = 10;
+  else source = 3;
+
+  if (criteria.budgetSignal && c.notes && c.notes.toLowerCase().includes(criteria.budgetSignal.split(" ")[0].toLowerCase())) budget = 5;
+
+  const total = Math.min(100, industry + temperature + leadScore + source + budget);
+  return { total, breakdown: { industry, temperature, leadScore, source, budget } };
 }
 
 export default function ICPScorerPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rescoring, setRescoring] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<Criteria>({
     industry: "Tecnología", companySizeMin: 5, companySizeMax: 200,
     role: "CEO, Director, Gerente", geography: "Colombia", budgetSignal: "ha preguntado precios",
@@ -50,9 +63,26 @@ export default function ICPScorerPage() {
   const setCrit = (key: keyof Criteria, val: string | number) => setCriteria(prev => ({ ...prev, [key]: val }));
 
   const scored = contacts
-    .map(c => ({ ...c, icpScore: scoreContact(c, criteria) }))
-    .sort((a, b) => b.icpScore - a.icpScore)
-    .filter(c => c.icpScore >= minScore);
+    .map(c => ({ ...c, ...scoreContact(c, criteria) }))
+    .sort((a, b) => b.total - a.total)
+    .filter(c => c.total >= minScore);
+
+  async function bulkRescore() {
+    if (!confirm(`¿Actualizar el lead score de ${scored.length} contactos con su puntuación ICP actual?`)) return;
+    setRescoring(true);
+    let ok = 0, fail = 0;
+    for (const c of scored) {
+      try {
+        const res = await fetch(`/api/contacts/${c.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score: c.total }) });
+        if (res.ok) ok++; else fail++;
+      } catch { fail++; }
+    }
+    setRescoring(false);
+    if (fail === 0) toast.success(`${ok} contactos actualizados`);
+    else toast.error(`${ok} actualizados, ${fail} fallaron`);
+    const fresh = await fetch("/api/contacts").then(r => r.json());
+    setContacts(fresh);
+  }
 
   const field = (label: string, node: React.ReactNode) => (
     <div style={{ marginBottom: 14 }}>
@@ -102,7 +132,7 @@ export default function ICPScorerPage() {
             <input value={criteria.budgetSignal} onChange={e => setCrit("budgetSignal", e.target.value)} placeholder="ej. pidió precios" style={inputStyle} />
           )}
 
-          <div>
+          <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 11, color: "var(--muted-foreground)", textTransform: "uppercase" as const, letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>
               Score mínimo: ≥{minScore}
             </label>
@@ -110,6 +140,31 @@ export default function ICPScorerPage() {
               onChange={e => setMinScore(+e.target.value)}
               style={{ width: "100%", accentColor: "var(--primary)" }} />
           </div>
+
+          {/* Score legend */}
+          <div style={{ borderRadius: 8, padding: "10px 12px", background: "var(--background)", border: "1px solid var(--border)", fontSize: 11, marginBottom: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Distribución de puntos</div>
+            {[
+              { label: "Industria (match)", max: 25 },
+              { label: "Temperatura", max: 30 },
+              { label: "Lead score", max: 25 },
+              { label: "Fuente", max: 15 },
+              { label: "Señal presupuesto", max: 5 },
+            ].map(row => (
+              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", color: "var(--muted-foreground)", marginBottom: 3 }}>
+                <span>{row.label}</span>
+                <span style={{ fontWeight: 600, color: "var(--foreground)" }}>/{row.max}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={bulkRescore}
+            disabled={rescoring || scored.length === 0}
+            style={{ width: "100%", padding: "9px 0", borderRadius: 8, border: "none", background: "var(--primary)", color: "var(--primary-foreground)", fontWeight: 700, fontSize: 13, cursor: rescoring || scored.length === 0 ? "not-allowed" : "pointer", opacity: rescoring || scored.length === 0 ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          >
+            {rescoring ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Actualizando...</> : `Aplicar como lead score (${scored.length})`}
+          </button>
         </div>
 
         {/* Ranked contacts */}
@@ -127,30 +182,59 @@ export default function ICPScorerPage() {
                   <div style={{ fontSize: 13 }}>Ningún contacto supera el score mínimo con estos criterios</div>
                 </div>
               ) : scored.map(c => (
-                <div key={c.id} style={{ borderRadius: 10, padding: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 16, background: "var(--card)", border: "1px solid var(--border)" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary-foreground)", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                    {c.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.company || "—"} · {c.source}</div>
-                  </div>
-                  <div style={{ width: 140 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
-                      <span style={{ color: "var(--muted-foreground)" }}>ICP Fit</span>
-                      <span style={{ fontWeight: 700, color: scoreColor(c.icpScore) }}>{c.icpScore}</span>
+                <div key={c.id} style={{ borderRadius: 10, padding: 14, marginBottom: 8, background: "var(--card)", border: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary-foreground)", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                      {c.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                     </div>
-                    <div style={{ height: 6, borderRadius: 3, background: "var(--border)" }}>
-                      <div style={{ width: `${c.icpScore}%`, height: "100%", borderRadius: 3, background: scoreColor(c.icpScore), transition: "width 0.4s" }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.company || "—"} · {c.source}</div>
                     </div>
+                    <div style={{ width: 140 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
+                        <span style={{ color: "var(--muted-foreground)" }}>ICP Fit</span>
+                        <span style={{ fontWeight: 700, color: scoreColor(c.total) }}>{c.total}</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 3, background: "var(--border)" }}>
+                        <div style={{ width: `${c.total}%`, height: "100%", borderRadius: 3, background: scoreColor(c.total), transition: "width 0.4s" }} />
+                      </div>
+                    </div>
+                    <Badge text={scoreLabel(c.total)} color={scoreColor(c.total)} />
                   </div>
-                  <Badge text={scoreLabel(c.icpScore)} color={scoreColor(c.icpScore)} />
+
+                  {/* Breakdown */}
+                  {expandedId === c.id && (
+                    <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 12, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
+                      {[
+                        { label: "Industria", val: c.breakdown.industry, max: 25 },
+                        { label: "Temperatura", val: c.breakdown.temperature, max: 30 },
+                        { label: "Lead score", val: c.breakdown.leadScore, max: 25 },
+                        { label: "Fuente", val: c.breakdown.source, max: 15 },
+                        { label: "Presupuesto", val: c.breakdown.budget, max: 5 },
+                      ].map(row => {
+                        const pct = (row.val / row.max) * 100;
+                        const color = pct >= 70 ? "#22c55e" : pct >= 30 ? "#f59e0b" : "#ef4444";
+                        return (
+                          <div key={row.label} style={{ borderRadius: 8, padding: "8px 10px", background: "var(--background)", border: "1px solid var(--border)" }}>
+                            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 4 }}>{row.label}</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color }}>{row.val}<span style={{ fontSize: 10, fontWeight: 400, color: "var(--muted-foreground)" }}>/{row.max}</span></div>
+                            <div style={{ height: 3, borderRadius: 2, background: "var(--border)", marginTop: 5 }}>
+                              <div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
             </>
           )}
         </div>
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

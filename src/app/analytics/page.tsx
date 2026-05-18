@@ -7,6 +7,22 @@ import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 
 const GOLD = "#C39A4C";
 
+interface CrmStats {
+  contactsThisMonth: number;
+  totalContacts: number;
+  activitiesThisWeek: number;
+  wonThisMonth: number;
+  wonThisMonthValue: number;
+  activeDeals: number;
+  pipelineValue: number;
+  actsByType: { type: string; count: number }[];
+  stageBreakdown: { stageName: string; stageColor: string; count: number; value: number }[];
+}
+
+function fmtCOP(v: number) {
+  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(v);
+}
+
 const cardStyle: React.CSSProperties = {
   background: "var(--card)",
   border: "1px solid var(--border)",
@@ -60,8 +76,11 @@ export default function AnalyticsPage() {
   const [ga4Loading, setGa4Loading] = useState(true);
   const [showBrevo, setShowBrevo] = useState(false);
   const [showGA4, setShowGA4] = useState(false);
+  const [crm, setCrm] = useState<CrmStats | null>(null);
 
   useEffect(() => {
+    fetch("/api/analytics/crm-stats").then(r => r.json()).then(setCrm).catch(() => {});
+
     fetch("/api/brevo/campaigns")
       .then(r => r.json())
       .then(d => {
@@ -104,8 +123,47 @@ export default function AnalyticsPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Analytics</h1>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>Visión 360 de canales de marketing. Brevo y GA4 conectados.</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>Visión 360 — CRM local + canales de marketing</div>
       </div>
+
+      {/* CRM Local Stats */}
+      {crm && (
+        <div style={{ ...cardStyle, border: "1px solid rgba(195,154,76,0.2)" }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>CRM — Resumen local</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 14 }}>
+            <KPI label="Contactos este mes" value={crm.contactsThisMonth} sub={`${crm.totalContacts} totales`} />
+            <KPI label="Deals ganados (mes)" value={crm.wonThisMonth} sub={fmtCOP(crm.wonThisMonthValue)} />
+            <KPI label="Pipeline activo" value={crm.activeDeals} sub={fmtCOP(crm.pipelineValue)} />
+            <KPI label="Actividades (7d)" value={crm.activitiesThisWeek} />
+          </div>
+          {crm.actsByType.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>Actividades por tipo (30d)</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {crm.actsByType.map(a => (
+                  <span key={a.type} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 12, background: "rgba(195,154,76,0.1)", color: GOLD, fontWeight: 600 }}>
+                    {a.type}: {a.count}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {crm.stageBreakdown.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>Distribución por etapa</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {crm.stageBreakdown.map(s => (
+                  <div key={s.stageName} style={{ borderRadius: 8, padding: "6px 10px", background: "var(--background)", border: "1px solid var(--border)", minWidth: 80 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.stageColor, marginBottom: 4 }} />
+                    <div style={{ fontSize: 11, fontWeight: 600 }}>{s.count}</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>{s.stageName}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
 

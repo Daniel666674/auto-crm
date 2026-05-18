@@ -299,3 +299,24 @@ export const workflowTriggers = sqliteTable("workflow_triggers", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
+
+// Outreach sequences — named multi-step follow-up templates
+export const sequences = sqliteTable("sequences", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  stepsJson: text("steps_json").notNull().default("[]"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const sequenceEnrollments = sqliteTable("sequence_enrollments", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  sequenceId: text("sequence_id").notNull().references(() => sequences.id),
+  contactId: text("contact_id").notNull().references(() => contacts.id),
+  currentStep: integer("current_step").notNull().default(0),
+  status: text("status").notNull().default("active"),
+  startedAt: integer("started_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+});

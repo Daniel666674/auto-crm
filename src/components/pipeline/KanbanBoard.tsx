@@ -256,31 +256,78 @@ export function KanbanBoard({ initialColumns, contactOptions }: KanbanBoardProps
 
       {/* Kanban view */}
       {viewMode === "kanban" && (
-        <div className="flex gap-3 overflow-x-auto pb-4">
-          {columns.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              id={column.id}
-              name={column.name}
-              color={column.color}
-              contactOptions={contactOptions}
-              onCreated={() => router.refresh()}
-              onReturnToMarketing={handleReturnToMarketing}
-              deals={column.deals.map((d) => ({
-                id: d.id,
-                title: d.title,
-                value: d.value,
-                contactId: d.contactId,
-                contactName: d.contactName || (d.contact?.name ?? null),
-                contactTemperature: d.contactTemperature || (d.contact?.temperature ?? null),
-                probability: d.probability,
-                stageUpdatedAt: d.updatedAt,
-                expectedClose: d.expectedClose,
-                lastActivityAt: (d as { lastActivityAt?: Date | null }).lastActivityAt ?? null,
-              }))}
-            />
-          ))}
-        </div>
+        <>
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {columns.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                id={column.id}
+                name={column.name}
+                color={column.color}
+                contactOptions={contactOptions}
+                onCreated={() => router.refresh()}
+                onReturnToMarketing={handleReturnToMarketing}
+                deals={column.deals.map((d) => ({
+                  id: d.id,
+                  title: d.title,
+                  value: d.value,
+                  contactId: d.contactId,
+                  contactName: d.contactName || (d.contact?.name ?? null),
+                  contactTemperature: d.contactTemperature || (d.contact?.temperature ?? null),
+                  probability: d.probability,
+                  stageUpdatedAt: d.updatedAt,
+                  expectedClose: d.expectedClose,
+                  lastActivityAt: (d as { lastActivityAt?: Date | null }).lastActivityAt ?? null,
+                }))}
+              />
+            ))}
+          </div>
+
+          {/* Stage conversion funnel */}
+          {(() => {
+            const activeStages = columns.filter(c => !c.isWon && !c.isLost);
+            const wonTotal = columns.filter(c => c.isWon).flatMap(c => c.deals).length;
+            if (activeStages.length < 2) return null;
+            const maxCount = Math.max(...activeStages.map(s => s.deals.length), 1);
+            return (
+              <div style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)", padding: "14px 16px", marginTop: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
+                  Embudo por etapa
+                </div>
+                <div style={{ display: "flex", gap: 0, alignItems: "flex-end" }}>
+                  {activeStages.map((stage, i) => {
+                    const pct = Math.max(4, (stage.deals.length / maxCount) * 100);
+                    const nextStage = activeStages[i + 1];
+                    const convRate = nextStage && stage.deals.length > 0
+                      ? Math.round((nextStage.deals.length / stage.deals.length) * 100)
+                      : null;
+                    return (
+                      <div key={stage.id} style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 0 }}>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{stage.deals.length}</div>
+                          <div style={{ width: "100%", maxWidth: 80, height: Math.max(6, pct * 0.6), borderRadius: 4, background: stage.color, opacity: 0.8, transition: "height 0.4s" }} />
+                          <div style={{ fontSize: 10, color: "var(--muted-foreground)", textAlign: "center", maxWidth: 70, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{stage.name}</div>
+                        </div>
+                        {convRate !== null && (
+                          <div style={{ fontSize: 10, color: convRate >= 50 ? "#22c55e" : convRate >= 25 ? "#f59e0b" : "#ef4444", fontWeight: 700, paddingBottom: 28, flexShrink: 0, width: 28, textAlign: "center" }}>
+                            {convRate}%
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {wonTotal > 0 && (
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#22c55e" }}>{wonTotal}</div>
+                      <div style={{ width: "100%", maxWidth: 80, height: Math.max(6, (wonTotal / maxCount) * 60), borderRadius: 4, background: "#22c55e", opacity: 0.8 }} />
+                      <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>Ganados</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </>
       )}
 
       <DragOverlay>
