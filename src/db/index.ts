@@ -164,6 +164,8 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE contacts ADD COLUMN linkedin_url TEXT`,
     `ALTER TABLE contacts ADD COLUMN whatsapp_number TEXT`,
     `ALTER TABLE contacts ADD COLUMN tags TEXT`,
+    `ALTER TABLE contacts ADD COLUMN apollo_id TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_contacts_apollo_id ON contacts(apollo_id)`,
   ];
 
   for (const sql of migrations) {

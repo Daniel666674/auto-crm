@@ -32,6 +32,7 @@ export interface Contact {
   linkedinUrl?: string | null;
   whatsappNumber?: string | null;
   tags?: string | null;
+  apolloId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
