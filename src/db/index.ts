@@ -235,6 +235,8 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE deals ADD COLUMN competitor TEXT`,
     `ALTER TABLE deals ADD COLUMN is_recurring INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE deals ADD COLUMN recurring_interval TEXT`,
+    `ALTER TABLE contacts ADD COLUMN returned_to_marketing_at INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN returned_to_marketing_reason TEXT`,
   ];
 
   for (const sql of migrations) {

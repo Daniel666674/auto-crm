@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       const existing = db.select().from(contacts).where(eq(contacts.email, email)).get();
       if (existing) {
         // Update existing contact's temperature/score
+        // Clear returnedToMarketing flag — re-handoff means this contact is back in sales
         db.update(contacts)
           .set({
             temperature: score >= 70 ? "hot" : score >= 45 ? "warm" : "cold",
@@ -28,6 +29,8 @@ export async function POST(req: Request) {
             notes: marketingNotes
               ? `[Marketing Handoff] ${marketingNotes}${existing.notes ? "\n" + existing.notes : ""}`
               : existing.notes,
+            returnedToMarketingAt: null,
+            returnedToMarketingReason: null,
             updatedAt: new Date(),
           })
           .where(eq(contacts.id, existing.id))

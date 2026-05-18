@@ -30,12 +30,19 @@ export async function POST(req: Request) {
       // continue
     }
 
-    // Append reason to contact notes
+    // Flag sales contact as returned to marketing — this hides it from the sales contacts list
+    // and is the canonical truth that the contact is no longer "in sales".
+    const now = new Date();
+    const updateFields: Record<string, unknown> = {
+      returnedToMarketingAt: now,
+      returnedToMarketingReason: reason || null,
+      updatedAt: now,
+    };
     if (reason) {
-      const prefix = `[Devuelto a marketing ${new Date().toISOString().slice(0, 10)}] `;
-      const newNotes = contact.notes ? `${prefix}${reason}\n\n${contact.notes}` : `${prefix}${reason}`;
-      db.update(contacts).set({ notes: newNotes, updatedAt: new Date() }).where(eq(contacts.id, contactId)).run();
+      const prefix = `[Devuelto a marketing ${now.toISOString().slice(0, 10)}] `;
+      updateFields.notes = contact.notes ? `${prefix}${reason}\n\n${contact.notes}` : `${prefix}${reason}`;
     }
+    db.update(contacts).set(updateFields).where(eq(contacts.id, contactId)).run();
 
     // If a deal is provided, handle the deal-side action
     if (dealId) {

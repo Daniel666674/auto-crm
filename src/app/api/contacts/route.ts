@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { contacts } from "@/db/schema";
-import { eq, like, or, desc } from "drizzle-orm";
+import { eq, like, or, desc, isNull, and } from "drizzle-orm";
 import { fireTriggers } from "@/lib/triggers";
 
 export async function GET(request: NextRequest) {
@@ -9,28 +9,37 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search");
   const temperature = searchParams.get("temperature");
   const source = searchParams.get("source");
+  const includeReturned = searchParams.get("includeReturned") === "true";
 
-  let query = db.select().from(contacts);
+  const conditions = [];
+
+  if (!includeReturned) {
+    // Exclude contacts that have been returned to marketing
+    conditions.push(isNull(contacts.returnedToMarketingAt));
+  }
 
   if (search) {
-    query = query.where(
+    conditions.push(
       or(
         like(contacts.name, `%${search}%`),
         like(contacts.email, `%${search}%`),
         like(contacts.company, `%${search}%`)
-      )
-    ) as typeof query;
+      )!
+    );
   }
 
   if (temperature) {
-    query = query.where(eq(contacts.temperature, temperature)) as typeof query;
+    conditions.push(eq(contacts.temperature, temperature));
   }
 
   if (source) {
-    query = query.where(eq(contacts.source, source)) as typeof query;
+    conditions.push(eq(contacts.source, source));
   }
 
-  const results = query.orderBy(desc(contacts.createdAt)).all();
+  const results = conditions.length > 0
+    ? db.select().from(contacts).where(and(...conditions)).orderBy(desc(contacts.createdAt)).all()
+    : db.select().from(contacts).orderBy(desc(contacts.createdAt)).all();
+
   return NextResponse.json(results);
 }
 

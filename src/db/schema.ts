@@ -39,6 +39,8 @@ export const contacts = sqliteTable("contacts", {
   whatsappNumber: text("whatsapp_number"),
   tags: text("tags"),
   apolloId: text("apollo_id"),
+  returnedToMarketingAt: integer("returned_to_marketing_at", { mode: "timestamp" }),
+  returnedToMarketingReason: text("returned_to_marketing_reason"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
