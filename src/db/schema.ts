@@ -32,6 +32,12 @@ export const contacts = sqliteTable("contacts", {
   retentionReviewNeeded: integer("retention_review_needed", { mode: "boolean" }).notNull().default(false),
   retentionReviewDate: integer("retention_review_date", { mode: "timestamp" }),
   engagementScore: integer("engagement_score"),
+  title: text("title"),
+  industry: text("industry"),
+  location: text("location"),
+  linkedinUrl: text("linkedin_url"),
+  whatsappNumber: text("whatsapp_number"),
+  tags: text("tags"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

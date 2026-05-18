@@ -77,6 +77,12 @@ export async function PUT(
   if (body.temperature !== undefined) updateData.temperature = body.temperature;
   if (body.score !== undefined) updateData.score = Math.max(0, Math.min(100, body.score));
   if (body.notes !== undefined) updateData.notes = body.notes;
+  if (body.title !== undefined) updateData.title = body.title || null;
+  if (body.industry !== undefined) updateData.industry = body.industry || null;
+  if (body.location !== undefined) updateData.location = body.location || null;
+  if (body.linkedinUrl !== undefined) updateData.linkedinUrl = body.linkedinUrl || null;
+  if (body.whatsappNumber !== undefined) updateData.whatsappNumber = body.whatsappNumber || null;
+  if (body.tags !== undefined) updateData.tags = body.tags || null;
 
   const result = db
     .update(contacts)

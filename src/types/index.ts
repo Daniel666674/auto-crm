@@ -26,6 +26,12 @@ export interface Contact {
   score: number;
   engagementScore?: number | null;
   notes: string | null;
+  title?: string | null;
+  industry?: string | null;
+  location?: string | null;
+  linkedinUrl?: string | null;
+  whatsappNumber?: string | null;
+  tags?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

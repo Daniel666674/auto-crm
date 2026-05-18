@@ -28,6 +28,11 @@ const contactSchema = z.object({
   email: z.string().email("Email invalido").or(z.literal("")),
   phone: z.string(),
   company: z.string(),
+  title: z.string(),
+  industry: z.string(),
+  location: z.string(),
+  linkedinUrl: z.string(),
+  whatsappNumber: z.string(),
   source: z.string(),
   temperature: z.enum(["cold", "warm", "hot"]),
   notes: z.string(),
@@ -38,7 +43,7 @@ type ContactFormData = z.infer<typeof contactSchema>;
 interface ContactFormProps {
   open: boolean;
   onClose: () => void;
-  initialData?: Partial<ContactFormData> & { id?: string };
+  initialData?: Partial<ContactFormData> & { id?: string; title?: string | null; industry?: string | null; location?: string | null; linkedinUrl?: string | null; whatsappNumber?: string | null; };
 }
 
 export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
@@ -59,6 +64,11 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
       email: initialData?.email || "",
       phone: initialData?.phone || "",
       company: initialData?.company || "",
+      title: initialData?.title || "",
+      industry: initialData?.industry || "",
+      location: initialData?.location || "",
+      linkedinUrl: initialData?.linkedinUrl || "",
+      whatsappNumber: initialData?.whatsappNumber || "",
       source: initialData?.source || "otro",
       temperature: initialData?.temperature || "cold",
       notes: initialData?.notes || "",
@@ -93,7 +103,7 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg" style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Editar Contacto" : "Nuevo Contacto"}
@@ -120,12 +130,58 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="company">Empresa</Label>
-            <Input id="company" {...register("company")} placeholder="Nombre de la empresa" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="company">Empresa</Label>
+              <Input id="company" {...register("company")} placeholder="Nombre de la empresa" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Cargo / Título</Label>
+              <Input id="title" {...register("title")} placeholder="CEO, Director de Ventas…" />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="industry">Industria</Label>
+              <Input id="industry" {...register("industry")} placeholder="SaaS, Manufactura, Retail…" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Ubicación</Label>
+              <Input id="location" {...register("location")} placeholder="Ciudad, País" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+              <Input id="linkedinUrl" {...register("linkedinUrl")} placeholder="linkedin.com/in/…" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="whatsappNumber">WhatsApp (si difiere del teléfono)</Label>
+              <Input id="whatsappNumber" {...register("whatsappNumber")} placeholder="+57 300 123 4567" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Temperatura</Label>
+              <Select
+                value={watch("temperature")}
+                onValueChange={(v) =>
+                  v && setValue("temperature", v as "cold" | "warm" | "hot")
+                }
+              >
+                <SelectTrigger className="cursor-pointer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cold">Frío</SelectItem>
+                  <SelectItem value="warm">Tibio</SelectItem>
+                  <SelectItem value="hot">Caliente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Fuente</Label>
               <Select
@@ -147,24 +203,6 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
                   <SelectItem value="import">Importado</SelectItem>
                   <SelectItem value="webhook">Webhook</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Temperatura</Label>
-              <Select
-                value={watch("temperature")}
-                onValueChange={(v) =>
-                  v && setValue("temperature", v as "cold" | "warm" | "hot")
-                }
-              >
-                <SelectTrigger className="cursor-pointer">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cold">Frio</SelectItem>
-                  <SelectItem value="warm">Tibio</SelectItem>
-                  <SelectItem value="hot">Caliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>

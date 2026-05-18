@@ -158,6 +158,12 @@ function initTables(db: Database.Database): void {
     `CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action)`,
     `ALTER TABLE contacts ADD COLUMN engagement_score INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN title TEXT`,
+    `ALTER TABLE contacts ADD COLUMN industry TEXT`,
+    `ALTER TABLE contacts ADD COLUMN location TEXT`,
+    `ALTER TABLE contacts ADD COLUMN linkedin_url TEXT`,
+    `ALTER TABLE contacts ADD COLUMN whatsapp_number TEXT`,
+    `ALTER TABLE contacts ADD COLUMN tags TEXT`,
   ];
 
   for (const sql of migrations) {

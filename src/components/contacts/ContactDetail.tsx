@@ -6,6 +6,8 @@ import { ConsentBadge } from "./ConsentBadge";
 import { DataDeletionModal } from "./DataDeletionModal";
 import { ContactForm } from "./ContactForm";
 import { ActivityForm } from "@/components/activities/ActivityForm";
+import { ContactEngagementCard } from "./ContactEngagementCard";
+import { ContactNextBestAction } from "./ContactNextBestAction";
 import { formatCurrency, formatDate, formatRelativeDate, cleanPhoneForWhatsApp } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG, SOURCE_LABELS } from "@/lib/constants";
 import { toast } from "sonner";
@@ -55,6 +57,11 @@ interface ContactDetailClientProps {
     consentSource?: string | null;
     engagementStatus?: string | null;
     engagementScore?: number | null;
+    title?: string | null;
+    industry?: string | null;
+    location?: string | null;
+    linkedinUrl?: string | null;
+    whatsappNumber?: string | null;
   };
   deals: Array<{
     id: string;
@@ -63,6 +70,10 @@ interface ContactDetailClientProps {
     probability: number;
     stageName: string | null;
     stageColor: string | null;
+    stageOrder?: number | null;
+    isWon?: boolean | null;
+    isLost?: boolean | null;
+    stageId: string;
     createdAt: number | Date;
   }>;
   activities: Array<{
@@ -73,11 +84,23 @@ interface ContactDetailClientProps {
     completedAt: number | Date | null;
     createdAt: number | Date;
   }>;
+  relatedContacts?: Array<{
+    id: string;
+    name: string;
+    company: string | null;
+    title: string | null;
+  }>;
+  stages?: Array<{
+    id: string;
+    order: number;
+    isWon: boolean;
+    isLost: boolean;
+  }>;
 }
 
-export function ContactDetailClient({ contact, deals, activities }: ContactDetailClientProps) {
+export function ContactDetailClient({ contact, deals, activities, relatedContacts = [], stages = [] }: ContactDetailClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"stage" | "score" | "nextsteps" | "activities">("stage");
+  const [activeTab, setActiveTab] = useState<"stage" | "score" | "nextsteps" | "activities" | "related">("stage");
   const [showEditForm, setShowEditForm] = useState(false);
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [consentGiven, setConsentGiven] = useState(contact.consentGiven ?? false);
@@ -152,6 +175,7 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
     { id: "score" as const, label: "Score" },
     { id: "nextsteps" as const, label: "Próximos Pasos" },
     { id: "activities" as const, label: `Actividades (${activities.length})` },
+    { id: "related" as const, label: `Relacionados (${relatedContacts.length})` },
   ];
 
   const pendingActivities = activities.filter(a => !a.completedAt && a.scheduledAt);
@@ -199,7 +223,13 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 15, fontWeight: 600 }}>{contact.name}</div>
-              {contact.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{contact.company}</div>}
+              {contact.title && <div style={{ fontSize: 12, color: "var(--foreground)", marginTop: 1, fontWeight: 500 }}>{contact.title}</div>}
+              {contact.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 1 }}>{contact.company}</div>}
+              {contact.industry && (
+                <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600, background: "rgba(99,102,241,0.12)", color: "#6366f1" }}>
+                  {contact.industry}
+                </span>
+              )}
             </div>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 5,
@@ -236,6 +266,12 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
               <span style={{ color: "var(--muted-foreground)" }}>📅</span>
               <span style={{ color: "var(--muted-foreground)" }}>Desde {formatDate(contact.createdAt)}</span>
             </div>
+            {contact.location && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <span style={{ color: "var(--muted-foreground)" }}>📍</span>
+                <span style={{ color: "var(--muted-foreground)" }}>{contact.location}</span>
+              </div>
+            )}
             {contact.engagementStatus && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                 <span style={{ color: "var(--muted-foreground)" }}>📊</span>
@@ -244,29 +280,46 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
             )}
           </div>
 
-          {/* Quick actions — Email · WhatsApp · Call · LinkedIn */}
-          {(contact.phone || contact.email) && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, paddingTop: 4 }}>
-              {contact.email && (
+          {/* Quick actions */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {contact.email ? (
                 <a href={`mailto:${contact.email}`} style={qaBtn("#3b82f6")}>✉️ Email</a>
-              )}
-              {contact.phone && (
+              ) : <span />}
+              {contact.phone ? (
                 <a href={`https://wa.me/${cleanPhoneForWhatsApp(contact.phone)}`} target="_blank" rel="noopener noreferrer" style={qaBtn("#22c55e")}>
                   💬 WhatsApp
                 </a>
-              )}
-              {contact.phone && (
+              ) : <span />}
+              {contact.phone ? (
                 <a href={`tel:${contact.phone}`} style={qaBtn("#f59e0b")}>📞 Llamar</a>
-              )}
+              ) : <span />}
               <a
-                href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(contact.name + (contact.company ? " " + contact.company : ""))}`}
+                href={contact.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(contact.name + (contact.company ? " " + contact.company : ""))}`}
                 target="_blank" rel="noopener noreferrer"
                 style={qaBtn("#0a66c2")}
               >
                 in LinkedIn
               </a>
             </div>
-          )}
+            {/* WhatsApp Business API — ready for token */}
+            <button
+              onClick={async () => {
+                const waNum = contact.whatsappNumber || contact.phone;
+                if (!waNum) { toast.error("Sin número de WhatsApp"); return; }
+                try {
+                  const res = await fetch("/api/whatsapp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: waNum, name: contact.name }) });
+                  const d = await res.json();
+                  if (d.notConfigured) toast.info("WhatsApp Business API no configurada — agrega WHATSAPP_API_TOKEN en .env");
+                  else if (d.error) toast.error(d.error);
+                  else toast.success("Mensaje enviado via WhatsApp API");
+                } catch { toast.error("Error al contactar API"); }
+              }}
+              style={{ ...qaBtn("#25d366"), width: "100%", border: "1px dashed #25d36655", background: "rgba(37,211,102,0.06)" }}
+            >
+              🟢 WhatsApp Business API
+            </button>
+          </div>
 
           {/* Notes */}
           {contact.notes && (
@@ -307,6 +360,15 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
 
         {/* Right: tabs */}
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Next Best Action banner */}
+          <ContactNextBestAction
+            temperature={contact.temperature}
+            deals={deals.map(d => ({ stageId: d.stageId, createdAt: d.createdAt }))}
+            activities={activities}
+            stages={stages}
+            onLogActivity={() => setShowActivityForm(true)}
+            onCreateDeal={() => router.push(`/pipeline`)}
+          />
           {/* Tab bar */}
           <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
             {tabs.map(tab => (
@@ -393,6 +455,19 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
           {/* Score tab */}
           {activeTab === "score" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Engagement health widget */}
+              {(() => {
+                const now = Date.now();
+                const lastAct = activities.reduce<number | null>((m, a) => {
+                  const ts = a.completedAt || a.createdAt;
+                  if (!ts) return m;
+                  const ms = ts instanceof Date ? ts.getTime() : (ts as number) < 1e10 ? (ts as number) * 1000 : ts as number;
+                  return m === null || ms > m ? ms : m;
+                }, null);
+                const daysSinceLast = lastAct !== null ? Math.floor((now - lastAct) / 86400000) : null;
+                const activeDealVal = deals.filter(d => !d.isWon && !d.isLost).reduce((sum, d) => sum + d.value, 0);
+                return <ContactEngagementCard lastActivityDays={daysSinceLast} activeDealValue={activeDealVal} temperature={contact.temperature} icpScore={contact.score} />;
+              })()}
               {/* ICP Fit score (Apollo) */}
               <div style={{ display: "flex", alignItems: "center", gap: 24, padding: 20, borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)" }}>
                 <div style={{ position: "relative", width: 100, height: 100, flexShrink: 0 }}>
@@ -591,6 +666,40 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
                     );
                   })}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Related contacts tab */}
+          {activeTab === "related" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {relatedContacts.length === 0 ? (
+                <div style={{ padding: 32, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13, borderRadius: 10, border: "1px dashed var(--border)" }}>
+                  {contact.company ? `Sin otros contactos en ${contact.company}` : "Sin empresa asociada"}
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 4 }}>
+                    Otros contactos en <strong style={{ color: "var(--foreground)" }}>{contact.company}</strong>
+                  </div>
+                  {relatedContacts.map(rc => (
+                    <div
+                      key={rc.id}
+                      onClick={() => router.push(`/contacts/${rc.id}`)}
+                      style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}
+                      onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.06)")}
+                      onMouseLeave={e => (e.currentTarget.style.filter = "")}
+                    >
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "var(--primary-foreground)", flexShrink: 0 }}>
+                        {rc.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{rc.name}</div>
+                        {rc.title && <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{rc.title}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </>
               )}
             </div>
           )}
