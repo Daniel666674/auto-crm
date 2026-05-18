@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConsentBadge } from "./ConsentBadge";
 import { DataDeletionModal } from "./DataDeletionModal";
@@ -20,6 +20,15 @@ const TEMP_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 const ACT_EMOJI: Record<string, string> = {
   call: "📞", email: "✉️", meeting: "🤝", note: "📝", follow_up: "⏰",
 };
+
+function qaBtn(color: string): React.CSSProperties {
+  return {
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+    padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer",
+    background: `${color}1a`, color, textDecoration: "none",
+    border: `1px solid ${color}33`,
+  };
+}
 
 const CONSENT_SOURCES = [
   { value: "event", label: "Evento" },
@@ -235,36 +244,27 @@ export function ContactDetailClient({ contact, deals, activities }: ContactDetai
             )}
           </div>
 
-          {/* Quick actions */}
+          {/* Quick actions — Email · WhatsApp · Call · LinkedIn */}
           {(contact.phone || contact.email) && (
-            <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, paddingTop: 4 }}>
+              {contact.email && (
+                <a href={`mailto:${contact.email}`} style={qaBtn("#3b82f6")}>✉️ Email</a>
+              )}
               {contact.phone && (
-                <a
-                  href={`https://wa.me/${cleanPhoneForWhatsApp(contact.phone)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{
-                    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                    padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer",
-                    background: "rgba(34,197,94,0.1)", color: "#22c55e", textDecoration: "none",
-                    border: "1px solid rgba(34,197,94,0.2)",
-                  }}
-                >
+                <a href={`https://wa.me/${cleanPhoneForWhatsApp(contact.phone)}`} target="_blank" rel="noopener noreferrer" style={qaBtn("#22c55e")}>
                   💬 WhatsApp
                 </a>
               )}
-              {contact.email && (
-                <a
-                  href={`mailto:${contact.email}`}
-                  style={{
-                    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                    padding: "7px 0", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer",
-                    background: "rgba(59,130,246,0.1)", color: "#3b82f6", textDecoration: "none",
-                    border: "1px solid rgba(59,130,246,0.2)",
-                  }}
-                >
-                  ✉️ Email
-                </a>
+              {contact.phone && (
+                <a href={`tel:${contact.phone}`} style={qaBtn("#f59e0b")}>📞 Llamar</a>
               )}
+              <a
+                href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(contact.name + (contact.company ? " " + contact.company : ""))}`}
+                target="_blank" rel="noopener noreferrer"
+                style={qaBtn("#0a66c2")}
+              >
+                in LinkedIn
+              </a>
             </div>
           )}
 

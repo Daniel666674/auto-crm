@@ -12,6 +12,7 @@ interface Deal {
   contactName: string | null;
   contactTemperature: string | null;
   probability: number;
+  contactId?: string;
 }
 
 interface KanbanColumnProps {
@@ -19,9 +20,10 @@ interface KanbanColumnProps {
   name: string;
   color: string;
   deals: Deal[];
+  onReturnToMarketing?: (args: { dealId: string; dealTitle: string; contactId: string; contactName: string | null }) => void;
 }
 
-export function KanbanColumn({ id, name, color, deals }: KanbanColumnProps) {
+export function KanbanColumn({ id, name, color, deals, onReturnToMarketing }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
 
@@ -54,7 +56,7 @@ export function KanbanColumn({ id, name, color, deals }: KanbanColumnProps) {
       <SortableContext items={deals.map(d => d.id)} strategy={verticalListSortingStrategy}>
         <div style={{ flex: 1, padding: 8, display: "flex", flexDirection: "column", gap: 6, minHeight: 100, overflowY: "auto" }}>
           {deals.map(deal => (
-            <DealCard key={deal.id} {...deal} stageColor={color} />
+            <DealCard key={deal.id} {...deal} stageColor={color} onReturnToMarketing={onReturnToMarketing} />
           ))}
           {deals.length === 0 && (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--muted-foreground)", opacity: 0.5, minHeight: 80 }}>

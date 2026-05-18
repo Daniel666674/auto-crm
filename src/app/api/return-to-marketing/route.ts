@@ -1,26 +1,75 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { contacts } from "@/db/schema";
+import { contacts, deals, pipelineStages, activities } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { mktDb } from "@/db/mkt-db";
 
-// POST /api/return-to-marketing
-// Resets ready_for_sales on the matching marketing contact so it re-appears in the marketing pipeline
+interface Body {
+  contactId: string;
+  dealId?: string;
+  reason?: string;
+  moveToLost?: boolean;
+}
+
 export async function POST(req: Request) {
   try {
-    const { contactId } = await req.json();
+    const { contactId, dealId, reason, moveToLost }: Body = await req.json();
     if (!contactId) return NextResponse.json({ error: "contactId required" }, { status: 400 });
 
     const contact = db.select().from(contacts).where(eq(contacts.id, contactId)).get();
     if (!contact) return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     if (!contact.email) return NextResponse.json({ error: "Contact has no email — cannot match to marketing" }, { status: 400 });
 
-    const result = mktDb
-      .prepare("UPDATE mkt_contacts SET ready_for_sales = 0, passed_to_sales_at = NULL WHERE email = ?")
-      .run(contact.email);
+    // Reset ready_for_sales in marketing DB so the contact reappears in marketing pipeline.
+    // Non-fatal if marketing DB doesn't exist or has no matching contact.
+    try {
+      mktDb
+        .prepare("UPDATE mkt_contacts SET ready_for_sales = 0, passed_to_sales_at = NULL WHERE email = ?")
+        .run(contact.email);
+    } catch {
+      // continue
+    }
 
-    if (result.changes === 0) {
-      return NextResponse.json({ error: "No matching marketing contact found for this email" }, { status: 404 });
+    // Append reason to contact notes
+    if (reason) {
+      const prefix = `[Devuelto a marketing ${new Date().toISOString().slice(0, 10)}] `;
+      const newNotes = contact.notes ? `${prefix}${reason}\n\n${contact.notes}` : `${prefix}${reason}`;
+      db.update(contacts).set({ notes: newNotes, updatedAt: new Date() }).where(eq(contacts.id, contactId)).run();
+    }
+
+    // If a deal is provided, handle the deal-side action
+    if (dealId) {
+      const deal = db.select().from(deals).where(eq(deals.id, dealId)).get();
+      if (deal) {
+        if (moveToLost) {
+          const lostStage = db.select().from(pipelineStages).where(eq(pipelineStages.isLost, true)).get();
+          if (lostStage) {
+            db.update(deals).set({
+              stageId: lostStage.id,
+              notes: reason ? `${deal.notes ?? ""}\n\nDevuelto a marketing: ${reason}`.trim() : deal.notes,
+              updatedAt: new Date(),
+            }).where(eq(deals.id, dealId)).run();
+          }
+        } else if (reason) {
+          db.update(deals).set({
+            notes: `${deal.notes ?? ""}\n\nDevuelto a marketing: ${reason}`.trim(),
+            updatedAt: new Date(),
+          }).where(eq(deals.id, dealId)).run();
+        }
+      }
+
+      // Activity record for audit trail
+      try {
+        db.insert(activities).values({
+          type: "note",
+          description: `Devuelto a marketing${reason ? `: ${reason}` : ""}${moveToLost ? " (movido a Cerrado Perdido)" : ""}`,
+          contactId,
+          dealId,
+          completedAt: new Date(),
+        }).run();
+      } catch {
+        // non-fatal
+      }
     }
 
     return NextResponse.json({ ok: true });

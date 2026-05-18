@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -14,6 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "./KanbanColumn";
 import { DealCard } from "./DealCard";
+import { ReturnToMarketingModal } from "./ReturnToMarketingModal";
 import { toast } from "sonner";
 import type { PipelineColumn } from "@/types";
 
@@ -21,10 +23,23 @@ interface KanbanBoardProps {
   initialColumns: PipelineColumn[];
 }
 
+interface ReturnTarget {
+  dealId: string;
+  dealTitle: string;
+  contactId: string;
+  contactName: string | null;
+}
+
 export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
+  const router = useRouter();
   const [columns, setColumns] = useState(initialColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [returnTarget, setReturnTarget] = useState<ReturnTarget | null>(null);
   const columnsSnapshot = useRef<PipelineColumn[]>(initialColumns);
+
+  const handleReturnToMarketing = useCallback((args: ReturnTarget) => {
+    setReturnTarget(args);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -145,10 +160,12 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
             id={column.id}
             name={column.name}
             color={column.color}
+            onReturnToMarketing={handleReturnToMarketing}
             deals={column.deals.map((d) => ({
               id: d.id,
               title: d.title,
               value: d.value,
+              contactId: d.contactId,
               contactName: d.contactName || (d.contact?.name ?? null),
               contactTemperature:
                 d.contactTemperature ||
@@ -165,6 +182,7 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
             id={activeDeal.id}
             title={activeDeal.title}
             value={activeDeal.value}
+            stageColor="var(--primary)"
             contactName={
               activeDeal.contactName ||
               (activeDeal.contact?.name ?? null)
@@ -177,6 +195,16 @@ export function KanbanBoard({ initialColumns }: KanbanBoardProps) {
           />
         ) : null}
       </DragOverlay>
+
+      <ReturnToMarketingModal
+        open={!!returnTarget}
+        onClose={() => setReturnTarget(null)}
+        onDone={() => router.refresh()}
+        contactId={returnTarget?.contactId ?? ""}
+        contactName={returnTarget?.contactName ?? undefined}
+        dealId={returnTarget?.dealId}
+        dealTitle={returnTarget?.dealTitle}
+      />
     </DndContext>
   );
 }
