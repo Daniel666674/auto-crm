@@ -1,5 +1,5 @@
-const CACHE_NAME = "nexus-v1";
-const STATIC_ASSETS = ["/", "/manifest.json"];
+const CACHE_NAME = "nexus-v3";
+const STATIC_ASSETS = ["/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -18,10 +18,18 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Network-first for API calls
-  if (event.request.url.includes("/api/")) return;
+  const req = event.request;
+
+  // Don't intercept API calls
+  if (req.url.includes("/api/")) return;
+
+  // Don't intercept document/HTML/page navigations — always hit the network
+  // so users see fresh server-rendered content after deploys.
+  if (req.mode === "navigate" || req.destination === "document") return;
+
+  // Cache-fallback for everything else (icons, manifest, static assets)
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(req).catch(() => caches.match(req))
   );
 });
 
