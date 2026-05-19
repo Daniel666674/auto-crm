@@ -22,7 +22,7 @@ import { applyCrmTheme } from "@/lib/apply-theme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente" | "automatizaciones";
+type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente" | "automatizaciones" | "portales";
 
 interface UserPrefs {
   theme: string; accentPrimary: string; accentSecondary: string;
@@ -1328,6 +1328,191 @@ function TabCliente() {
   );
 }
 
+// ─── Tab: Portales ────────────────────────────────────────────────────────────
+
+interface PortalRow {
+  id: string;
+  token: string;
+  contactId: string;
+  title: string;
+  createdAt: string | number;
+  contactName?: string;
+  contactCompany?: string;
+}
+
+function TabPortales() {
+  const [portals, setPortals] = useState<PortalRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; company?: string }[]>([]);
+  const [selectedContact, setSelectedContact] = useState<{ id: string; name: string; company?: string } | null>(null);
+  const [portalTitle, setPortalTitle] = useState("");
+  const [creating, setCreating] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/portals");
+      if (res.ok) setPortals(await res.json());
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSearch = (v: string) => {
+    setSearch(v);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!v.trim()) { setSearchResults([]); return; }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/contacts?search=${encodeURIComponent(v)}`);
+        if (res.ok) {
+          const data = await res.json() as { contacts?: { id: string; name: string; company?: string }[]; data?: { id: string; name: string; company?: string }[] };
+          setSearchResults((data.contacts || data.data || []).slice(0, 6));
+        }
+      } catch { /* ignore */ }
+    }, 300);
+  };
+
+  const handleCreate = async () => {
+    if (!selectedContact) { toast.error("Selecciona un contacto"); return; }
+    setCreating(true);
+    try {
+      const res = await fetch("/api/portals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: selectedContact.id, title: portalTitle || "Portal del Cliente" }),
+      });
+      if (res.ok) {
+        toast.success("Portal creado");
+        setSearch("");
+        setSearchResults([]);
+        setSelectedContact(null);
+        setPortalTitle("");
+        await load();
+      } else {
+        const data = await res.json() as { error?: string };
+        toast.error(data.error || "Error al crear portal");
+      }
+    } catch { toast.error("Error de red"); }
+    setCreating(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Eliminar este portal?")) return;
+    try {
+      const res = await fetch(`/api/portals/${id}`, { method: "DELETE" });
+      if (res.ok) { toast.success("Portal eliminado"); setPortals(p => p.filter(x => x.id !== id)); }
+      else toast.error("Error al eliminar");
+    } catch { toast.error("Error de red"); }
+  };
+
+  const copyLink = (token: string) => {
+    const url = `${window.location.origin}/portal/${token}`;
+    navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado"));
+  };
+
+  return (
+    <div style={S.section}>
+      {/* Create form */}
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <Globe size={14} style={{ color: "var(--muted-foreground)" }} />
+          Crear Portal de Cliente
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+          <div style={{ position: "relative" }}>
+            <span style={S.label}>Contacto</span>
+            {selectedContact ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "rgba(209,156,21,0.07)", border: "1px solid rgba(209,156,21,0.25)", borderRadius: 8 }}>
+                <span style={{ fontSize: 13, color: "var(--foreground)", flex: 1 }}>
+                  {selectedContact.name}{selectedContact.company ? ` — ${selectedContact.company}` : ""}
+                </span>
+                <button onClick={() => { setSelectedContact(null); setSearch(""); }} style={{ ...S.btn("ghost"), padding: "2px 6px", fontSize: 11 }}>
+                  Cambiar
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  style={S.input}
+                  placeholder="Buscar contacto..."
+                  value={search}
+                  onChange={e => handleSearch(e.target.value)}
+                />
+                {searchResults.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, zIndex: 20, marginTop: 2, overflow: "hidden" }}>
+                    {searchResults.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => { setSelectedContact(c); setSearch(c.name); setSearchResults([]); }}
+                        style={{ width: "100%", padding: "8px 12px", background: "transparent", border: "none", borderBottom: "1px solid var(--border)", textAlign: "left", cursor: "pointer", color: "var(--foreground)", fontSize: 13 }}
+                      >
+                        {c.name}{c.company ? <span style={{ color: "var(--muted-foreground)", marginLeft: 6 }}>— {c.company}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div>
+            <span style={S.label}>Título del portal</span>
+            <input
+              style={S.input}
+              placeholder="Portal del Cliente"
+              value={portalTitle}
+              onChange={e => setPortalTitle(e.target.value)}
+            />
+          </div>
+        </div>
+        <button style={S.btn("primary")} onClick={handleCreate} disabled={creating || !selectedContact}>
+          {creating ? <RefreshCw size={13} className="animate-spin" /> : <Globe size={13} />}
+          {creating ? "Creando..." : "Crear portal"}
+        </button>
+      </div>
+
+      {/* List */}
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Portales existentes</div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>Cargando...</div>
+        ) : portals.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>No hay portales creados</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {portals.map(p => {
+              const url = typeof window !== "undefined" ? `${window.location.origin}/portal/${p.token}` : `/portal/${p.token}`;
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(215,210,203,0.03)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                  <Globe size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{p.title}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
+                      {p.contactName || "Contacto"}{p.contactCompany ? ` — ${p.contactCompany}` : ""}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      /portal/{p.token}
+                    </div>
+                  </div>
+                  <button onClick={() => copyLink(p.token)} style={S.btn("outline")} title="Copiar enlace">
+                    <Link2 size={12} /> Copiar enlace
+                  </button>
+                  <button onClick={() => handleDelete(p.id)} style={S.btn("danger")} title="Eliminar portal">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode; roles?: string[] }[] = [
@@ -1342,6 +1527,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode; roles?: string[] }[
   { id: "pipeline",         label: "Pipeline",           icon: <Kanban size={14} /> },
   { id: "notificaciones",   label: "Notificaciones",     icon: <Bell size={14} /> },
   { id: "cliente",          label: "Cliente",            icon: <Lock size={14} />,       roles: ["superadmin"] },
+  { id: "portales",         label: "Portales",           icon: <Globe size={14} />,      roles: ["superadmin"] },
 ];
 
 export default function SettingsPage() {
@@ -1400,6 +1586,7 @@ export default function SettingsPage() {
       {current === "pipeline"       && <TabPipeline role={userRole} />}
       {current === "notificaciones" && <TabNotificaciones />}
       {current === "cliente"        && <TabCliente />}
+      {current === "portales"       && <TabPortales />}
     </div>
   );
 }

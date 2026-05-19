@@ -414,12 +414,11 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: activityDot(a.type),
+                      background: "transparent",
                       marginTop: 5,
                       flexShrink: 0,
                       border: `2px solid ${activityDot(a.type)}`,
-                      background: "transparent",
-                    } as React.CSSProperties} />
+                    }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, color: "#D7D2CB", lineHeight: 1.4 }}>{a.description}</div>
                       <div style={{ fontSize: 11, color: "#7a756e", marginTop: 2 }}>
