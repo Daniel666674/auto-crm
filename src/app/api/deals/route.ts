@@ -3,11 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
 import { deals, contacts, pipelineStages } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, isNull } from "drizzle-orm";
 import { fireTriggers } from "@/lib/triggers";
 
-export async function GET() {
-  const results = db
+export async function GET(request: NextRequest) {
+  const includeReturned = new URL(request.url).searchParams.get("includeReturned") === "true";
+
+  const query = db
     .select({
       id: deals.id,
       title: deals.title,
@@ -31,9 +33,11 @@ export async function GET() {
     })
     .from(deals)
     .leftJoin(contacts, eq(deals.contactId, contacts.id))
-    .leftJoin(pipelineStages, eq(deals.stageId, pipelineStages.id))
-    .orderBy(desc(deals.createdAt))
-    .all();
+    .leftJoin(pipelineStages, eq(deals.stageId, pipelineStages.id));
+
+  const results = includeReturned
+    ? query.orderBy(desc(deals.createdAt)).all()
+    : query.where(isNull(contacts.returnedToMarketingAt)).orderBy(desc(deals.createdAt)).all();
 
   return NextResponse.json(results);
 }

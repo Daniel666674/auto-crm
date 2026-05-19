@@ -29,8 +29,9 @@ export default async function DealIntelligencePage() {
   if (!session) redirect("/login");
 
   const allStages = db.select().from(pipelineStages).orderBy(asc(pipelineStages.order)).all();
-  const allDeals = db.select().from(deals).all();
   const allContacts = db.select().from(contacts).all();
+  const activeContactIds = new Set(allContacts.filter(c => !c.returnedToMarketingAt).map(c => c.id));
+  const allDeals = db.select().from(deals).all().filter(d => activeContactIds.has(d.contactId));
   const allActivities = db.select().from(activities).all();
   const allUsers = db.select({ id: users.id, name: users.name, email: users.email }).from(users).all();
 

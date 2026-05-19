@@ -92,8 +92,9 @@ export default async function ForecastPage() {
   if (!session) redirect("/login");
 
   const allStages = db.select().from(pipelineStages).orderBy(asc(pipelineStages.order)).all();
-  const allDeals = db.select().from(deals).all();
   const allContacts = db.select().from(contacts).all();
+  const activeContactIds = new Set(allContacts.filter(c => !c.returnedToMarketingAt).map(c => c.id));
+  const allDeals = db.select().from(deals).all().filter(d => activeContactIds.has(d.contactId));
 
   const contactMap = Object.fromEntries(allContacts.map(c => [c.id, c]));
   const stageMap = Object.fromEntries(allStages.map(s => [s.id, s]));

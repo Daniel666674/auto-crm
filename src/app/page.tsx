@@ -33,7 +33,8 @@ export default async function DashboardPage() {
 
   // ── Core data ──────────────────────────────────────────────────────────────
   const allContacts = db.select().from(contacts).where(isNull(contacts.returnedToMarketingAt)).all();
-  const allDeals = db.select().from(deals).all();
+  const activeContactIds = new Set(allContacts.map(c => c.id));
+  const allDeals = db.select().from(deals).all().filter(d => activeContactIds.has(d.contactId));
   const stages = db.select().from(pipelineStages).orderBy(asc(pipelineStages.order)).all();
   const allActivities = db
     .select({
@@ -112,6 +113,7 @@ export default async function DashboardPage() {
     })
     .from(deals)
     .leftJoin(contacts, eq(deals.contactId, contacts.id))
+    .where(isNull(contacts.returnedToMarketingAt))
     .all();
 
   const riskDeals: RiskDeal[] = dealsWithContacts

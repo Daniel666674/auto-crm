@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { pipelineStages, deals, contacts, clients } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, isNull } from "drizzle-orm";
 
 export async function GET() {
   const stages = db
@@ -10,6 +10,7 @@ export async function GET() {
     .orderBy(asc(pipelineStages.order))
     .all();
 
+  // Exclude deals whose contact has been returned to marketing
   const allDeals = db
     .select({
       id: deals.id,
@@ -27,6 +28,7 @@ export async function GET() {
     })
     .from(deals)
     .leftJoin(contacts, eq(deals.contactId, contacts.id))
+    .where(isNull(contacts.returnedToMarketingAt))
     .all();
 
   const pipeline = stages.map((stage) => ({
