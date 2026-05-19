@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { contacts, activities } from "@/db/schema";
+import { contacts, activities, crmSettings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { MSHealthScore } from "@/components/dashboard/MSHealthScore";
 
@@ -94,9 +94,22 @@ function FunnelBar({ label, count, total, color }: {
 
 export default async function MSCommandPage() {
   const now = Date.now();
-  const ago24h = now - 24 * 60 * 60 * 1000;
   const ago14d = now - 14 * 24 * 60 * 60 * 1000;
   const ago30d = now - 30 * 24 * 60 * 60 * 1000;
+
+  // ── Read SLA config ───────────────────────────────────────────────────────
+  const slaRow = db.select().from(crmSettings).where(eq(crmSettings.key, "ms_sla_config")).get();
+  let slaResponseHours = 24;
+  let slaVersion = 1;
+  try {
+    if (slaRow?.value) {
+      const parsed = JSON.parse(slaRow.value) as { mqlResponseHours?: number; version?: number };
+      if (parsed.mqlResponseHours) slaResponseHours = parsed.mqlResponseHours;
+      if (parsed.version) slaVersion = parsed.version;
+    }
+  } catch { /* use defaults */ }
+
+  const agoSlaMs = now - slaResponseHours * 60 * 60 * 1000;
 
   // ── All contacts (minimal fields) ─────────────────────────────────────────
   const allContacts = db.select({
@@ -125,12 +138,12 @@ export default async function MSCommandPage() {
   }));
   const totalFunnel = allContacts.length;
 
-  // ── SLA breaches: MQL contacts older than 24h, not returned ──────────────
+  // ── SLA breaches: MQL contacts older than SLA window, not returned ───────
   const slaBreaches = allContacts
     .filter(c =>
       c.lifecycleStage === "MQL" &&
       c.returnedToMarketingAt === null &&
-      toMs(c.updatedAt) < ago24h
+      toMs(c.updatedAt) < agoSlaMs
     )
     .map(c => ({
       id: c.id,
@@ -246,6 +259,28 @@ export default async function MSCommandPage() {
         <span style={{ fontSize: 11, color: "var(--muted-foreground)", paddingTop: 4 }}>{todayLabel}</span>
       </div>
 
+      {/* SLA contract banner */}
+      <div style={{
+        padding: "10px 16px", borderRadius: 10,
+        background: "rgba(195,154,76,0.07)", border: "1px solid rgba(195,154,76,0.25)",
+        display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8,
+      }}>
+        <span style={{ fontSize: 12, color: "var(--foreground)" }}>
+          <strong style={{ color: "#C39A4C" }}>SLA v{slaVersion}</strong>
+          {" — "}Los MQLs deben contactarse en{" "}
+          <strong style={{ color: "#C39A4C" }}>&lt;{slaResponseHours}h</strong>.{" "}
+          {slaBreaches.length > 0
+            ? <span style={{ color: "#ef4444", fontWeight: 600 }}>{slaBreaches.length} en incumplimiento</span>
+            : <span style={{ color: "#22c55e" }}>Sin incumplimientos activos</span>}
+        </span>
+        <a
+          href="/settings/sla"
+          style={{ fontSize: 11, color: "#C39A4C", textDecoration: "none", fontWeight: 600 }}
+        >
+          Editar SLA →
+        </a>
+      </div>
+
       {/* Row 1: Health Score + SLA Breaches */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Health score widget (client — fetches live or uses SSR data) */}
@@ -254,7 +289,7 @@ export default async function MSCommandPage() {
         {/* SLA Breaches */}
         <SectionCard
           title="Breaches SLA"
-          subtitle={`${slaBreaches.length} MQLs sin atención >24h`}
+          subtitle={`${slaBreaches.length} MQLs sin atención >${slaResponseHours}h`}
         >
           {slaBreaches.length === 0 ? (
             <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Sin incumplimientos activos</p>
