@@ -15,18 +15,35 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  // Read SLA from settings
-  const settingRow = db
+  // Read SLA: prefer the JSON contract (ms_sla_config), fall back to legacy key
+  let slaHours = DEFAULT_SLA_HOURS;
+
+  const contractRow = db
     .select()
     .from(crmSettings)
-    .where(eq(crmSettings.key, "mql_response_hours"))
+    .where(eq(crmSettings.key, "ms_sla_config"))
     .get();
 
-  let slaHours = DEFAULT_SLA_HOURS;
-  if (settingRow) {
-    const parsed = Number(settingRow.value);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      slaHours = parsed;
+  if (contractRow?.value) {
+    try {
+      const parsed = JSON.parse(contractRow.value) as { mqlResponseHours?: number };
+      if (parsed.mqlResponseHours && Number.isFinite(parsed.mqlResponseHours) && parsed.mqlResponseHours > 0) {
+        slaHours = parsed.mqlResponseHours;
+      }
+    } catch { /* fall through */ }
+  }
+
+  if (slaHours === DEFAULT_SLA_HOURS) {
+    const legacyRow = db
+      .select()
+      .from(crmSettings)
+      .where(eq(crmSettings.key, "mql_response_hours"))
+      .get();
+    if (legacyRow) {
+      const parsed = Number(legacyRow.value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        slaHours = parsed;
+      }
     }
   }
 
