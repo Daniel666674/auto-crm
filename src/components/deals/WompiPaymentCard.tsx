@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { CreditCard, Copy, ExternalLink, RefreshCw, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { BSSpinner } from "@/components/ui/BSSpinner";
 
 interface WompiPaymentCardProps {
   dealId: string;
@@ -102,7 +103,7 @@ export function WompiPaymentCard({ dealId, dealValue, paymentLinkUrl, paymentSta
             onClick={generateLink}
             style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", background: dealValue > 0 && !loading ? "#22c55e" : "var(--border)", color: dealValue > 0 && !loading ? "white" : "var(--muted-foreground)", cursor: dealValue > 0 && !loading ? "pointer" : "not-allowed", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            <CreditCard size={14} /> {loading ? "Generando…" : "Generar link Wompi"}
+            {loading ? <BSSpinner size="sm" /> : <CreditCard size={14} />} {loading ? "Generando…" : "Generar link Wompi"}
           </button>
           {dealValue <= 0 && (
             <div style={{ fontSize: 11, color: "#f59e0b" }}>El deal necesita un valor mayor a $0 para generar un link.</div>

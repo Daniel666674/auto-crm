@@ -19,10 +19,12 @@ import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { DigestScheduleSettings } from "@/components/settings/DigestScheduleSettings";
 import { ApiTokensSettings } from "@/components/settings/ApiTokensSettings";
 import { applyCrmTheme } from "@/lib/apply-theme";
+import { PORTAL_WIDGETS, REQUIREMENTS_MAP, DEFAULT_PORTAL_CONFIG, type PortalConfig } from "@/types/portal";
+import { CircleAlert, Info } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente" | "automatizaciones" | "portales";
+type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente" | "automatizaciones";
 
 interface UserPrefs {
   theme: string; accentPrimary: string; accentSecondary: string;
@@ -1294,41 +1296,7 @@ function TabNotificaciones() {
   );
 }
 
-// ─── Tab: Cliente (placeholder) ───────────────────────────────────────────────
-
-function TabCliente() {
-  return (
-    <div style={{ ...S.card, position: "relative", overflow: "hidden", minHeight: 320 }}>
-      <div style={{ filter: "blur(3px)", opacity: 0.35, pointerEvents: "none" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
-          {["Contactos activos","Campañas activas","Pipeline value"].map(t => (
-            <div key={t} style={{ background: "rgba(195,154,76,0.08)", border: "1px solid rgba(195,154,76,0.15)", borderRadius: 10, padding: 16 }}>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>{t}</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>—</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ height: 120, background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid var(--border)" }} />
-      </div>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(195,154,76,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Lock size={22} style={{ color: "#C39A4C" }} />
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Vista de Cliente</div>
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)", maxWidth: 360, lineHeight: 1.6 }}>
-            Comparte el rendimiento de estrategia con tus clientes en un dashboard personalizado. Próximamente.
-          </div>
-        </div>
-        <button style={S.btn("outline")} onClick={() => toast.info("Te notificaremos cuando esté disponible.")}>
-          Notificarme cuando esté listo
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Tab: Portales ────────────────────────────────────────────────────────────
+// ─── Tab: Cliente (Portal Editor) ─────────────────────────────────────────────
 
 interface PortalRow {
   id: string;
@@ -1336,18 +1304,23 @@ interface PortalRow {
   contactId: string;
   title: string;
   createdAt: string | number;
+  configJson?: string;
+  clientCompany?: string | null;
   contactName?: string;
   contactCompany?: string;
 }
 
-function TabPortales() {
+function TabCliente() {
   const [portals, setPortals] = useState<PortalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; company?: string }[]>([]);
   const [selectedContact, setSelectedContact] = useState<{ id: string; name: string; company?: string } | null>(null);
   const [portalTitle, setPortalTitle] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [clientCompany, setClientCompany] = useState("");
+  const [config, setConfig] = useState<PortalConfig>({ ...DEFAULT_PORTAL_CONFIG, widgets: [...DEFAULT_PORTAL_CONFIG.widgets] });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = async () => {
@@ -1376,36 +1349,93 @@ function TabPortales() {
     }, 300);
   };
 
-  const handleCreate = async () => {
-    if (!selectedContact) { toast.error("Selecciona un contacto"); return; }
-    setCreating(true);
+  const resetForm = () => {
+    setSearch("");
+    setSearchResults([]);
+    setSelectedContact(null);
+    setPortalTitle("");
+    setClientCompany("");
+    setConfig({ ...DEFAULT_PORTAL_CONFIG, widgets: [...DEFAULT_PORTAL_CONFIG.widgets] });
+    setEditingId(null);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const res = await fetch("/api/portals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: selectedContact.id, title: portalTitle || "Portal del Cliente" }),
-      });
-      if (res.ok) {
-        toast.success("Portal creado");
-        setSearch("");
-        setSearchResults([]);
-        setSelectedContact(null);
-        setPortalTitle("");
-        await load();
+      if (editingId) {
+        const res = await fetch(`/api/portals/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: portalTitle || "Portal del Cliente",
+            configJson: JSON.stringify(config),
+            clientCompany: clientCompany || null,
+          }),
+        });
+        if (res.ok) {
+          toast.success("Portal actualizado");
+          resetForm();
+          await load();
+        } else {
+          const data = await res.json() as { error?: string };
+          toast.error(data.error || "Error al actualizar portal");
+        }
       } else {
-        const data = await res.json() as { error?: string };
-        toast.error(data.error || "Error al crear portal");
+        if (!selectedContact) { toast.error("Selecciona un contacto"); setSaving(false); return; }
+        const res = await fetch("/api/portals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contactId: selectedContact.id,
+            title: portalTitle || "Portal del Cliente",
+            configJson: JSON.stringify(config),
+            clientCompany: clientCompany || null,
+          }),
+        });
+        if (res.ok) {
+          toast.success("Portal creado");
+          resetForm();
+          await load();
+        } else {
+          const data = await res.json() as { error?: string };
+          toast.error(data.error || "Error al crear portal");
+        }
       }
     } catch { toast.error("Error de red"); }
-    setCreating(false);
+    setSaving(false);
+  };
+
+  const handleEdit = (p: PortalRow) => {
+    setEditingId(p.id);
+    setSelectedContact({ id: p.contactId, name: p.contactName || "Contacto", company: p.contactCompany });
+    setSearch(p.contactName || "");
+    setPortalTitle(p.title);
+    setClientCompany(p.clientCompany || "");
+    try {
+      const parsed = p.configJson ? JSON.parse(p.configJson) as Partial<PortalConfig> : {};
+      setConfig({
+        widgets: Array.isArray(parsed.widgets) && parsed.widgets.length > 0 ? parsed.widgets : [...DEFAULT_PORTAL_CONFIG.widgets],
+        branding: parsed.branding || {},
+        reportCadence: parsed.reportCadence || "monthly",
+        kpiTargets: parsed.kpiTargets,
+      });
+    } catch {
+      setConfig({ ...DEFAULT_PORTAL_CONFIG, widgets: [...DEFAULT_PORTAL_CONFIG.widgets] });
+    }
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este portal?")) return;
     try {
       const res = await fetch(`/api/portals/${id}`, { method: "DELETE" });
-      if (res.ok) { toast.success("Portal eliminado"); setPortals(p => p.filter(x => x.id !== id)); }
-      else toast.error("Error al eliminar");
+      if (res.ok) {
+        toast.success("Portal eliminado");
+        setPortals(p => p.filter(x => x.id !== id));
+        if (editingId === id) resetForm();
+      } else {
+        toast.error("Error al eliminar");
+      }
     } catch { toast.error("Error de red"); }
   };
 
@@ -1414,15 +1444,64 @@ function TabPortales() {
     navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado"));
   };
 
+  const toggleWidget = (id: string) => {
+    setConfig(prev => {
+      const has = prev.widgets.includes(id);
+      return { ...prev, widgets: has ? prev.widgets.filter(w => w !== id) : [...prev.widgets, id] };
+    });
+  };
+
+  // Compute requirements from selected widgets
+  const requirementIds = (() => {
+    const base = new Set<string>(["logo", "brand-colors", "primary-contact", "report-cadence"]);
+    for (const wId of config.widgets) {
+      const w = PORTAL_WIDGETS.find(x => x.id === wId);
+      if (w?.requires) for (const r of w.requires) base.add(r);
+    }
+    return Array.from(base);
+  })();
+
+  const salesWidgets = PORTAL_WIDGETS.filter(w => w.category === "sales");
+  const mktWidgets = PORTAL_WIDGETS.filter(w => w.category === "marketing");
+
+  const renderWidgetRow = (widget: typeof PORTAL_WIDGETS[number]) => {
+    const enabled = config.widgets.includes(widget.id);
+    const isMkt = widget.category === "marketing";
+    return (
+      <label
+        key={widget.id}
+        style={{
+          display: "flex", gap: 10, padding: "10px 12px", borderRadius: 8,
+          border: `1px solid ${enabled ? "rgba(195,154,76,0.3)" : "var(--border)"}`,
+          background: enabled
+            ? "rgba(195,154,76,0.06)"
+            : isMkt ? "rgba(99,102,241,0.06)" : "transparent",
+          cursor: "pointer",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={() => toggleWidget(widget.id)}
+          style={{ accentColor: "#C39A4C", marginTop: 2 }}
+        />
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{widget.label}</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{widget.description}</div>
+        </div>
+      </label>
+    );
+  };
+
   return (
     <div style={S.section}>
-      {/* Create form */}
+      {/* Top: contact + title + company */}
       <div style={S.card}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           <Globe size={14} style={{ color: "var(--muted-foreground)" }} />
-          Crear Portal de Cliente
+          {editingId ? "Editar portal de cliente" : "Crear portal de cliente"}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
           <div style={{ position: "relative" }}>
             <span style={S.label}>Contacto</span>
             {selectedContact ? (
@@ -1430,9 +1509,11 @@ function TabPortales() {
                 <span style={{ fontSize: 13, color: "var(--foreground)", flex: 1 }}>
                   {selectedContact.name}{selectedContact.company ? ` — ${selectedContact.company}` : ""}
                 </span>
-                <button onClick={() => { setSelectedContact(null); setSearch(""); }} style={{ ...S.btn("ghost"), padding: "2px 6px", fontSize: 11 }}>
-                  Cambiar
-                </button>
+                {!editingId && (
+                  <button onClick={() => { setSelectedContact(null); setSearch(""); }} style={{ ...S.btn("ghost"), padding: "2px 6px", fontSize: 11 }}>
+                    Cambiar
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -1467,11 +1548,107 @@ function TabPortales() {
               onChange={e => setPortalTitle(e.target.value)}
             />
           </div>
+          <div>
+            <span style={S.label}>Empresa del cliente</span>
+            <input
+              style={S.input}
+              placeholder="Nombre comercial"
+              value={clientCompany}
+              onChange={e => setClientCompany(e.target.value)}
+            />
+          </div>
         </div>
-        <button style={S.btn("primary")} onClick={handleCreate} disabled={creating || !selectedContact}>
-          {creating ? <RefreshCw size={13} className="animate-spin" /> : <Globe size={13} />}
-          {creating ? "Creando..." : "Crear portal"}
+      </div>
+
+      {/* Dashboard editor 2-col */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
+        {/* LEFT: widget toggles */}
+        <div style={S.card}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Módulos del dashboard</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Ventas</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {salesWidgets.map(renderWidgetRow)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Marketing</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {mktWidgets.map(renderWidgetRow)}
+              </div>
+            </div>
+          </div>
+
+          {/* Cadence */}
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            <span style={S.label}>Cadencia de reporte</span>
+            <div style={{ display: "flex", gap: 12 }}>
+              {(["weekly", "monthly", "quarterly"] as const).map(c => (
+                <label key={c} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--foreground)" }}>
+                  <input
+                    type="radio"
+                    name="cadence"
+                    checked={config.reportCadence === c}
+                    onChange={() => setConfig(prev => ({ ...prev, reportCadence: c }))}
+                    style={{ accentColor: "#C39A4C" }}
+                  />
+                  {c === "weekly" ? "Semanal" : c === "monthly" ? "Mensual" : "Trimestral"}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: requirements checklist */}
+        <div style={S.card}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Lo que necesitamos del cliente</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 12 }}>
+            Lista auto-generada según los módulos seleccionados.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {requirementIds.map(rId => {
+              const req = REQUIREMENTS_MAP[rId];
+              if (!req) return null;
+              const isOptional = rId === "kpi-targets";
+              return (
+                <div
+                  key={rId}
+                  style={{
+                    display: "flex", gap: 10, padding: "10px 12px", borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "rgba(215,210,203,0.03)",
+                  }}
+                >
+                  {isOptional
+                    ? <Info size={14} style={{ color: "var(--muted-foreground)", marginTop: 2, flexShrink: 0 }} />
+                    : <CircleAlert size={14} style={{ color: "#C39A4C", marginTop: 2, flexShrink: 0 }} />}
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{req.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{req.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Save button */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          style={S.btn("primary")}
+          onClick={handleSave}
+          disabled={saving || (!editingId && !selectedContact)}
+        >
+          {saving ? <RefreshCw size={13} className="animate-spin" /> : <Globe size={13} />}
+          {saving ? (editingId ? "Guardando..." : "Creando...") : (editingId ? "Guardar cambios" : "Crear portal")}
         </button>
+        {editingId && (
+          <button style={S.btn("outline")} onClick={resetForm} disabled={saving}>
+            Cancelar edición
+          </button>
+        )}
       </div>
 
       {/* List */}
@@ -1483,29 +1660,30 @@ function TabPortales() {
           <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>No hay portales creados</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {portals.map(p => {
-              const url = typeof window !== "undefined" ? `${window.location.origin}/portal/${p.token}` : `/portal/${p.token}`;
-              return (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(215,210,203,0.03)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                  <Globe size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{p.title}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
-                      {p.contactName || "Contacto"}{p.contactCompany ? ` — ${p.contactCompany}` : ""}
-                    </div>
-                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      /portal/{p.token}
-                    </div>
+            {portals.map(p => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(215,210,203,0.03)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                <Globe size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{p.title}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
+                    {p.clientCompany || p.contactCompany || p.contactName || "Contacto"}
+                    {p.contactName && (p.clientCompany || p.contactCompany) ? ` — ${p.contactName}` : ""}
                   </div>
-                  <button onClick={() => copyLink(p.token)} style={S.btn("outline")} title="Copiar enlace">
-                    <Link2 size={12} /> Copiar enlace
-                  </button>
-                  <button onClick={() => handleDelete(p.id)} style={S.btn("danger")} title="Eliminar portal">
-                    <Trash2 size={12} />
-                  </button>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    /portal/{p.token}
+                  </div>
                 </div>
-              );
-            })}
+                <button onClick={() => handleEdit(p)} style={S.btn("outline")} title="Editar portal">
+                  Editar
+                </button>
+                <button onClick={() => copyLink(p.token)} style={S.btn("outline")} title="Copiar enlace">
+                  <Link2 size={12} /> Copiar enlace
+                </button>
+                <button onClick={() => handleDelete(p.id)} style={S.btn("danger")} title="Eliminar portal">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1526,8 +1704,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode; roles?: string[] }[
   { id: "integraciones",    label: "Integraciones",      icon: <Plug size={14} /> },
   { id: "pipeline",         label: "Pipeline",           icon: <Kanban size={14} /> },
   { id: "notificaciones",   label: "Notificaciones",     icon: <Bell size={14} /> },
-  { id: "cliente",          label: "Cliente",            icon: <Lock size={14} />,       roles: ["superadmin"] },
-  { id: "portales",         label: "Portales",           icon: <Globe size={14} />,      roles: ["superadmin"] },
+  { id: "cliente",          label: "Cliente",            icon: <Globe size={14} />,      roles: ["superadmin"] },
 ];
 
 export default function SettingsPage() {
@@ -1586,7 +1763,6 @@ export default function SettingsPage() {
       {current === "pipeline"       && <TabPipeline role={userRole} />}
       {current === "notificaciones" && <TabNotificaciones />}
       {current === "cliente"        && <TabCliente />}
-      {current === "portales"       && <TabPortales />}
     </div>
   );
 }

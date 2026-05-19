@@ -5,6 +5,7 @@ import { useMkt } from "./mkt-provider";
 import { mktFormatRelative } from "./mkt-utils";
 import type { MktCampaign } from "./mkt-types";
 import { MKT_CHANNELS } from "./mkt-types";
+import { BSCardLoader } from "@/components/ui/BSCardLoader";
 
 function rateColor(rate: number, [good, ok]: [number, number]): string {
   if (rate >= good) return "#22c55e";
@@ -653,6 +654,7 @@ export function MktCampaignWall() {
         </div>
       )}
 
+      <BSCardLoader loading={brevoLoading} label="Cargando campañas de Brevo…">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
         {displayCampaigns.map(camp => {
           const openRate = safeRate(camp.openRate);
@@ -745,6 +747,7 @@ export function MktCampaignWall() {
           );
         })}
       </div>
+      </BSCardLoader>
 
       {showForm && <CampaignFormModal onClose={() => setShowForm(false)} />}
     </div>

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
 import { clientPortals, contacts } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { DEFAULT_PORTAL_CONFIG } from "@/types/portal";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -19,6 +20,8 @@ export async function GET() {
       title: clientPortals.title,
       createdAt: clientPortals.createdAt,
       createdBy: clientPortals.createdBy,
+      configJson: clientPortals.configJson,
+      clientCompany: clientPortals.clientCompany,
       contactName: contacts.name,
       contactCompany: contacts.company,
     })
@@ -35,14 +38,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  let body: { contactId?: string; title?: string };
+  let body: { contactId?: string; title?: string; configJson?: string; clientCompany?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "JSON invalido" }, { status: 400 });
   }
 
-  const { contactId, title } = body;
+  const { contactId, title, configJson, clientCompany } = body;
   if (!contactId) {
     return NextResponse.json({ error: "contactId es requerido" }, { status: 400 });
   }
@@ -55,6 +58,8 @@ export async function POST(request: NextRequest) {
       contactId,
       title: title || "Portal del Cliente",
       createdBy: session.user?.email || undefined,
+      configJson: configJson || JSON.stringify(DEFAULT_PORTAL_CONFIG),
+      clientCompany: clientCompany || null,
     })
     .returning()
     .get();

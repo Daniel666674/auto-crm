@@ -263,6 +263,8 @@ function initTables(db: Database.Database): void {
       created_at INTEGER NOT NULL,
       created_by TEXT
     )`,
+    `ALTER TABLE client_portals ADD COLUMN config_json TEXT NOT NULL DEFAULT '{}'`,
+    `ALTER TABLE client_portals ADD COLUMN client_company TEXT`,
   ];
 
   for (const sql of migrations) {

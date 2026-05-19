@@ -352,4 +352,6 @@ export const clientPortals = sqliteTable("client_portals", {
   title: text("title").notNull().default("Portal del Cliente"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   createdBy: text("created_by"),
+  configJson: text("config_json").notNull().default("{}"),
+  clientCompany: text("client_company"),
 });

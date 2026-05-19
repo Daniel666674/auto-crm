@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Mail, X, FileText } from "lucide-react";
 import { EMAIL_TEMPLATES, fillTemplate } from "@/lib/email-templates";
+import { BSSpinner } from "@/components/ui/BSSpinner";
 
 interface Props {
   email: string;
@@ -313,7 +314,13 @@ export function EmailButton({ email, contactName, companyName, title, contactId 
                       transition: "background 0.12s",
                     }}
                   >
-                    {sending ? "Enviando..." : "Enviar"}
+                    {sending ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <BSSpinner size="sm" /> Enviando…
+                      </span>
+                    ) : (
+                      "Enviar"
+                    )}
                   </button>
                 </div>
               </div>

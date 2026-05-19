@@ -172,3 +172,59 @@
   width: 6px;
   height: 6px;
 }
+/* ─── Blackscale BSSpinner ────────────────────────────────────────────────── */
+@keyframes bs-arc {
+  0%   { stroke-dashoffset: var(--bs-full); transform: rotate(-90deg); }
+  45%  { stroke-dashoffset: var(--bs-short); transform: rotate(120deg); }
+  100% { stroke-dashoffset: var(--bs-full); transform: rotate(270deg); }
+}
+@keyframes bs-pulse-opacity { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .bs-arc-path { animation: bs-pulse-opacity 1.6s ease-in-out infinite !important; }
+}
+.bs-arc-path {
+  fill: none; stroke: #C89B3C; stroke-linecap: round;
+  animation: bs-arc 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(200,155,60,0.6));
+}
+.bs-track { fill: none; stroke: rgba(200,155,60,0.08); }
+.bs-b {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700; fill: #C89B3C;
+  dominant-baseline: central; text-anchor: middle;
+  user-select: none;
+}
+.bs-spinner { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; }
+.bs-spinner-label { font-size: 12px; color: var(--muted-foreground, #888); font-family: inherit; }
+@keyframes bs-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.bs-skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 75%);
+  background-size: 400px 100%;
+  animation: bs-shimmer 1.4s ease-in-out infinite;
+}
+.bs-section-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px; z-index: 10;
+  background: rgba(13,13,13,0.7); border-radius: inherit;
+  transition: opacity 300ms ease;
+}
+.bs-section-overlay.fade-out { opacity: 0; pointer-events: none; }
+.bs-section-grid {
+  position: absolute; inset: 0; border-radius: inherit; overflow: hidden;
+  background-image:
+    linear-gradient(rgba(200,155,60,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,155,60,.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.bs-section-glow {
+  position: absolute; width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,155,60,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.bs-btn-loading {
+  opacity: 0.7 !important; pointer-events: none !important; cursor: not-allowed !important;
+  display: inline-flex !important; align-items: center !important; gap: 8px !important;
+}
