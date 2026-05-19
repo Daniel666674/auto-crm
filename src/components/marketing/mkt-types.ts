@@ -56,6 +56,7 @@ export type MktSection =
   | "reengagement"
   | "funnel"
   | "segments-builder"
+  | "forecast" | "attribution-model"
   | "icp" | "segments" // legacy aliases kept for backward compat
   | "settings";
 

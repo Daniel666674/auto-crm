@@ -18,6 +18,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { formatCurrency } from "@/lib/constants";
 import Link from "next/link";
+import { NextBestActions } from "@/components/dashboard/NextBestActions";
 
 export const dynamic = "force-dynamic";
 
@@ -312,6 +313,9 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Next Best Actions */}
+      <NextBestActions />
     </div>
   );
 }
