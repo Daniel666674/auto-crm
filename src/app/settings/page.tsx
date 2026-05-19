@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   RefreshCw, CheckCircle, AlertCircle, LogOut, Copy,
   User, Palette, Briefcase, Users, Plug, Kanban, Bell, Lock,
-  Upload, Eye, EyeOff, Target, BarChart2, Zap,
+  Upload, Eye, EyeOff, Target, BarChart2, Zap, Globe, Trash2, Link2,
 } from "lucide-react";
 import { CloseReasonsSettings } from "@/components/settings/CloseReasonsSettings";
 import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings";

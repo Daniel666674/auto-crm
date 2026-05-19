@@ -255,6 +255,14 @@ function initTables(db: Database.Database): void {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS client_portals (
+      id TEXT PRIMARY KEY,
+      token TEXT NOT NULL UNIQUE,
+      contact_id TEXT NOT NULL REFERENCES contacts(id),
+      title TEXT NOT NULL DEFAULT 'Portal del Cliente',
+      created_at INTEGER NOT NULL,
+      created_by TEXT
+    )`,
   ];
 
   for (const sql of migrations) {

@@ -344,3 +344,12 @@ export const mktSegments = sqliteTable("mkt_segments", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
+
+export const clientPortals = sqliteTable("client_portals", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  token: text("token").notNull().unique(),
+  contactId: text("contact_id").notNull().references(() => contacts.id),
+  title: text("title").notNull().default("Portal del Cliente"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  createdBy: text("created_by"),
+});
