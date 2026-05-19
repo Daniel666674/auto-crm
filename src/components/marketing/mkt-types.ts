@@ -54,6 +54,8 @@ export type MktSection =
   | "digest" | "roi" | "export"
   | "integrations"
   | "reengagement"
+  | "funnel"
+  | "segments-builder"
   | "icp" | "segments" // legacy aliases kept for backward compat
   | "settings";
 

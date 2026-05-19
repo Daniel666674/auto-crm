@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, DollarSign, Percent, FileText } from "lucide-react";
 import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG } from "@/lib/constants";
+import { WompiPaymentCard } from "@/components/deals/WompiPaymentCard";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,15 @@ export default async function DealDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <WompiPaymentCard
+        dealId={deal.id}
+        dealValue={deal.value}
+        paymentLinkUrl={deal.paymentLinkUrl ?? null}
+        paymentStatus={deal.paymentStatus ?? null}
+        paymentReference={deal.paymentReference ?? null}
+        paidAt={deal.paidAt ?? null}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {deal.notes && (

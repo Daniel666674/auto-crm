@@ -242,6 +242,19 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE contacts ADD COLUMN last_touch_campaign_id TEXT`,
     `ALTER TABLE contacts ADD COLUMN assisting_campaign_ids TEXT`,
     `ALTER TABLE contacts ADD COLUMN reengagement_queued_at INTEGER`,
+    `ALTER TABLE deals ADD COLUMN payment_link_url TEXT`,
+    `ALTER TABLE deals ADD COLUMN payment_status TEXT`,
+    `ALTER TABLE deals ADD COLUMN payment_provider TEXT`,
+    `ALTER TABLE deals ADD COLUMN payment_reference TEXT`,
+    `ALTER TABLE deals ADD COLUMN paid_at INTEGER`,
+    `CREATE TABLE IF NOT EXISTS mkt_segments (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      rules_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
   ];
 
   for (const sql of migrations) {

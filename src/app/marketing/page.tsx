@@ -21,6 +21,8 @@ import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
 import { MktAdvancedSettings } from "@/components/marketing/mkt-advanced-settings";
 import { MktContactsView } from "@/components/marketing/mkt-contacts-view";
 import { MktReengagement } from "@/components/marketing/mkt-reengagement";
+import { MktFunnel } from "@/components/marketing/mkt-funnel";
+import { MktSegmentsBuilder } from "@/components/marketing/mkt-segments-builder";
 import { MKT_THEME_VARS, MKT_PRESETS, getMktThemeVars } from "@/components/marketing/mkt-utils";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -31,6 +33,8 @@ const SECTION_LABELS: Record<MktSection, string> = {
   campaigns: "Campañas",
   contacts: "Contactos",
   reengagement: "Re-engagement Queue",
+  funnel: "Funnel Dashboard",
+  "segments-builder": "Smart Segments",
   segments: "Segment Health",
   "segment-health": "Segment Health",
   attribution: "Atribución",
@@ -735,6 +739,8 @@ function MarketingContent() {
       case "campaigns": return <MktCampaignWall />;
       case "contacts": return <MktContactsView />;
       case "reengagement": return <MktReengagement />;
+      case "funnel": return <MktFunnel />;
+      case "segments-builder": return <MktSegmentsBuilder />;
       case "segments":
       case "segment-health": return <MktSegmentHealth />;
       case "attribution": return <MktAttributionDashboard />;

@@ -76,6 +76,11 @@ export const deals = sqliteTable("deals", {
   competitor: text("competitor"),
   isRecurring: integer("is_recurring", { mode: "boolean" }).notNull().default(false),
   recurringInterval: text("recurring_interval"),
+  paymentLinkUrl: text("payment_link_url"),
+  paymentStatus: text("payment_status"),
+  paymentProvider: text("payment_provider"),
+  paymentReference: text("payment_reference"),
+  paidAt: integer("paid_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -329,4 +334,13 @@ export const sequenceEnrollments = sqliteTable("sequence_enrollments", {
   status: text("status").notNull().default("active"),
   startedAt: integer("started_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   completedAt: integer("completed_at", { mode: "timestamp" }),
+});
+
+export const mktSegments = sqliteTable("mkt_segments", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  description: text("description"),
+  rulesJson: text("rules_json").notNull().default("{}"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
