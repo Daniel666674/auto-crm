@@ -151,8 +151,8 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
         toast.error(data.error || "Error al devolver a marketing");
         return;
       }
-      setReturnedToMkt(true);
       toast.success("Contacto devuelto al pipeline de marketing");
+      router.push("/contacts");
     } catch {
       toast.error("Error al devolver a marketing");
     } finally {
@@ -935,9 +935,7 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
                       toast.error(data.error || "Error al enviar");
                     } else {
                       toast.success("Contacto enviado a marketing");
-                      setSendToMktOpen(false);
-                      setSendToMktReason("");
-                      router.refresh();
+                      router.push("/contacts");
                     }
                   } catch { toast.error("Error al enviar"); }
                   finally { setSendToMktSubmitting(false); }

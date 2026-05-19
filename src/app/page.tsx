@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { contacts, deals, activities, pipelineStages } from "@/db/schema";
-import { eq, asc, desc, isNull } from "drizzle-orm";
+import { eq, asc, desc, isNull, and } from "drizzle-orm";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { PipelineChart } from "@/components/dashboard/PipelineChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   if (session?.user?.role === "marketing") redirect("/marketing");
 
   // ── Core data ──────────────────────────────────────────────────────────────
-  const allContacts = db.select().from(contacts).all();
+  const allContacts = db.select().from(contacts).where(isNull(contacts.returnedToMarketingAt)).all();
   const allDeals = db.select().from(deals).all();
   const stages = db.select().from(pipelineStages).orderBy(asc(pipelineStages.order)).all();
   const allActivities = db
@@ -173,7 +173,7 @@ export default async function DashboardPage() {
   const hotLeadsList = db
     .select({ id: contacts.id, name: contacts.name, company: contacts.company, score: contacts.score })
     .from(contacts)
-    .where(eq(contacts.temperature, "hot"))
+    .where(and(eq(contacts.temperature, "hot"), isNull(contacts.returnedToMarketingAt)))
     .limit(5)
     .all();
 

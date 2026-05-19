@@ -1342,8 +1342,9 @@ function TabCliente() {
       try {
         const res = await fetch(`/api/contacts?search=${encodeURIComponent(v)}`);
         if (res.ok) {
-          const data = await res.json() as { contacts?: { id: string; name: string; company?: string }[]; data?: { id: string; name: string; company?: string }[] };
-          setSearchResults((data.contacts || data.data || []).slice(0, 6));
+          const data = await res.json();
+          const list: { id: string; name: string; company?: string }[] = Array.isArray(data) ? data : (data.contacts || data.data || []);
+          setSearchResults(list.slice(0, 6));
         }
       } catch { /* ignore */ }
     }, 300);
