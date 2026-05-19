@@ -34,7 +34,15 @@ export interface PortalConfig {
   widgets: string[];
   branding: { companyName?: string; logoUrl?: string; primaryColor?: string };
   reportCadence: "weekly" | "monthly" | "quarterly";
-  kpiTargets?: { revenue?: number; deals?: number; winRate?: number };
+  kpiTargets?: {
+    revenue?: number;
+    deals?: number;
+    winRate?: number;
+    // New per-portal targets (used by the editor + portal page)
+    monthlyRevenueTarget?: number;   // cents
+    monthlyLeadsTarget?: number;     // count of new contacts/leads
+    pipelineCoverageTarget?: number; // multiplier (e.g. 3)
+  };
 }
 
 export const DEFAULT_PORTAL_CONFIG: PortalConfig = {

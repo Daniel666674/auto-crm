@@ -1320,8 +1320,12 @@ function TabCliente() {
   const [clientCompany, setClientCompany] = useState("");
   const [config, setConfig] = useState<PortalConfig>({ ...DEFAULT_PORTAL_CONFIG, widgets: [...DEFAULT_PORTAL_CONFIG.widgets] });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingToken, setEditingToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -1341,12 +1345,16 @@ function TabCliente() {
     searchTimeout.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/contacts?search=${encodeURIComponent(v)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const list: { id: string; name: string; company?: string }[] = Array.isArray(data) ? data : (data.contacts || data.data || []);
-          setSearchResults(list.slice(0, 6));
+        if (!res.ok) {
+          console.warn("[TabCliente] contact search failed", res.status);
+          return;
         }
-      } catch { /* ignore */ }
+        const data = await res.json();
+        const list: { id: string; name: string; company?: string }[] = Array.isArray(data) ? data : (data.contacts || data.data || []);
+        setSearchResults(list.slice(0, 6));
+      } catch (err) {
+        console.warn("[TabCliente] contact search error", err);
+      }
     }, 300);
   };
 
@@ -1358,9 +1366,18 @@ function TabCliente() {
     setClientCompany("");
     setConfig({ ...DEFAULT_PORTAL_CONFIG, widgets: [...DEFAULT_PORTAL_CONFIG.widgets] });
     setEditingId(null);
+    setEditingToken(null);
   };
 
   const handleSave = async () => {
+    if (!editingId && !selectedContact) {
+      toast.error("Selecciona un contacto antes de guardar");
+      return;
+    }
+    if (config.widgets.length === 0) {
+      toast.error("Selecciona al menos un widget para el dashboard");
+      return;
+    }
     setSaving(true);
     try {
       if (editingId) {
@@ -1374,29 +1391,41 @@ function TabCliente() {
           }),
         });
         if (res.ok) {
+          const savedId = editingId;
           toast.success("Portal actualizado");
           resetForm();
           await load();
+          // Highlight the just-saved row and scroll list into view
+          setHighlightId(savedId);
+          setTimeout(() => {
+            listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 50);
+          setTimeout(() => setHighlightId(null), 2600);
         } else {
           const data = await res.json() as { error?: string };
           toast.error(data.error || "Error al actualizar portal");
         }
       } else {
-        if (!selectedContact) { toast.error("Selecciona un contacto"); setSaving(false); return; }
         const res = await fetch("/api/portals", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contactId: selectedContact.id,
+            contactId: selectedContact!.id,
             title: portalTitle || "Portal del Cliente",
             configJson: JSON.stringify(config),
             clientCompany: clientCompany || null,
           }),
         });
         if (res.ok) {
+          const created = await res.json() as { id?: string };
           toast.success("Portal creado");
           resetForm();
           await load();
+          if (created?.id) setHighlightId(created.id);
+          setTimeout(() => {
+            listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 50);
+          setTimeout(() => setHighlightId(null), 2600);
         } else {
           const data = await res.json() as { error?: string };
           toast.error(data.error || "Error al crear portal");
@@ -1408,6 +1437,7 @@ function TabCliente() {
 
   const handleEdit = (p: PortalRow) => {
     setEditingId(p.id);
+    setEditingToken(p.token);
     setSelectedContact({ id: p.contactId, name: p.contactName || "Contacto", company: p.contactCompany });
     setSearch(p.contactName || "");
     setPortalTitle(p.title);
@@ -1426,6 +1456,30 @@ function TabCliente() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handlePreview = () => {
+    if (!editingId || !editingToken) {
+      toast.info("Guarda el portal primero para previsualizarlo");
+      return;
+    }
+    window.open(`/portal/${editingToken}`, "_blank", "noopener,noreferrer");
+  };
+
+  const resetWidgetsToDefaults = () => {
+    setConfig(prev => ({
+      ...prev,
+      widgets: [...DEFAULT_PORTAL_CONFIG.widgets],
+    }));
+    toast.success("Widgets restablecidos");
+  };
+
+  // KPI target helpers: store cents internally; surface MXN to the user.
+  const setKpiTarget = (key: "monthlyRevenueTarget" | "monthlyLeadsTarget" | "pipelineCoverageTarget", value: number | undefined) => {
+    setConfig(prev => ({
+      ...prev,
+      kpiTargets: { ...(prev.kpiTargets || {}), [key]: value },
+    }));
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este portal?")) return;
     try {
@@ -1440,9 +1494,13 @@ function TabCliente() {
     } catch { toast.error("Error de red"); }
   };
 
-  const copyLink = (token: string) => {
+  const copyLink = (token: string, rowId: string) => {
     const url = `${window.location.origin}/portal/${token}`;
-    navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado"));
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(rowId);
+      toast.success("Enlace copiado");
+      setTimeout(() => setCopiedId(prev => (prev === rowId ? null : prev)), 1800);
+    });
   };
 
   const toggleWidget = (id: string) => {
@@ -1548,6 +1606,11 @@ function TabCliente() {
               value={portalTitle}
               onChange={e => setPortalTitle(e.target.value)}
             />
+            {!portalTitle.trim() && (
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
+                Si lo dejas vacío usaremos &quot;Portal del Cliente&quot;.
+              </div>
+            )}
           </div>
           <div>
             <span style={S.label}>Empresa del cliente</span>
@@ -1565,7 +1628,26 @@ function TabCliente() {
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
         {/* LEFT: widget toggles */}
         <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Módulos del dashboard</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Módulos del dashboard</div>
+            <button
+              type="button"
+              onClick={resetWidgetsToDefaults}
+              style={{ ...S.btn("ghost"), padding: "4px 10px", fontSize: 11 }}
+              title="Restablecer widgets a los valores por defecto"
+            >
+              <RefreshCw size={11} /> Restablecer
+            </button>
+          </div>
+          {config.widgets.length === 0 && (
+            <div style={{
+              fontSize: 11, color: "#f59e0b",
+              background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
+              padding: "8px 10px", borderRadius: 8, marginBottom: 12,
+            }}>
+              Selecciona al menos un widget para que el portal del cliente muestre contenido.
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Ventas</div>
@@ -1597,6 +1679,77 @@ function TabCliente() {
                   {c === "weekly" ? "Semanal" : c === "monthly" ? "Mensual" : "Trimestral"}
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* KPI Targets */}
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <Target size={12} style={{ color: "#C39A4C" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>Metas del portal</span>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
+              Opcionales. Se muestran junto a los KPIs del cliente.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              <div>
+                <span style={S.label}>Revenue mensual (MXN)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  placeholder="500000"
+                  style={S.input}
+                  value={
+                    config.kpiTargets?.monthlyRevenueTarget !== undefined
+                      ? Math.round((config.kpiTargets.monthlyRevenueTarget) / 100)
+                      : ""
+                  }
+                  onChange={e => {
+                    const v = e.target.value.trim();
+                    if (v === "") return setKpiTarget("monthlyRevenueTarget", undefined);
+                    const n = Number(v);
+                    if (!Number.isFinite(n) || n < 0) return;
+                    setKpiTarget("monthlyRevenueTarget", Math.round(n * 100));
+                  }}
+                />
+              </div>
+              <div>
+                <span style={S.label}>Leads / mes</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="25"
+                  style={S.input}
+                  value={config.kpiTargets?.monthlyLeadsTarget ?? ""}
+                  onChange={e => {
+                    const v = e.target.value.trim();
+                    if (v === "") return setKpiTarget("monthlyLeadsTarget", undefined);
+                    const n = Number(v);
+                    if (!Number.isFinite(n) || n < 0) return;
+                    setKpiTarget("monthlyLeadsTarget", Math.round(n));
+                  }}
+                />
+              </div>
+              <div>
+                <span style={S.label}>Cobertura pipeline (x)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  placeholder="3"
+                  style={S.input}
+                  value={config.kpiTargets?.pipelineCoverageTarget ?? ""}
+                  onChange={e => {
+                    const v = e.target.value.trim();
+                    if (v === "") return setKpiTarget("pipelineCoverageTarget", undefined);
+                    const n = Number(v);
+                    if (!Number.isFinite(n) || n < 0) return;
+                    setKpiTarget("pipelineCoverageTarget", n);
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1636,7 +1789,7 @@ function TabCliente() {
       </div>
 
       {/* Save button */}
-      <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button
           style={S.btn("primary")}
           onClick={handleSave}
@@ -1644,6 +1797,15 @@ function TabCliente() {
         >
           {saving ? <RefreshCw size={13} className="animate-spin" /> : <Globe size={13} />}
           {saving ? (editingId ? "Guardando..." : "Creando...") : (editingId ? "Guardar cambios" : "Crear portal")}
+        </button>
+        <button
+          type="button"
+          style={S.btn("outline")}
+          onClick={handlePreview}
+          disabled={saving}
+          title={editingId ? "Abrir el portal en una pestaña nueva" : "Guarda el portal primero para previsualizarlo"}
+        >
+          <Eye size={13} /> Previsualizar
         </button>
         {editingId && (
           <button style={S.btn("outline")} onClick={resetForm} disabled={saving}>
@@ -1653,7 +1815,7 @@ function TabCliente() {
       </div>
 
       {/* List */}
-      <div style={S.card}>
+      <div ref={listRef} style={S.card}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Portales existentes</div>
         {loading ? (
           <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>Cargando...</div>
@@ -1661,30 +1823,59 @@ function TabCliente() {
           <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>No hay portales creados</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {portals.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(215,210,203,0.03)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                <Globe size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{p.title}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
-                    {p.clientCompany || p.contactCompany || p.contactName || "Contacto"}
-                    {p.contactName && (p.clientCompany || p.contactCompany) ? ` — ${p.contactName}` : ""}
+            {portals.map(p => {
+              const isHighlight = highlightId === p.id;
+              const isCopied = copiedId === p.id;
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "12px 14px",
+                    background: isHighlight ? "rgba(195,154,76,0.14)" : "rgba(215,210,203,0.03)",
+                    border: `1px solid ${isHighlight ? "rgba(195,154,76,0.55)" : "var(--border)"}`,
+                    borderRadius: 8,
+                    transition: "background 0.6s, border-color 0.6s",
+                    boxShadow: isHighlight ? "0 0 0 1px rgba(195,154,76,0.25)" : "none",
+                  }}
+                >
+                  <Globe size={14} style={{ color: isHighlight ? "#C39A4C" : "var(--muted-foreground)", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{p.title}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
+                      {p.clientCompany || p.contactCompany || p.contactName || "Contacto"}
+                      {p.contactName && (p.clientCompany || p.contactCompany) ? ` — ${p.contactName}` : ""}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      /portal/{p.token}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    /portal/{p.token}
-                  </div>
+                  <button onClick={() => handleEdit(p)} style={S.btn("outline")} title="Editar portal">
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => window.open(`/portal/${p.token}`, "_blank", "noopener,noreferrer")}
+                    style={S.btn("outline")}
+                    title="Abrir portal del cliente"
+                  >
+                    <Eye size={12} /> Ver
+                  </button>
+                  <button
+                    onClick={() => copyLink(p.token, p.id)}
+                    style={{
+                      ...S.btn("outline"),
+                      ...(isCopied ? { background: "rgba(34,197,94,0.12)", color: "#22c55e", borderColor: "rgba(34,197,94,0.35)" } : {}),
+                    }}
+                    title="Copiar enlace"
+                  >
+                    {isCopied ? <><CheckCircle size={12} /> Copiado</> : <><Link2 size={12} /> Copiar enlace</>}
+                  </button>
+                  <button onClick={() => handleDelete(p.id)} style={S.btn("danger")} title="Eliminar portal">
+                    <Trash2 size={12} />
+                  </button>
                 </div>
-                <button onClick={() => handleEdit(p)} style={S.btn("outline")} title="Editar portal">
-                  Editar
-                </button>
-                <button onClick={() => copyLink(p.token)} style={S.btn("outline")} title="Copiar enlace">
-                  <Link2 size={12} /> Copiar enlace
-                </button>
-                <button onClick={() => handleDelete(p.id)} style={S.btn("danger")} title="Eliminar portal">
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

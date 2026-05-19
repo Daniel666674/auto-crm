@@ -149,6 +149,10 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const config = parseConfig(portal.configJson);
   const enabled = new Set(config.widgets);
   const accent = config.branding?.primaryColor || "#D19C15";
+  const targets = config.kpiTargets || {};
+  const revenueTarget = targets.monthlyRevenueTarget;
+  const leadsTarget = targets.monthlyLeadsTarget;
+  const coverageTarget = targets.pipelineCoverageTarget;
 
   // 4. Get deals with stages
   const dealRows: DealRow[] = db
@@ -222,6 +226,15 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const wonValueMonth = wonMonth.reduce((s, d) => s + d.value, 0);
   const closedTotal = wonMonth.length + lostMonth.length;
   const winRate = closedTotal > 0 ? Math.round((wonMonth.length / closedTotal) * 100) : 0;
+
+  // Pipeline coverage = (open pipeline) / (revenue target)
+  const coverageRatio = revenueTarget && revenueTarget > 0 ? pipelineTotal / revenueTarget : null;
+  const coverageOk = coverageRatio !== null && coverageTarget !== undefined
+    ? coverageRatio >= coverageTarget
+    : null;
+  const revenueProgress = revenueTarget && revenueTarget > 0
+    ? Math.min(100, Math.round((wonValueMonth / revenueTarget) * 100))
+    : null;
 
   // Funnel
   const funnelData = allStages.map((stage) => {
@@ -303,14 +316,30 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
               <div style={{ fontSize: 26, fontWeight: 700, color: "#D7D2CB" }}>
                 {formatCurrency(pipelineTotal)}
               </div>
-              <div style={{ fontSize: 11, color: "#7a756e", marginTop: 4 }}>valor total de oportunidades</div>
+              {coverageRatio !== null && coverageTarget !== undefined ? (
+                <div style={{ fontSize: 11, color: coverageOk ? "#22c55e" : "#f59e0b", marginTop: 4 }}>
+                  Cobertura {coverageRatio.toFixed(1)}x · meta {coverageTarget}x
+                </div>
+              ) : revenueTarget !== undefined ? (
+                <div style={{ fontSize: 11, color: "#7a756e", marginTop: 4 }}>
+                  Meta revenue: {formatCurrency(revenueTarget)}
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: "#7a756e", marginTop: 4 }}>valor total de oportunidades</div>
+              )}
             </div>
             <div style={{ ...CARD_STYLE, padding: "18px 20px" }}>
               <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#7a756e", marginBottom: 8 }}>
                 Deals Activos
               </div>
               <div style={{ fontSize: 26, fontWeight: 700, color: "#D7D2CB" }}>{activeDeals}</div>
-              <div style={{ fontSize: 11, color: "#7a756e", marginTop: 4 }}>oportunidades en proceso</div>
+              {leadsTarget !== undefined ? (
+                <div style={{ fontSize: 11, color: "#7a756e", marginTop: 4 }}>
+                  Meta leads/mes: {leadsTarget}
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: "#7a756e", marginTop: 4 }}>oportunidades en proceso</div>
+              )}
             </div>
             <div style={{ ...CARD_STYLE, padding: "18px 20px" }}>
               <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#7a756e", marginBottom: 8 }}>

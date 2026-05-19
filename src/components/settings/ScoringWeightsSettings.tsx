@@ -1,8 +1,171 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, Save, RotateCcw } from "lucide-react";
+import { RefreshCw, Save, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+
+interface CategoryWeight {
+  wins: number;
+  losses: number;
+  score: number;
+}
+
+interface LearnedWeights {
+  computedAt: string | null;
+  wonDealsCount: number;
+  lostDealsCount: number;
+  campaignWeights: Record<string, CategoryWeight>;
+  industryWeights: Record<string, CategoryWeight>;
+  sourceWeights: Record<string, CategoryWeight>;
+}
+
+function topEntries(map: Record<string, CategoryWeight>, n: number): Array<{ key: string } & CategoryWeight> {
+  return Object.entries(map)
+    .map(([key, v]) => ({ key, ...v }))
+    .sort((a, b) => b.score - a.score || (b.wins + b.losses) - (a.wins + a.losses))
+    .slice(0, n);
+}
+
+function AutoLearningCard({ canEdit }: { canEdit: boolean }) {
+  const [data, setData] = useState<LearnedWeights | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/scoring/loop");
+      if (!res.ok) throw new Error();
+      setData(await res.json());
+    } catch {
+      // fall through; component shows empty state
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleRecalc = async () => {
+    setRunning(true);
+    try {
+      const res = await fetch("/api/scoring/loop", { method: "POST" });
+      if (!res.ok) throw new Error();
+      const fresh = await res.json();
+      setData(fresh);
+      toast.success(`Aprendizaje recalculado: ${fresh.wonDealsCount} wins, ${fresh.lostDealsCount} losses`);
+    } catch {
+      toast.error("Error al recalcular");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const card: React.CSSProperties = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: 24 };
+  const btn: React.CSSProperties = {
+    padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: canEdit && !running ? "pointer" : "not-allowed",
+    border: "1px solid var(--border)", display: "inline-flex", alignItems: "center", gap: 6,
+    background: "var(--primary)", color: "var(--primary-foreground)", opacity: canEdit ? (running ? 0.6 : 1) : 0.5,
+  };
+
+  const lastUpdate = data?.computedAt
+    ? new Date(data.computedAt).toLocaleString("es-CO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "Nunca";
+
+  const topIndustries = data ? topEntries(data.industryWeights, 5) : [];
+  const topCampaigns = data ? topEntries(data.campaignWeights, 5) : [];
+
+  const tableHeader: React.CSSProperties = { fontSize: 10, color: "var(--muted-foreground)", textAlign: "left", padding: "6px 8px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" };
+  const tableCell: React.CSSProperties = { fontSize: 12, padding: "8px", borderTop: "1px solid var(--border)" };
+
+  return (
+    <div style={{ ...card, background: "rgba(195,154,76,0.04)", borderColor: "rgba(195,154,76,0.2)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Sparkles size={18} style={{ color: "#C39A4C" }} />
+          <div>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>Auto-Aprendizaje</h4>
+            <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "2px 0 0" }}>
+              Pesos derivados de los deals cerrados (últimos 180 días)
+            </p>
+          </div>
+        </div>
+        <button onClick={handleRecalc} disabled={!canEdit || running || loading} style={btn}>
+          <RefreshCw size={12} style={running ? { animation: "spin 1s linear infinite" } : undefined} />
+          {running ? "Calculando…" : "Recalcular ahora"}
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16, fontSize: 11, color: "var(--muted-foreground)" }}>
+        <div><strong style={{ color: "var(--foreground)" }}>Última actualización:</strong> {lastUpdate}</div>
+        <div><strong style={{ color: "#22c55e" }}>{data?.wonDealsCount ?? 0}</strong> wins</div>
+        <div><strong style={{ color: "#ef4444" }}>{data?.lostDealsCount ?? 0}</strong> losses</div>
+      </div>
+
+      {loading ? (
+        <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Cargando…</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              Top industrias
+            </div>
+            {topIndustries.length === 0 ? (
+              <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Sin datos aún</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={tableHeader}>Industria</th>
+                    <th style={{ ...tableHeader, textAlign: "right" }}>W/L</th>
+                    <th style={{ ...tableHeader, textAlign: "right" }}>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topIndustries.map(r => (
+                    <tr key={r.key}>
+                      <td style={tableCell}>{r.key}</td>
+                      <td style={{ ...tableCell, textAlign: "right", color: "var(--muted-foreground)" }}>{r.wins}/{r.losses}</td>
+                      <td style={{ ...tableCell, textAlign: "right", fontWeight: 700, color: r.score >= 60 ? "#22c55e" : r.score >= 30 ? "#D19C15" : "#ef4444" }}>{r.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              Top campañas
+            </div>
+            {topCampaigns.length === 0 ? (
+              <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Sin datos aún</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={tableHeader}>Campaign ID</th>
+                    <th style={{ ...tableHeader, textAlign: "right" }}>W/L</th>
+                    <th style={{ ...tableHeader, textAlign: "right" }}>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topCampaigns.map(r => (
+                    <tr key={r.key}>
+                      <td style={{ ...tableCell, fontFamily: "monospace", fontSize: 11 }}>{r.key.slice(0, 16)}{r.key.length > 16 ? "…" : ""}</td>
+                      <td style={{ ...tableCell, textAlign: "right", color: "var(--muted-foreground)" }}>{r.wins}/{r.losses}</td>
+                      <td style={{ ...tableCell, textAlign: "right", fontWeight: 700, color: r.score >= 60 ? "#22c55e" : r.score >= 30 ? "#D19C15" : "#ef4444" }}>{r.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const S = {
   card: { background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: 24 } as React.CSSProperties,
