@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { pipelineStages, deals, contacts, activities } from "@/db/schema";
-import { eq, asc, isNotNull, sql } from "drizzle-orm";
+import { eq, asc, isNotNull, isNull, sql } from "drizzle-orm";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import type { PipelineColumn } from "@/types";
 
@@ -30,6 +30,7 @@ export default function PipelinePage() {
     })
     .from(deals)
     .leftJoin(contacts, eq(deals.contactId, contacts.id))
+    .where(isNull(contacts.returnedToMarketingAt))
     .all();
 
   // Last activity per deal — must be before columns map
@@ -73,6 +74,7 @@ export default function PipelinePage() {
   const contactOptions = db
     .select({ id: contacts.id, name: contacts.name, company: contacts.company })
     .from(contacts)
+    .where(isNull(contacts.returnedToMarketingAt))
     .orderBy(asc(contacts.name))
     .all();
 
