@@ -76,7 +76,9 @@ export const MKT_INDUSTRIES = [
 export const MKT_CHANNELS = [
   { id: "brevo_email", label: "Brevo Email" },
   { id: "linkedin", label: "LinkedIn Ads" },
-  { id: "meta", label: "Meta (Facebook/Instagram)" },
+  { id: "facebook", label: "Facebook Ads" },
+  { id: "instagram", label: "Instagram Ads" },
+  { id: "meta", label: "Meta (FB+IG combo)" },
   { id: "google_ads", label: "Google Ads" },
   { id: "outbound", label: "Outbound Sequence (Brevo)" },
 ] as const;

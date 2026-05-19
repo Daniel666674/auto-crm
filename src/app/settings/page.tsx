@@ -213,6 +213,71 @@ const FONTS = [
   { id: "mono", label: "JetBrains Mono", preview: "Aa" },
 ];
 
+// Blackscale brandbook palette — appearance options are LOCKED to these values.
+// Do not add arbitrary hex colors here without brand approval.
+const BS_BRAND = {
+  goldPrimary:   "#C39A4C", // Primary accent
+  goldDeep:      "#A07A2E", // Deeper gold for hover/secondary accent
+  burgundy:      "#6D1F2E", // Brandbook secondary
+  ivory:         "#D7D2CB", // Brandbook text on dark
+  charcoal:      "#0a0a09", // Brandbook black
+  slate:         "#1a1a17", // Brandbook surface
+  light:         "#fafafa", // Light-mode bg
+  ink:           "#0f172a", // Light-mode text
+};
+
+const BS_ACCENT_SWATCHES: { id: string; hex: string; label: string }[] = [
+  { id: "gold",     hex: BS_BRAND.goldPrimary, label: "Oro" },
+  { id: "goldDeep", hex: BS_BRAND.goldDeep,    label: "Oro profundo" },
+  { id: "burgundy", hex: BS_BRAND.burgundy,    label: "Burdeos" },
+];
+
+const BS_SIDEBAR_SWATCHES: { id: string; hex: string; label: string }[] = [
+  { id: "charcoal", hex: BS_BRAND.charcoal, label: "Carbón" },
+  { id: "slate",    hex: BS_BRAND.slate,    label: "Pizarra" },
+  { id: "burgundy", hex: BS_BRAND.burgundy, label: "Burdeos" },
+];
+
+const BS_TEXT_SWATCHES: { id: string; hex: string; label: string }[] = [
+  { id: "ivory", hex: BS_BRAND.ivory, label: "Marfil" },
+  { id: "ink",   hex: BS_BRAND.ink,   label: "Tinta" },
+];
+
+function BrandSwatchPicker({
+  value, onChange, swatches,
+}: {
+  value: string;
+  onChange: (hex: string) => void;
+  swatches: { id: string; hex: string; label: string }[];
+}) {
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {swatches.map(sw => {
+        const active = value.toLowerCase() === sw.hex.toLowerCase();
+        return (
+          <button
+            key={sw.id}
+            type="button"
+            onClick={() => onChange(sw.hex)}
+            title={`${sw.label} — ${sw.hex}`}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 10px 6px 6px", borderRadius: 8, cursor: "pointer",
+              border: `1.5px solid ${active ? "#C39A4C" : "var(--border)"}`,
+              background: active ? "rgba(195,154,76,0.08)" : "transparent",
+              fontSize: 11, color: "var(--foreground)",
+              transition: "all 0.12s",
+            }}
+          >
+            <span style={{ width: 22, height: 22, borderRadius: 5, background: sw.hex, border: "1px solid rgba(255,255,255,0.08)" }} />
+            <span style={{ fontWeight: active ? 600 : 400 }}>{sw.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 
 function TabApariencia() {
   const DEFAULTS: UserPrefs = {
@@ -301,24 +366,18 @@ function TabApariencia() {
           </div>
 
           {prefs.theme === "custom" && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+                Los colores están bloqueados al brandbook de Blackscale. Solo se permiten los tonos oficiales.
+              </div>
               <Field label="Accent primario">
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="color" value={prefs.accentPrimary} onChange={e => set("accentPrimary", e.target.value)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
-                  <input style={{ ...S.input, flex: 1 }} value={prefs.accentPrimary} onChange={e => set("accentPrimary", e.target.value)} />
-                </div>
+                <BrandSwatchPicker value={prefs.accentPrimary} onChange={v => set("accentPrimary", v)} swatches={BS_ACCENT_SWATCHES} />
               </Field>
               <Field label="Accent secundario">
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="color" value={prefs.accentSecondary} onChange={e => set("accentSecondary", e.target.value)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
-                  <input style={{ ...S.input, flex: 1 }} value={prefs.accentSecondary} onChange={e => set("accentSecondary", e.target.value)} />
-                </div>
+                <BrandSwatchPicker value={prefs.accentSecondary} onChange={v => set("accentSecondary", v)} swatches={BS_ACCENT_SWATCHES} />
               </Field>
               <Field label="Color de texto">
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="color" value={prefs.textColor} onChange={e => set("textColor", e.target.value)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
-                  <input style={{ ...S.input, flex: 1 }} value={prefs.textColor} onChange={e => set("textColor", e.target.value)} />
-                </div>
+                <BrandSwatchPicker value={prefs.textColor} onChange={v => set("textColor", v)} swatches={BS_TEXT_SWATCHES} />
               </Field>
             </div>
           )}
@@ -350,16 +409,18 @@ function TabApariencia() {
           />
           <div style={{ marginTop: 12 }}>
             {prefs.sidebarBgType === "solid" && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="color" value={prefs.sidebarBg} onChange={e => set("sidebarBg", e.target.value)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer", borderRadius: 6 }} />
-                <input style={S.input} value={prefs.sidebarBg} onChange={e => set("sidebarBg", e.target.value)} />
-              </div>
+              <BrandSwatchPicker value={prefs.sidebarBg} onChange={v => set("sidebarBg", v)} swatches={BS_SIDEBAR_SWATCHES} />
             )}
             {prefs.sidebarBgType === "gradient" && (
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <input type="color" value={prefs.sidebarBg} onChange={e => set("sidebarBg", e.target.value)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer" }} />
-                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>→</span>
-                <input type="color" value={prefs.accentSecondary} onChange={e => set("accentSecondary", e.target.value)} style={{ width: 36, height: 36, border: "none", background: "none", cursor: "pointer" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 4 }}>Color base</div>
+                  <BrandSwatchPicker value={prefs.sidebarBg} onChange={v => set("sidebarBg", v)} swatches={BS_SIDEBAR_SWATCHES} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 4 }}>Color secundario</div>
+                  <BrandSwatchPicker value={prefs.accentSecondary} onChange={v => set("accentSecondary", v)} swatches={BS_ACCENT_SWATCHES} />
+                </div>
               </div>
             )}
             {prefs.sidebarBgType === "image" && (

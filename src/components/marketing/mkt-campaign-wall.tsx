@@ -36,8 +36,11 @@ function ChannelBadge({ channel }: { channel: string }) {
   const labels: Record<string, { label: string; color: string }> = {
     brevo_email: { label: "Brevo Email", color: "#3b82f6" },
     linkedin: { label: "LinkedIn", color: "#0a66c2" },
+    facebook: { label: "Facebook", color: "#1877f2" },
+    instagram: { label: "Instagram", color: "#e1306c" },
     meta: { label: "Meta", color: "#1877f2" },
     google_ads: { label: "Google Ads", color: "#ea4335" },
+    google: { label: "Google", color: "#ea4335" },
     outbound: { label: "Outbound", color: "#8b5cf6" },
   };
   const c = labels[channel] ?? { label: channel, color: "#64748b" };
@@ -359,7 +362,9 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
                 value={form.totalContacts} onChange={e => setForm({ ...form, totalContacts: Number(e.target.value) })} />
               <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginTop: 6 }}>
                 {form.channel === "linkedin" && "Configura esta campaña en LinkedIn Campaign Manager."}
-                {form.channel === "meta" && "Configura esta campaña en Meta Business Manager."}
+                {form.channel === "meta" && "Configura esta campaña en Meta Business Manager (FB + IG)."}
+                {form.channel === "facebook" && "Configura esta campaña en Meta Business Manager (Facebook)."}
+                {form.channel === "instagram" && "Configura esta campaña en Meta Business Manager (Instagram)."}
                 {form.channel === "google_ads" && "Configura esta campaña en Google Ads."}
               </p>
             </div>
@@ -453,6 +458,16 @@ interface BrevoCampaign {
   };
 }
 
+// Platform filter options — maps user-facing labels to channel ids
+const PLATFORM_FILTERS: { id: string; label: string; matches: (channel: string) => boolean }[] = [
+  { id: "all",       label: "Todas",     matches: () => true },
+  { id: "facebook",  label: "Facebook",  matches: c => c === "meta" || c === "facebook" },
+  { id: "instagram", label: "Instagram", matches: c => c === "meta" || c === "instagram" },
+  { id: "linkedin",  label: "LinkedIn",  matches: c => c === "linkedin" },
+  { id: "google",    label: "Google",    matches: c => c === "google_ads" || c === "google" },
+  { id: "brevo",     label: "Email",     matches: c => c === "brevo_email" || c === "outbound" },
+];
+
 export function MktCampaignWall() {
   const { campaigns } = useMkt();
   const [showForm, setShowForm] = useState(false);
@@ -460,6 +475,7 @@ export function MktCampaignWall() {
   const [brevoLive, setBrevoLive] = useState<BrevoCampaign[]>([]);
   const [brevoLoading, setBrevoLoading] = useState(true);
   const [brevoError, setBrevoError] = useState("");
+  const [platformFilter, setPlatformFilter] = useState<string>("all");
 
   const loadCampaigns = useCallback(async () => {
     setBrevoLoading(true);
@@ -495,7 +511,7 @@ export function MktCampaignWall() {
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
 
   // Build display list: Brevo live campaigns take priority, fall back to local DB
-  const displayCampaigns: MktCampaign[] = brevoLive.length > 0
+  const baseCampaigns: MktCampaign[] = brevoLive.length > 0
     ? brevoLive.map(b => {
         const stats = (b.statistics as any) ?? {};
         const csList: any[] = Array.isArray(stats.campaignStats) ? stats.campaignStats : [];
@@ -526,6 +542,19 @@ export function MktCampaignWall() {
         };
       })
     : campaigns;
+
+  const activeFilter = PLATFORM_FILTERS.find(f => f.id === platformFilter) ?? PLATFORM_FILTERS[0];
+  const displayCampaigns: MktCampaign[] = baseCampaigns.filter(c =>
+    activeFilter.matches((c.channel ?? "brevo_email").toLowerCase())
+  );
+
+  // Per-platform counts for the filter pills
+  const platformCounts: Record<string, number> = {};
+  for (const f of PLATFORM_FILTERS) {
+    platformCounts[f.id] = baseCampaigns.filter(c =>
+      f.matches((c.channel ?? "brevo_email").toLowerCase())
+    ).length;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -565,6 +594,39 @@ export function MktCampaignWall() {
         </div>
       </div>
 
+      {/* Platform filter pills */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: 4 }}>
+          Plataforma
+        </span>
+        {PLATFORM_FILTERS.map(f => {
+          const active = platformFilter === f.id;
+          const count = platformCounts[f.id] ?? 0;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setPlatformFilter(f.id)}
+              style={{
+                padding: "5px 11px", borderRadius: 999, cursor: "pointer",
+                border: `1px solid ${active ? "var(--mkt-accent)" : "var(--mkt-border)"}`,
+                background: active ? "rgba(209,156,21,0.10)" : "transparent",
+                color: active ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
+                fontSize: 11, fontWeight: active ? 600 : 500,
+                display: "inline-flex", alignItems: "center", gap: 6,
+                transition: "all 0.12s",
+              }}
+            >
+              {f.label}
+              <span style={{
+                fontSize: 10, padding: "1px 6px", borderRadius: 999,
+                background: active ? "rgba(209,156,21,0.20)" : "rgba(255,255,255,0.06)",
+                color: active ? "var(--mkt-accent)" : "var(--mkt-text-muted)",
+              }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {brevoError && (
         <div style={{
           padding: "10px 14px", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -585,7 +647,9 @@ export function MktCampaignWall() {
           background: "var(--mkt-surface)", borderRadius: 12,
           border: "1px solid var(--mkt-border)",
         }}>
-          No hay campañas registradas. Crea la primera con el botón de arriba.
+          {platformFilter === "all"
+            ? "No hay campañas registradas. Crea la primera con el botón de arriba."
+            : `No hay campañas en ${activeFilter.label}. Prueba con otra plataforma o crea una nueva.`}
         </div>
       )}
 
