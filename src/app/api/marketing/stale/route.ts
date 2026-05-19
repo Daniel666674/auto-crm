@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
-import { crmSettings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { crmSettings, contacts } from "@/db/schema";
+import { eq, isNull, and, lt, inArray } from "drizzle-orm";
 import { mktDb } from "@/db/mkt-db";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,33 @@ export async function GET() {
     ORDER BY last_activity ASC
   `).all(threshold) as StaleContact[];
 
+  // Stuck leads by lifecycle stage (main CRM contacts)
+  const stuckStages = ["lead", "MQL", "SQL"] as const;
+  const stuckCutoff = new Date(Date.now() - 14 * 86400000);
+
+  const stuckRows = db
+    .select({
+      lifecycleStage: contacts.lifecycleStage,
+    })
+    .from(contacts)
+    .where(
+      and(
+        inArray(contacts.lifecycleStage, [...stuckStages]),
+        isNull(contacts.returnedToMarketingAt),
+        lt(contacts.updatedAt, stuckCutoff)
+      )
+    )
+    .all();
+
+  const stuckByStage: Record<string, number> = { lead: 0, MQL: 0, SQL: 0 };
+  for (const row of stuckRows) {
+    const stage = row.lifecycleStage ?? "lead";
+    if (stage in stuckByStage) {
+      stuckByStage[stage]++;
+    }
+  }
+  const stuckTotal = stuckRows.length;
+
   return NextResponse.json({
     staleDays,
     contacts: rows.map((c) => ({
@@ -44,5 +71,7 @@ export async function GET() {
       lastActivity: c.last_activity,
       daysSinceActivity: Math.floor((Date.now() - c.last_activity) / 86400000),
     })),
+    stuckByStage,
+    stuckTotal,
   });
 }
