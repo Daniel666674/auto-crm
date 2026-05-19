@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { contacts, activities } from "@/db/schema";
-import { eq, and, isNull, isNotNull, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { MSHealthScore } from "@/components/dashboard/MSHealthScore";
 
 export const dynamic = "force-dynamic";

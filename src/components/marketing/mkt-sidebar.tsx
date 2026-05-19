@@ -168,8 +168,27 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
         ))}
       </nav>
 
-      {/* Settings */}
+      {/* Command Center shortcut */}
       <div style={{ padding: "8px 8px 0", borderTop: "1px solid var(--mkt-border)" }}>
+        <a
+          href="/ms-command"
+          style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+            width: "100%", borderRadius: 8, border: "1px solid var(--mkt-border)",
+            background: "transparent", color: "var(--mkt-text-muted)",
+            fontSize: 12, cursor: "pointer", textDecoration: "none",
+            transition: "color 0.15s", boxSizing: "border-box",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--mkt-accent)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--mkt-text-muted)"; }}
+        >
+          <SvgIcon path="M3 3v18h18M7 12l4-4 4 4 4-4" size={14} />
+          Command Center
+        </a>
+      </div>
+
+      {/* Settings */}
+      <div style={{ padding: "4px 8px 0", borderTop: "none" }}>
         <button
           onClick={() => onNavigate("settings")}
           style={{
