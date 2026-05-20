@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { BSLoading } from "../ui/BSLoading";
 
 interface ReengagementContact {
   id: string;
@@ -131,7 +132,7 @@ export function MktReengagement() {
 
       {/* Table */}
       {loading ? (
-        <div style={{ padding: "48px 0", textAlign: "center", fontSize: 13, color: "var(--mkt-text-muted)" }}>Cargando…</div>
+        <BSLoading label="Cargando contactos…" />
       ) : filtered.length === 0 ? (
         <div style={{ padding: "48px 0", textAlign: "center", fontSize: 13, color: "var(--mkt-text-muted)", borderRadius: 10, border: "1px dashed var(--mkt-border)" }}>
           {contacts.length === 0 ? "No hay contactos en la cola. ¡Todo en orden!" : "Sin resultados para el filtro seleccionado."}

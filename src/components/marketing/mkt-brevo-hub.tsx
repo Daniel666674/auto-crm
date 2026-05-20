@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { RefreshCw, Mail, Users, List, Send, Webhook, AtSign, Search, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { BSLoading } from "../ui/BSLoading";
 
 const GOLD = "#C39A4C";
 
@@ -98,7 +99,7 @@ export function MktBrevoHub() {
   }, [data, search]);
 
   if (loading) {
-    return <div style={{ padding: 32, textAlign: "center", color: "var(--mkt-text-muted)" }}>Cargando Brevo Hub…</div>;
+    return <BSLoading label="Cargando Brevo Hub…" />;
   }
   if (err) {
     return (

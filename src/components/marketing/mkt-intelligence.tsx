@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { BSLoading } from "../ui/BSLoading";
 
 const ACCENT = "var(--mkt-accent)";
 
@@ -137,7 +138,7 @@ export function MktIntelligence() {
   useEffect(() => { load(); }, [load]);
 
   if (loading || !data) {
-    return <div style={{ padding: 40, textAlign: "center", color: "var(--mkt-text-muted)", fontSize: 13 }}>Cargando…</div>;
+    return <BSLoading label="Cargando inteligencia…" />;
   }
 
   const s = data.summary;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { BSLoading } from "../ui/BSLoading";
 
 interface SegmentRules {
   temperature?: string[];
@@ -123,7 +124,7 @@ export function MktSegmentsBuilder() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "32px 0", textAlign: "center", color: "var(--mkt-text-muted)", fontSize: 13 }}>Cargando…</div>
+          <BSLoading label="Cargando segmentos…" />
         ) : segments.length === 0 ? (
           <div style={{ padding: "32px 0", textAlign: "center", color: "var(--mkt-text-muted)", fontSize: 13, borderRadius: 10, border: "1px dashed var(--mkt-border)" }}>
             Aún no hay segmentos. Crea uno con el panel de la derecha.

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/constants";
+import { BSLoading } from "../ui/BSLoading";
 
 interface Deal {
   id: string;
@@ -118,7 +119,7 @@ export function MktPipelineView() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>Cargando pipeline…</div>;
+  if (loading) return <BSLoading label="Cargando pipeline…" />;
   if (error) return <div style={{ fontSize: 13, color: "#ef4444" }}>{error}</div>;
 
   const activeStages = stages.filter(s => !s.isWon && !s.isLost);

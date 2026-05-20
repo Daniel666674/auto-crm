@@ -17,6 +17,7 @@ import { SlackSettings } from "@/components/settings/SlackSettings";
 import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { HandoffRulesSettings } from "@/components/settings/HandoffRulesSettings";
+import { BSLoading } from "@/components/ui/BSLoading";
 import { DigestScheduleSettings } from "@/components/settings/DigestScheduleSettings";
 import { ApiTokensSettings } from "@/components/settings/ApiTokensSettings";
 import { applyCrmTheme } from "@/lib/apply-theme";
@@ -324,7 +325,7 @@ function TabApariencia() {
     toast.success("Defaults restaurados");
   };
 
-  if (!loaded) return <div style={{ padding: 40, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>Cargando…</div>;
+  if (!loaded) return <BSLoading label="Cargando…" />;
 
   const ToggleGroup = ({ options, value, onChange }: { options: { id: string; label: string }[]; value: string; onChange: (v: string) => void }) => (
     <div style={{ display: "flex", gap: 6 }}>
@@ -670,7 +671,7 @@ function TabUsuarios({ currentUserId }: { currentUserId: string }) {
           ))}
         </div>
         {loading ? (
-          <div style={{ padding: 32, textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>Cargando…</div>
+          <BSLoading label="Cargando usuarios…" />
         ) : userList.map((u, i) => {
           const isMe = u.id === currentUserId;
           const isActive = !u.role.startsWith("inactive:");
@@ -1819,7 +1820,7 @@ function TabCliente() {
       <div ref={listRef} style={S.card}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Portales existentes</div>
         {loading ? (
-          <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>Cargando...</div>
+          <BSLoading label="Cargando portales…" />
         ) : portals.length === 0 ? (
           <div style={{ textAlign: "center", padding: 24, color: "var(--muted-foreground)", fontSize: 13 }}>No hay portales creados</div>
         ) : (

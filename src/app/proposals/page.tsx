@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BSLoading } from "@/components/ui/BSLoading";
 
 const GOLD = "#D19C15";
 const GOLD_TEXT = "#0a0a09";
@@ -108,7 +109,7 @@ export default function ProposalsPage() {
         </button>
       </div>
 
-      {loading && <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>Cargando…</div>}
+      {loading && <BSLoading label="Cargando propuestas…" />}
 
       {showNew && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.55)" }}

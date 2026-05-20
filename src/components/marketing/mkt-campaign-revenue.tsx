@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/constants";
+import { BSLoading } from "../ui/BSLoading";
 
 interface CampaignRevenue {
   campaignId: string;
@@ -137,7 +138,7 @@ export function MktCampaignRevenue() {
 
       {/* Table */}
       {loading ? (
-        <div style={{ fontSize: 13, color: "#718096" }}>Cargando…</div>
+        <BSLoading label="Cargando revenue…" />
       ) : error ? (
         <div style={{ ...card, textAlign: "center", padding: "40px 0", color: "#718096", fontSize: 13 }}>No se pudo cargar el revenue por campaña.</div>
       ) : data.length === 0 ? (

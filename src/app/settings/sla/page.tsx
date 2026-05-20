@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { BSLoading } from "@/components/ui/BSLoading";
 
 interface SLAConfig {
   version: number;
@@ -87,9 +88,7 @@ export default function SLAPage() {
     outline: "none", boxSizing: "border-box",
   };
 
-  if (!sla) return (
-    <div style={{ padding: 32, color: "var(--muted-foreground)" }}>Cargando SLA…</div>
-  );
+  if (!sla) return <BSLoading label="Cargando SLA…" />;
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: 32 }}>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Trash2, Edit2, Users, Play, Pause, Check, X, ChevronRight } from "lucide-react";
+import { BSLoading } from "@/components/ui/BSLoading";
 import { toast } from "sonner";
 import type { Contact } from "@/types";
 
@@ -283,7 +284,7 @@ export default function SequencesPage() {
             Secuencias ({sequences.length})
           </div>
           {loading ? (
-            <div style={{ padding: 24, fontSize: 13, color: "var(--muted-foreground)" }}>Cargando...</div>
+            <BSLoading label="Cargando secuencias…" />
           ) : sequences.length === 0 ? (
             <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>Sin secuencias. Crea la primera.</div>
           ) : sequences.map(seq => {

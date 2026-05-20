@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Zap, Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Globe, Bell } from "lucide-react";
+import { BSLoading } from "../ui/BSLoading";
 
 interface Action {
   type: "send_webhook" | "notify_slack" | "log";
@@ -278,7 +279,7 @@ export function WorkflowTriggers({ role }: { role: string }) {
         </div>
       )}
 
-      {loading && <div className="text-center py-8 text-zinc-500 text-sm">Cargando…</div>}
+      {loading && <BSLoading label="Cargando workflows…" />}
 
       {!loading && workflows.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-10 text-zinc-600">

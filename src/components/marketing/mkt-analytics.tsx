@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
+import { BSLoading } from "@/components/ui/BSLoading";
 import { GA4Detail } from "@/components/analytics/ga4-detail";
 import { GSCPanel } from "@/components/analytics/gsc-panel";
 
@@ -117,7 +118,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
             <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Conectado</span>
           </div>
           {brevoLoading ? (
-            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Cargando…</div>
+            <BSLoading size="sm" minHeight={80} label="Cargando…" />
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -156,7 +157,7 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
           </div>
 
           {ga4Loading ? (
-            <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Cargando…</div>
+            <BSLoading size="sm" minHeight={80} label="Cargando…" />
           ) : ga4Connected && ga4 ? (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

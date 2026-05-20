@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { BSLoading } from "../ui/BSLoading";
 
 interface FunnelData {
   lifecycleCounts: Record<string, number>;
@@ -43,7 +44,7 @@ export function MktFunnel() {
   useEffect(() => { load(); }, [load]);
 
   if (loading || !data) {
-    return <div style={{ padding: "48px 0", textAlign: "center", color: "var(--mkt-text-muted)", fontSize: 13 }}>Cargando funnel…</div>;
+    return <BSLoading label="Cargando funnel…" />;
   }
 
   const maxLifecycle = Math.max(...Object.values(data.lifecycleCounts), 1);

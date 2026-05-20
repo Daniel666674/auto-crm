@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Play, RefreshCw, ToggleLeft, ToggleRight, ArrowRight } from "lucide-react";
 import type { HandoffRule, LifecycleStage } from "@/lib/handoff-rules-engine";
+import { BSLoading } from "../ui/BSLoading";
 
 const STAGES: { value: LifecycleStage; label: string }[] = [
   { value: "lead", label: "Lead" },
@@ -269,7 +270,7 @@ export function HandoffRulesSettings() {
 
       {/* Rules list */}
       {loading ? (
-        <div style={{ padding: 24, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>Cargando…</div>
+        <BSLoading label="Cargando reglas…" />
       ) : rules.length === 0 ? (
         <div style={{ ...S.card, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13, padding: 32 }}>
           Sin reglas configuradas. Crea una para automatizar la progresión de leads.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BSLoading } from "@/components/ui/BSLoading";
 
 type Deliverable = {
   id: string; clientId: string; title: string; status: string;
@@ -177,7 +178,7 @@ export default function DeliverablesPage() {
         </div>
       )}
 
-      {loading && <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>Cargando…</div>}
+      {loading && <BSLoading label="Cargando entregables…" />}
 
       {!loading && clientsData.length === 0 && (
         <div style={{ padding: "48px 24px", textAlign: "center", borderRadius: 12, border: "1px dashed var(--border)" }}>

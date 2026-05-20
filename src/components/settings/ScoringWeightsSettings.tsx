@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Save, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { BSLoading } from "../ui/BSLoading";
 
 interface CategoryWeight {
   wins: number;
@@ -103,7 +104,7 @@ function AutoLearningCard({ canEdit }: { canEdit: boolean }) {
       </div>
 
       {loading ? (
-        <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Cargando…</p>
+        <BSLoading label="Cargando scoring…" />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Mail, Clock, Calendar, CheckCircle } from "lucide-react";
+import { BSLoading } from "../ui/BSLoading";
 
 interface DigestSchedule {
   enabled: boolean;
@@ -88,7 +89,7 @@ export function DigestScheduleSettings({ role }: { role: string }) {
     return `${display}:00 ${suffix}`;
   };
 
-  if (loading) return <div className="py-6 text-center text-sm text-zinc-500">Cargando…</div>;
+  if (loading) return <BSLoading label="Cargando configuración…" />;
 
   return (
     <div className="space-y-5">
