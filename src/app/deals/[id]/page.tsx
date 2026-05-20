@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, DollarSign, Percent, FileText } from "lucide-react";
-import { formatCurrency, formatDate, formatRelativeDate } from "@/lib/constants";
+import { formatCurrency, formatUSD, formatDate, formatRelativeDate } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG } from "@/lib/constants";
 import { WompiPaymentCard } from "@/components/deals/WompiPaymentCard";
 
@@ -83,6 +83,12 @@ export default async function DealDetailPage({
             <p className="text-xl font-bold text-primary">
               {formatCurrency(deal.value)}
             </p>
+            {deal.usdValue ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatUSD(deal.usdValue)} USD
+                {deal.fxRate ? ` @ ${deal.fxRate.toLocaleString("es-CO")} COP/USD` : ""}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
         <Card>

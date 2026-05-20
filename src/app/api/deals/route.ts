@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
       id: deals.id,
       title: deals.title,
       value: deals.value,
+      usdValue: deals.usdValue,
+      fxRate: deals.fxRate,
       stageId: deals.stageId,
       contactId: deals.contactId,
       expectedClose: deals.expectedClose,
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "JSON invalido" }, { status: 400 });
   }
-  const { title, value, stageId, contactId, expectedClose, probability, notes, ownerId } = body;
+  const { title, value, usdValue, fxRate, stageId, contactId, expectedClose, probability, notes, ownerId } = body;
 
   if (!title || !contactId) {
     return NextResponse.json(
@@ -85,6 +87,8 @@ export async function POST(request: NextRequest) {
       .values({
         title,
         value: value || 0,
+        usdValue: Number.isFinite(Number(usdValue)) && Number(usdValue) > 0 ? Math.round(Number(usdValue)) : null,
+        fxRate: Number.isFinite(Number(fxRate)) && Number(fxRate) > 0 ? Number(fxRate) : null,
         stageId: finalStageId,
         contactId,
         expectedClose: expectedClose ? new Date(expectedClose) : null,

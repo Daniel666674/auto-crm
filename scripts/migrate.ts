@@ -311,6 +311,19 @@ if (!hasColumn("mkt_contacts", "owner_id")) {
 }
 
 // ---------------------------------------------------------------------------
+// Migration 12: deals USD value + FX rate (deals negotiated in USD, stored COP)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking deals.usd_value / deals.fx_rate columns...");
+if (!hasColumn("deals", "usd_value")) {
+  db.exec(`ALTER TABLE deals ADD COLUMN usd_value INTEGER`);
+  console.log("[migrate] Added deals.usd_value column");
+}
+if (!hasColumn("deals", "fx_rate")) {
+  db.exec(`ALTER TABLE deals ADD COLUMN fx_rate REAL`);
+  console.log("[migrate] Added deals.fx_rate column");
+}
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

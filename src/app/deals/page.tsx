@@ -14,13 +14,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Plus, Briefcase, Download } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatUSD, formatDate } from "@/lib/constants";
 import { DealForm } from "@/components/deals/DealForm";
 
 interface DealRow {
   id: string;
   title: string;
   value: number;
+  usdValue: number | null;
+  fxRate: number | null;
   probability: number;
   contactName: string | null;
   stageName: string | null;
@@ -107,6 +109,11 @@ export default function DealsPage() {
                   <TableCell>{deal.contactName || "-"}</TableCell>
                   <TableCell className="font-semibold text-primary">
                     {formatCurrency(deal.value)}
+                    {deal.usdValue ? (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {formatUSD(deal.usdValue)} USD
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <Badge

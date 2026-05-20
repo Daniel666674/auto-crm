@@ -26,6 +26,8 @@ import { toast } from "sonner";
 
 const dealSchema = z.object({
   title: z.string().min(1, "El titulo es requerido"),
+  usd: z.string(),
+  fxRate: z.string(),
   value: z.string(),
   contactId: z.string().min(1, "El contacto es requerido"),
   stageId: z.string(),
@@ -49,13 +51,6 @@ export function DealForm({ open, onClose }: DealFormProps) {
   const [contactsList, setContacts] = useState<Array<{ id: string; name: string }>>([]);
   const [stagesList, setStages] = useState<Array<{ id: string; name: string }>>([]);
 
-  useEffect(() => {
-    if (open) {
-      fetch("/api/contacts").then((r) => r.json()).then(setContacts);
-      fetch("/api/pipeline").then((r) => r.json()).then(setStages);
-    }
-  }, [open]);
-
   const {
     register,
     handleSubmit,
@@ -67,6 +62,8 @@ export function DealForm({ open, onClose }: DealFormProps) {
     resolver: zodResolver(dealSchema),
     defaultValues: {
       title: "",
+      usd: "",
+      fxRate: "",
       value: "",
       contactId: "",
       stageId: "",
@@ -79,6 +76,29 @@ export function DealForm({ open, onClose }: DealFormProps) {
     },
   });
 
+  useEffect(() => {
+    if (open) {
+      fetch("/api/contacts").then((r) => r.json()).then(setContacts);
+      fetch("/api/pipeline").then((r) => r.json()).then(setStages);
+      // Prefill the negotiation FX rate from settings
+      fetch("/api/settings/fx-rate")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.rate) setValue("fxRate", String(d.rate)); })
+        .catch(() => {});
+    }
+  }, [open, setValue]);
+
+  // Auto-compute COP value from USD × rate whenever either changes.
+  const usdWatch = watch("usd");
+  const fxWatch = watch("fxRate");
+  useEffect(() => {
+    const usd = parseFloat(usdWatch || "0");
+    const rate = parseFloat(fxWatch || "0");
+    if (usd > 0 && rate > 0) {
+      setValue("value", String(Math.round(usd * rate)));
+    }
+  }, [usdWatch, fxWatch, setValue]);
+
   const onSubmit = async (data: DealFormData) => {
     try {
       const res = await fetch("/api/deals", {
@@ -87,6 +107,8 @@ export function DealForm({ open, onClose }: DealFormProps) {
         body: JSON.stringify({
           ...data,
           value: Math.round(parseFloat(data.value || "0") * 100),
+          usdValue: parseFloat(data.usd || "0") > 0 ? Math.round(parseFloat(data.usd) * 100) : null,
+          fxRate: parseFloat(data.fxRate || "0") > 0 ? parseFloat(data.fxRate) : null,
           probability: parseInt(data.probability || "0"),
           competitor: data.competitor || null,
           isRecurring: data.isRecurring,
@@ -123,14 +145,42 @@ export function DealForm({ open, onClose }: DealFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
+              <Label htmlFor="deal-usd">Valor en USD</Label>
+              <Input
+                id="deal-usd"
+                type="number"
+                step="0.01"
+                {...register("usd")}
+                placeholder="10000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deal-fx">Tasa (COP por USD)</Label>
+              <Input
+                id="deal-fx"
+                type="number"
+                step="1"
+                {...register("fxRate")}
+                placeholder="4000"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
               <Label htmlFor="deal-value">Valor (COP)</Label>
               <Input
                 id="deal-value"
                 type="number"
-                step="0.01"
+                step="1"
                 {...register("value")}
-                placeholder="0.00"
+                placeholder="0"
               />
+              {parseFloat(usdWatch || "0") > 0 && parseFloat(fxWatch || "0") > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  ${parseFloat(usdWatch).toLocaleString("en-US")} USD × {parseFloat(fxWatch).toLocaleString("es-CO")} = calculado automáticamente
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Probabilidad (%)</Label>

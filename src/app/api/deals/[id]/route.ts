@@ -47,6 +47,8 @@ export async function PUT(
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (body.title !== undefined) updateData.title = body.title;
   if (body.value !== undefined) updateData.value = body.value;
+  if (body.usdValue !== undefined) updateData.usdValue = body.usdValue === null ? null : Math.round(Number(body.usdValue));
+  if (body.fxRate !== undefined) updateData.fxRate = body.fxRate === null ? null : Number(body.fxRate);
   if (body.contactId !== undefined) updateData.contactId = body.contactId;
   if (body.closeReasonId !== undefined) updateData.closeReasonId = body.closeReasonId || null;
   if (body.ownerId !== undefined) updateData.ownerId = body.ownerId || null;

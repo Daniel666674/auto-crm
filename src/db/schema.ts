@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -64,6 +64,8 @@ export const deals = sqliteTable("deals", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),
   value: integer("value").notNull().default(0),
+  usdValue: integer("usd_value"),
+  fxRate: real("fx_rate"),
   stageId: text("stage_id").notNull().references(() => pipelineStages.id),
   contactId: text("contact_id").notNull().references(() => contacts.id),
   expectedClose: integer("expected_close", { mode: "timestamp" }),

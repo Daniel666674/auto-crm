@@ -43,6 +43,15 @@ export function formatCurrency(cents: number): string {
   }).format(cents / 100);
 }
 
+// USD display for deals negotiated in dollars (stored in USD cents).
+export function formatUSD(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
 export function cleanPhoneForWhatsApp(phone: string): string {
   // "+52 55 1234 5678" → "525512345678"
   return phone.replace(/[\s\-\(\)]/g, "").replace(/^\+/, "");

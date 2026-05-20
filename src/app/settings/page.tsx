@@ -17,6 +17,7 @@ import { SlackSettings } from "@/components/settings/SlackSettings";
 import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { HandoffRulesSettings } from "@/components/settings/HandoffRulesSettings";
+import { CurrencySettings } from "@/components/settings/CurrencySettings";
 import { BSLoading } from "@/components/ui/BSLoading";
 import { DigestScheduleSettings } from "@/components/settings/DigestScheduleSettings";
 import { ApiTokensSettings } from "@/components/settings/ApiTokensSettings";
@@ -525,6 +526,7 @@ function TabNegocio({ role }: { role: string }) {
   }
 
   return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
     <div style={S.card}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <Field label="Nombre de empresa">
@@ -568,6 +570,8 @@ function TabNegocio({ role }: { role: string }) {
       <div style={{ marginTop: 20 }}>
         <SaveBtn saving={saving} onClick={handleSave} label="Guardar configuración" />
       </div>
+    </div>
+    <CurrencySettings canEdit={canEdit} />
     </div>
   );
 }

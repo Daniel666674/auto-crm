@@ -247,6 +247,8 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE deals ADD COLUMN payment_provider TEXT`,
     `ALTER TABLE deals ADD COLUMN payment_reference TEXT`,
     `ALTER TABLE deals ADD COLUMN paid_at INTEGER`,
+    `ALTER TABLE deals ADD COLUMN usd_value INTEGER`,
+    `ALTER TABLE deals ADD COLUMN fx_rate REAL`,
     `CREATE TABLE IF NOT EXISTS mkt_segments (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
