@@ -46,6 +46,7 @@ export const contacts = sqliteTable("contacts", {
   lastTouchCampaignId: text("last_touch_campaign_id"),
   assistingCampaignIds: text("assisting_campaign_ids"),
   reengagementQueuedAt: integer("reengagement_queued_at", { mode: "timestamp" }),
+  customFields: text("custom_fields"), // JSON object { [fieldId]: value }
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -66,6 +67,7 @@ export const deals = sqliteTable("deals", {
   value: integer("value").notNull().default(0),
   usdValue: integer("usd_value"),
   fxRate: real("fx_rate"),
+  customFields: text("custom_fields"), // JSON object { [fieldId]: value }
   stageId: text("stage_id").notNull().references(() => pipelineStages.id),
   contactId: text("contact_id").notNull().references(() => contacts.id),
   expectedClose: integer("expected_close", { mode: "timestamp" }),
@@ -117,6 +119,18 @@ export const activities = sqliteTable("activities", {
 export const crmSettings = sqliteTable("crm_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
+});
+
+export const customFieldDefs = sqliteTable("custom_field_defs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  entity: text("entity").notNull(), // "contact" | "deal"
+  label: text("label").notNull(),
+  fieldKey: text("field_key").notNull(),
+  type: text("type").notNull().default("text"), // text | number | select | date | boolean
+  options: text("options"), // JSON array of strings, for type=select
+  order: integer("order").notNull().default(0),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export const calendarEvents = sqliteTable("calendar_events", {

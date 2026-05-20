@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   RefreshCw, CheckCircle, AlertCircle, LogOut, Copy,
   User, Palette, Briefcase, Users, Plug, Kanban, Bell, Lock,
-  Upload, Eye, EyeOff, Target, BarChart2, Zap, Globe, Trash2, Link2,
+  Upload, Eye, EyeOff, Target, BarChart2, Zap, Globe, Trash2, Link2, ListPlus,
 } from "lucide-react";
 import { CloseReasonsSettings } from "@/components/settings/CloseReasonsSettings";
 import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings";
@@ -18,6 +18,7 @@ import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { HandoffRulesSettings } from "@/components/settings/HandoffRulesSettings";
 import { CurrencySettings } from "@/components/settings/CurrencySettings";
+import { CustomFieldsSettings } from "@/components/settings/CustomFieldsSettings";
 import { BSLoading } from "@/components/ui/BSLoading";
 import { DigestScheduleSettings } from "@/components/settings/DigestScheduleSettings";
 import { ApiTokensSettings } from "@/components/settings/ApiTokensSettings";
@@ -27,7 +28,7 @@ import { CircleAlert, Info } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente" | "automatizaciones";
+type Tab = "perfil" | "apariencia" | "negocio" | "usuarios" | "integraciones" | "pipeline" | "notificaciones" | "objetivos" | "scoring" | "cliente" | "automatizaciones" | "campos";
 
 interface UserPrefs {
   theme: string; accentPrimary: string; accentSecondary: string;
@@ -1899,6 +1900,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode; roles?: string[] }[
   { id: "objetivos",        label: "Objetivos",          icon: <Target size={14} />,    roles: ["superadmin","marketing"] },
   { id: "scoring",          label: "Scoring ICP",        icon: <BarChart2 size={14} />,  roles: ["superadmin","marketing"] },
   { id: "automatizaciones", label: "Automatizaciones",   icon: <Zap size={14} />,        roles: ["superadmin","marketing"] },
+  { id: "campos",           label: "Campos",             icon: <ListPlus size={14} />,   roles: ["superadmin"] },
   { id: "integraciones",    label: "Integraciones",      icon: <Plug size={14} /> },
   { id: "pipeline",         label: "Pipeline",           icon: <Kanban size={14} /> },
   { id: "notificaciones",   label: "Notificaciones",     icon: <Bell size={14} /> },
@@ -1960,6 +1962,7 @@ export default function SettingsPage() {
           <HandoffRulesSettings />
         </div>
       )}
+      {current === "campos"         && <div style={S.card}><CustomFieldsSettings /></div>}
       {current === "integraciones"  && <TabIntegraciones role={userRole} />}
       {current === "pipeline"       && <TabPipeline role={userRole} />}
       {current === "notificaciones" && <TabNotificaciones />}

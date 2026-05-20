@@ -344,6 +344,33 @@ db.exec(`
 console.log("[migrate] calendar_events table: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 14: custom fields (defs table + JSON value columns)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking custom_field_defs table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS custom_field_defs (
+    id TEXT PRIMARY KEY,
+    entity TEXT NOT NULL,
+    label TEXT NOT NULL,
+    field_key TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'text',
+    options TEXT,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL
+  )
+`);
+if (!hasColumn("contacts", "custom_fields")) {
+  db.exec(`ALTER TABLE contacts ADD COLUMN custom_fields TEXT`);
+  console.log("[migrate] Added contacts.custom_fields column");
+}
+if (!hasColumn("deals", "custom_fields")) {
+  db.exec(`ALTER TABLE deals ADD COLUMN custom_fields TEXT`);
+  console.log("[migrate] Added deals.custom_fields column");
+}
+console.log("[migrate] custom fields: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

@@ -279,6 +279,19 @@ function initTables(db: Database.Database): void {
       created_by TEXT,
       created_at INTEGER NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS custom_field_defs (
+      id TEXT PRIMARY KEY,
+      entity TEXT NOT NULL,
+      label TEXT NOT NULL,
+      field_key TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'text',
+      options TEXT,
+      "order" INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    )`,
+    `ALTER TABLE contacts ADD COLUMN custom_fields TEXT`,
+    `ALTER TABLE deals ADD COLUMN custom_fields TEXT`,
   ];
 
   for (const sql of migrations) {
