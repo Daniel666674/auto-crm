@@ -11,6 +11,7 @@ import { formatCurrency, formatUSD, formatDate, formatRelativeDate } from "@/lib
 import { ACTIVITY_TYPE_CONFIG } from "@/lib/constants";
 import { WompiPaymentCard } from "@/components/deals/WompiPaymentCard";
 import { CustomFieldValues, parseCustomFields } from "@/components/shared/CustomFields";
+import { DealLineItems } from "@/components/deals/DealLineItems";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,8 @@ export default async function DealDetailPage({
         paymentReference={deal.paymentReference ?? null}
         paidAt={deal.paidAt ?? null}
       />
+
+      <DealLineItems dealId={deal.id} dealValue={deal.value} />
 
       <CustomFieldValues entity="deal" values={parseCustomFields((deal as { customFields?: string | null }).customFields)} />
 

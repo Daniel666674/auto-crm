@@ -133,6 +133,16 @@ export const customFieldDefs = sqliteTable("custom_field_defs", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+export const dealLineItems = sqliteTable("deal_line_items", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  dealId: text("deal_id").notNull().references(() => deals.id),
+  label: text("label").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: integer("unit_price").notNull().default(0), // COP cents
+  order: integer("order").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 export const calendarEvents = sqliteTable("calendar_events", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),

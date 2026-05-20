@@ -371,6 +371,23 @@ if (!hasColumn("deals", "custom_fields")) {
 console.log("[migrate] custom fields: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 15: deal line items (multi-product / itemized deals)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking deal_line_items table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS deal_line_items (
+    id TEXT PRIMARY KEY,
+    deal_id TEXT NOT NULL,
+    label TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price INTEGER NOT NULL DEFAULT 0,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )
+`);
+console.log("[migrate] deal_line_items: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();
