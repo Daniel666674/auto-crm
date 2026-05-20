@@ -1795,6 +1795,88 @@ function TabCliente() {
         </div>
       </div>
 
+      {/* Branding */}
+      <div style={S.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Palette size={14} style={{ color: "var(--muted-foreground)" }} />
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Apariencia del portal</span>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 4 }}>
+            — logo, color y nombre de empresa visibles solo por el cliente
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+          <div>
+            <span style={S.label}>Nombre de empresa (portal)</span>
+            <input
+              style={S.input}
+              placeholder="Ej: Acme Corp"
+              value={config.branding?.companyName ?? ""}
+              onChange={e => setConfig(prev => ({ ...prev, branding: { ...prev.branding, companyName: e.target.value || undefined } }))}
+            />
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
+              Se muestra en el encabezado del dashboard del cliente.
+            </div>
+          </div>
+          <div>
+            <span style={S.label}>URL del logo (SVG o PNG)</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                style={{ ...S.input, flex: 1 }}
+                placeholder="https://..."
+                value={config.branding?.logoUrl ?? ""}
+                onChange={e => setConfig(prev => ({ ...prev, branding: { ...prev.branding, logoUrl: e.target.value || undefined } }))}
+              />
+              {config.branding?.logoUrl && (
+                <div style={{ width: 34, height: 34, borderRadius: 6, border: "1px solid var(--border)", background: "var(--card)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={config.branding.logoUrl} alt="" style={{ width: 28, height: 28, objectFit: "contain" }} />
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
+              URL pública de la imagen. Dejar vacío para usar el logo de BlackScale.
+            </div>
+          </div>
+          <div>
+            <span style={S.label}>Color primario</span>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input
+                style={{ ...S.input, flex: 1, fontFamily: "monospace", textTransform: "uppercase" }}
+                placeholder="#D19C15"
+                maxLength={7}
+                value={config.branding?.primaryColor ?? ""}
+                onChange={e => {
+                  const v = e.target.value;
+                  setConfig(prev => ({ ...prev, branding: { ...prev.branding, primaryColor: v || undefined } }));
+                }}
+              />
+              <input
+                type="color"
+                value={config.branding?.primaryColor && /^#[0-9a-fA-F]{6}$/.test(config.branding.primaryColor) ? config.branding.primaryColor : "#D19C15"}
+                onChange={e => setConfig(prev => ({ ...prev, branding: { ...prev.branding, primaryColor: e.target.value } }))}
+                style={{ width: 34, height: 34, borderRadius: 6, border: "1px solid var(--border)", padding: 2, cursor: "pointer", background: "var(--card)", flexShrink: 0 }}
+                title="Elegir color"
+              />
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
+              Acento de botones y badges en el portal del cliente.
+            </div>
+          </div>
+        </div>
+        {(config.branding?.primaryColor && /^#[0-9a-fA-F]{6}$/.test(config.branding.primaryColor)) && (
+          <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8, border: `1px solid ${config.branding.primaryColor}40`, background: `${config.branding.primaryColor}0d`, display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: config.branding.primaryColor, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: config.branding.primaryColor, fontWeight: 600 }}>
+              Vista previa — {config.branding.companyName || "Empresa del cliente"}
+            </span>
+            {config.branding.logoUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={config.branding.logoUrl} alt="" style={{ height: 18, objectFit: "contain", marginLeft: "auto", opacity: 0.85 }} />
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Save button */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button
