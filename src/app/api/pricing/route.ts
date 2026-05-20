@@ -5,23 +5,26 @@ import { db } from "@/db";
 import { crmSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-const PRICING_KEY = "pricing_config";
+// Bumped to v2 when pricing moved from CRM-vendor tiers to BlackScale's
+// marketing + sales enablement service tiers (Colombia).
+const PRICING_KEY = "pricing_config_v2";
 
 const DEFAULT_PRICING = {
   packages: [
-    { id: "inicial", label: "Inicial", priceUSD: 750, description: "Setup básico, hasta 500 contactos, 1 pipeline" },
-    { id: "intermedio", label: "Intermedio", priceUSD: 1650, description: "CRM completo, integraciones básicas, hasta 2K contactos" },
-    { id: "avanzado", label: "Avanzado", priceUSD: 3000, description: "Enterprise, integraciones premium, contactos ilimitados" },
+    { id: "starter", label: "Starter — Digital Ads", priceUSD: 750, description: "Campaña en 1 plataforma · workshops de alineación con ventas · 1 SDR o AE · creativos paid/orgánico (opcional) · entrega y análisis" },
+    { id: "growth", label: "Growth — Ads + SDR", priceUSD: 1650, description: "Campaña en 2 plataformas · workshops semanales + scripts · 1 SDR + AE dedicado · creativos paid/orgánico (opcional) · entrega y análisis" },
+    { id: "enterprise", label: "Enterprise — Full Stack", priceUSD: 3000, description: "Campaña en 3+ plataformas · sesiones 1:1 con ventas (hasta 10) · 2 SDRs + AE dedicado · creativos paid/orgánico · entrega y análisis" },
   ],
+  // Add-on COP prices are editable placeholders (Editar precios) — confirm before quoting.
   scopeItems: [
-    { id: "onboarding", label: "Onboarding y capacitación", price: 500000 },
-    { id: "migration", label: "Migración de datos", price: 800000 },
-    { id: "whatsapp", label: "Integración WhatsApp Business", price: 600000 },
-    { id: "customreport", label: "Dashboard personalizado", price: 1200000 },
-    { id: "automation", label: "Automatizaciones avanzadas", price: 900000 },
-    { id: "brevo", label: "Setup Brevo + cadences", price: 700000 },
+    { id: "creativos-paid", label: "Generación de creativos — Paid (por plataforma)", price: 800000 },
+    { id: "creativos-organico", label: "Generación de creativos — Orgánico", price: 500000 },
+    { id: "plataforma-extra", label: "Plataforma de ads adicional", price: 600000 },
+    { id: "sdr-extra", label: "SDR adicional (mensual)", price: 2500000 },
+    { id: "scripts", label: "Desarrollo de scripts de ventas", price: 700000 },
+    { id: "sesiones-1a1", label: "Sesiones 1:1 con equipo de ventas", price: 900000 },
   ],
-  usdToCop: 4150,
+  usdToCop: 3800,
 };
 
 export async function GET() {

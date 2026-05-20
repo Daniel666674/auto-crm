@@ -29,6 +29,7 @@ import { MktAttributionModel } from "@/components/marketing/mkt-attribution-mode
 import { MktIntegrations } from "@/components/marketing/mkt-integrations";
 import { MktExport } from "@/components/marketing/mkt-export";
 import { MktAbm } from "@/components/marketing/mkt-abm";
+import { CalculatorTool } from "@/components/calculator/CalculatorTool";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
 const SECTION_LABELS: Record<MktSection, string> = {
@@ -53,6 +54,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   abm: "ABM Board",
   digest: "Digest Semanal",
   roi: "ROI",
+  calculator: "Calculadora de Precios",
   export: "Exportar",
   integrations: "Integraciones",
   settings: "Configuración",
@@ -750,6 +752,7 @@ function MarketingContent() {
       case "roi": return <MktCampaignRevenue />;
       case "export": return <MktExport />;
       case "integrations": return <MktIntegrations />;
+      case "calculator": return <CalculatorTool />;
       case "settings": return <MktSettings />;
     }
   };

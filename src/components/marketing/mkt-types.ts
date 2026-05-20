@@ -57,6 +57,7 @@ export type MktSection =
   | "funnel"
   | "segments-builder"
   | "forecast" | "attribution-model"
+  | "calculator"
   | "icp" | "segments" // legacy aliases kept for backward compat
   | "settings";
 

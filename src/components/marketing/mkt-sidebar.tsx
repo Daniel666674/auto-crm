@@ -82,6 +82,12 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
       ],
     },
     {
+      label: "Propuestas & Precios",
+      items: [
+        { id: "calculator", label: "Calculadora", path: "M9 7h6M9 11h6m-6 4h3M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" },
+      ],
+    },
+    {
       label: "Reportes",
       items: [
         { id: "forecast", label: "Forecast", path: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
