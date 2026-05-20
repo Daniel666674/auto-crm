@@ -1,477 +1,408 @@
-# BlackScale Nexus CRM — Guía de Uso para Julian
+# BlackScale Nexus — Guía del Módulo de Marketing para Julian
 
-> Guía práctica para dominar el CRM desde el primer día.
-> Cubre navegación, módulos, flujos de trabajo y tips de uso diario.
+> Guía completa para dominar el módulo de Marketing del CRM.
+> Enfocada 100% en marketing: cómo nutrir leads, gestionar campañas, calificar audiencia,
+> hacer handoff a ventas y medir el impacto real en revenue.
 
 ---
 
 ## Tabla de contenidos
 
-1. [Primeros pasos](#1-primeros-pasos)
-2. [Estructura del CRM — qué vive dónde](#2-estructura-del-crm)
-3. [Contactos y leads](#3-contactos-y-leads)
-4. [Pipeline de ventas](#4-pipeline-de-ventas)
-5. [Deals](#5-deals)
-6. [Actividades y seguimiento](#6-actividades-y-seguimiento)
-7. [Dashboard — tu pantalla de inicio](#7-dashboard)
-8. [Command Center M+S](#8-command-center-ms)
-9. [Marketing](#9-marketing)
-10. [Módulos de inteligencia (Forecast, Deal Intel, NBA)](#10-módulos-de-inteligencia)
-11. [Ajustes clave que debes conocer](#11-ajustes-clave)
-12. [Flujos de trabajo diarios recomendados](#12-flujos-de-trabajo-diarios)
-13. [Errores comunes y cómo evitarlos](#13-errores-comunes)
-14. [Tips avanzados](#14-tips-avanzados)
+1. [Cómo entrar al módulo de Marketing](#1-cómo-entrar)
+2. [Mapa del módulo — qué hace cada sección](#2-mapa-del-módulo)
+3. [Conceptos que debes dominar](#3-conceptos-clave)
+4. [Engagement Board — tu pantalla de inicio](#4-engagement-board)
+5. [Campañas](#5-campañas)
+6. [Contactos de marketing](#6-contactos)
+7. [Handoff Center — el corazón del trabajo M+S](#7-handoff-center)
+8. [Re-engagement Queue](#8-re-engagement-queue)
+9. [Audience Intelligence (Segment Health, ICP, Listas, Smart Segments, Funnel)](#9-audience-intelligence)
+10. [Pipeline Visibility (Vista Pipeline, Lead Velocity)](#10-pipeline-visibility)
+11. [Performance 360 (Analytics, Intelligence)](#11-performance-360)
+12. [Content & Planning (Calendario, ABM)](#12-content--planning)
+13. [Reportes (Forecast, Atribución Multi-Touch, Digest, ROI, Exportar)](#13-reportes)
+14. [Integraciones (Brevo)](#14-integraciones)
+15. [Flujos de trabajo diarios de marketing](#15-flujos-diarios)
+16. [Tips para sacarle el máximo](#16-tips)
+17. [Glosario de marketing](#17-glosario)
 
 ---
 
-## 1. Primeros pasos
+## 1. Cómo entrar
 
-### Acceso
-- URL de producción: `nexus.blackscale.consulting`
-- Inicia sesión con tu email y contraseña asignados.
-- Tu rol determina qué módulos ves. Roles disponibles: **Superadmin**, **Marketing**, **Sales**.
-
-### Orientación inicial
-Al entrar verás el **Dashboard principal** (Sales). Las tres cosas más importantes al inicio del día:
-
-1. **Próximas Acciones** (NBA) — contacts que requieren atención hoy
-2. **Leads Calientes** — quién tiene temperatura hot y score alto
-3. **KPIs del pipeline** — abierto, ponderado, ticket promedio, ganado este mes
+- En la barra lateral principal del CRM, clic en **Marketing**.
+- Esto abre el módulo de marketing con su propia barra lateral interna a la izquierda.
+- El módulo tiene su propia apariencia (tema configurable independiente del resto del CRM).
 
 ---
 
-## 2. Estructura del CRM
+## 2. Mapa del módulo
+
+La barra lateral interna de Marketing se organiza en grupos:
 
 ```
-Barra lateral izquierda
-├── Dashboard              ← Inicio de ventas
-├── Command Center         ← Vista unificada M+S
-├── Pipeline               ← Kanban de deals
-├── Contactos              ← Base de leads
-├── Deals                  ← Lista plana de deals
-├── Actividades            ← Todas las interacciones
-├── Calendario             ← Vista de actividades por fecha
+Marketing
+├── (Principal)
+│   ├── Engagement Board     ← Inicio: estado de la audiencia
+│   ├── Campañas             ← Crear y medir campañas
+│   ├── Contactos            ← Base de leads de marketing
+│   ├── Atribución           ← Qué canal genera resultados
+│   ├── Handoff Center       ← Pasar leads listos a ventas  [badge: # listos]
+│   └── Re-engagement        ← Leads devueltos por ventas
 │
-├── REVENUE INTELLIGENCE
-│   ├── Forecast           ← Proyecciones 30/60/90d
-│   ├── Revenue Intel      ← Análisis de ingresos
-│   ├── Deal Intelligence  ← Salud de deals individuales
-│   └── Win / Loss         ← Análisis de cierres
+├── Audience Intelligence
+│   ├── Segment Health       ← Salud de cada segmento
+│   ├── ICP Insights         ← Qué tan cerca del cliente ideal
+│   ├── Listas Brevo         ← Listas sincronizadas con Brevo
+│   ├── Smart Segments       ← Constructor de segmentos
+│   └── Funnel               ← Embudo de marketing
 │
-├── PROSPECTING ENGINE
-│   ├── ICP Scorer         ← Calificador de perfil ideal
-│   ├── Secuencias         ← Cadencias de outreach
-│   └── Radar              ← Leads en el radar
+├── Pipeline Visibility
+│   ├── Vista Pipeline       ← Ver el pipeline de ventas (solo lectura)
+│   └── Lead Velocity        ← Velocidad de avance de leads
 │
-├── ACCOUNT MANAGEMENT
-│   ├── Clientes           ← Cuentas activas
-│   ├── Renovaciones       ← Pipeline de renovaciones
-│   └── Entregables        ← Gestión de entregables
+├── Performance 360
+│   ├── Analytics            ← Métricas de desempeño
+│   └── Intelligence         ← Insights automáticos
 │
-├── PROPUESTAS & PRECIOS
-│   ├── Propuestas         ← Generador de propuestas
-│   └── Calculadora        ← Calculadora de precios
+├── Content & Planning
+│   ├── Calendario           ← Calendario de contenido/campañas
+│   └── ABM Board            ← Account-Based Marketing
 │
-├── REPORTES INTERNOS
-│   ├── Revenue / Métricas / Pipeline Health
-│   ├── Marketing          ← Módulo de marketing completo
-│   └── Analytics          ← Datos de tráfico/GA4
+├── Reportes
+│   ├── Forecast             ← Proyección 30/60/90 días
+│   ├── Atrib. Multi-Touch   ← Atribución por 5 modelos
+│   ├── Digest Semanal       ← Resumen por email
+│   ├── ROI                  ← Retorno de inversión por campaña
+│   └── Exportar             ← Exportar datos
 │
-└── Ajustes
+└── Integraciones           ← Conexión con Brevo y otros
 ```
 
 ---
 
-## 3. Contactos y leads
+## 3. Conceptos clave
 
-### Crear un contacto
-1. Ir a **Contactos** → botón **Nuevo contacto** (arriba a la derecha)
-2. Campos clave:
-   - **Nombre** (requerido)
-   - **Email** — sin email no se puede nutrir digitalmente
-   - **Empresa** — agrupa el contacto en la vista de Cuentas
-   - **Fuente** — de dónde vino (web, referido, linkedin, etc.)
-   - **Etapa del ciclo de vida** — lead / MQL / SQL / opportunity / customer
-   - **Temperatura** — cold / warm / hot
+Antes de operar, domina estos términos — son la base de todo el módulo:
 
-### Etapas del ciclo de vida
-| Etapa | Qué significa |
-|-------|---------------|
-| Lead | Contacto nuevo, sin calificar |
-| MQL | Marketing Qualified Lead — listo para ventas |
-| SQL | Sales Qualified Lead — ventas confirmó interés |
-| Opportunity | Deal abierto, negociando |
-| Customer | Cerró como cliente |
+### Engagement Status (estado de engagement)
+Cada contacto tiene uno de estos cuatro estados según su interacción con tus emails:
+| Estado | Qué significa | Qué hacer |
+|--------|---------------|-----------|
+| **hot** | Abre y hace clic activamente | Considerar handoff a ventas |
+| **warm** | Interactúa de vez en cuando | Seguir nutriendo |
+| **cold** | Casi no interactúa | Campaña de reactivación |
+| **dead** | No interactúa hace mucho / rebotó | Limpiar o re-engagement agresivo |
 
-**Regla importante:** No saltar etapas. Un lead no pasa de Lead a Opportunity sin ser MQL y SQL primero. Esto mantiene las métricas del embudo limpias.
+### Score
+Puntuación 0–100 de qué tan calificado está el lead. Combina engagement, fuente, industry y fit con el ICP.
 
-### Score y temperatura
-- El **score** (0–100) lo calcula automáticamente el sistema basado en interacciones, fuente, industry, etc.
-- La **temperatura** refleja nivel de interés: cold → warm → hot.
-- Puedes ajustar ambos manualmente desde el detalle del contacto.
+### Tier
+Nivel de prioridad del contacto (1 = máxima prioridad). Útil para segmentar esfuerzos.
 
-### Devolver un contacto a marketing
-Cuando ventas determina que un lead no está listo para cerrar:
-1. Abrir el contacto → botón **Devolver a Marketing**
-2. Seleccionar la razón (no es buen fit, mal timing, etc.)
-3. El contacto desaparece del pipeline, deals y dashboard de ventas automáticamente.
-4. Marketing lo ve en su módulo para re-nutrir.
+### readyForSales / passedToSalesAt
+- **readyForSales**: bandera que indica que el lead está listo para ventas (MQL).
+- **passedToSalesAt**: fecha en que se hizo el handoff. Si está vacío, aún no se ha pasado.
 
-**No elimines contactos** — devuélvelos. La historia se preserva.
+### MQL vs SQL
+- **MQL** (Marketing Qualified Lead): marketing lo califica como listo.
+- **SQL** (Sales Qualified Lead): ventas confirma que vale la pena trabajarlo.
+- Tu trabajo en marketing es producir MQLs de calidad que ventas acepte como SQLs.
 
-### Búsqueda y filtros
-- Barra de búsqueda global (arriba) busca por nombre, email, empresa.
-- En la lista de Contactos puedes filtrar por temperatura, fuente, lifecycle stage.
+### Brevo
+Es la plataforma de email marketing integrada. Los contactos, listas y campañas pueden sincronizarse con Brevo (campos `brevoId`, `brevoCampaignId`, `brevoCadence`).
 
 ---
 
-## 4. Pipeline de ventas
+## 4. Engagement Board
 
-### Vista Kanban
-- Cada columna es una etapa del pipeline (Prospecto → Contactado → Propuesta → Negociación → Cerrado).
-- Las tarjetas muestran: nombre del contacto, valor del deal, temperatura, días en etapa, score.
-- **Arrastra y suelta** tarjetas entre columnas para mover deals.
+**Tu pantalla de inicio en marketing.** Muestra el estado vivo de toda la audiencia.
 
-### Columnas Cerrado Ganado y Cerrado Perdido
-- Mover un deal a **Cerrado Ganado** crea automáticamente un registro en **Clientes**.
-- Mover a **Cerrado Perdido** registra la pérdida para análisis Win/Loss.
+Qué ves:
+- Distribución de contactos por engagement status (hot/warm/cold/dead)
+- Quién está más activo (aperturas, clics)
+- Acciones sugeridas según el comportamiento
 
-### Agregar un deal desde el pipeline
-- Clic en **+ Deal** en cualquier columna.
-- Selecciona el contacto, pon título, valor y fecha de cierre esperada.
-- El deal aparece inmediatamente en esa etapa.
-
-### Métricas del pipeline (barra superior)
-| Métrica | Qué muestra |
-|---------|-------------|
-| Pipeline abierto | Suma de todos los deals activos |
-| Ponderado | Valor × probabilidad de cierre |
-| Ticket promedio | Valor medio de deals activos |
-| Ganado este mes | Ingresos cerrados en el mes actual |
-
-### Embudo por etapa (parte inferior)
-Gráfico de barras que muestra cuántos deals hay en cada etapa. Úsalo para detectar cuellos de botella.
+Cómo usarlo:
+1. Al empezar el día, mira cuántos contactos están **hot** — son candidatos a handoff.
+2. Revisa cuántos cayeron a **cold/dead** — necesitan re-engagement.
+3. Cada contacto muestra su `engagementStatus` como etiqueta. Clic para ver el detalle completo (fuente, industry, aperturas, clics, notas de marketing).
 
 ---
 
-## 5. Deals
+## 5. Campañas
 
-### Lista de deals
-- **Deals** en la barra lateral muestra todos los deals en formato tabla.
-- Puedes ordenar por valor, etapa, fecha de cierre.
-- Clic en un deal para ver su detalle completo.
+Sección **Campañas** (Campaign Wall).
 
-### Detalle de un deal
-- Historial de cambios de etapa
-- Actividades asociadas
-- Valor, probabilidad, fecha esperada de cierre
-- Notas
+### Qué es una campaña
+Un esfuerzo de nutrición con: nombre, segmento objetivo, tipo de cadencia, canal, fechas y métricas.
 
-### Deals vs Pipeline
-- El **Pipeline** (kanban) es la vista visual para gestión diaria.
-- **Deals** (lista) es para buscar, filtrar y exportar.
-- Ambos muestran los mismos datos.
+### Métricas por campaña
+| Métrica | Qué mide |
+|---------|----------|
+| Open rate | % que abrió los emails |
+| Click rate | % que hizo clic |
+| Reply rate | % que respondió |
+| Total contacts | Cuántos contactos recibieron |
+| Conversions | Cuántos convirtieron (handoff/deal) |
 
----
-
-## 6. Actividades y seguimiento
-
-### Tipos de actividad
-| Tipo | Cuándo usarlo |
-|------|---------------|
-| Llamada | Después de una llamada telefónica |
-| Email | Registro de email enviado/recibido |
-| Reunión | Después de una reunión (presencial o virtual) |
-| Nota | Cualquier observación interna |
-| Follow-up | Recordatorio de seguimiento futuro |
-
-### Registrar una actividad
-1. Abrir el contacto o deal → sección **Actividades**
-2. Clic en **Agregar actividad**
-3. Seleccionar tipo, escribir descripción, marcar fecha
-
-### Follow-ups
-- Al crear un follow-up, aparece en el **Calendario** y en la sección de follow-ups pendientes.
-- Los follow-ups vencidos aparecen en rojo en el Dashboard bajo "Seguimientos".
-- **Regla de oro:** Nunca termines una interacción sin crear el siguiente follow-up.
-
-### Completar una actividad
-- Desde la lista de actividades del contacto → clic en el check ✓
-- Las actividades completadas se mueven al historial pero no se pierden.
+### Cómo trabajar campañas
+1. Crear campaña → definir segmento objetivo y cadencia.
+2. Conectarla a Brevo si usas envío automático (`brevoCampaignId`).
+3. Monitorear open/click/reply rate. Si el open rate es bajo (<15%), revisa el asunto/copy.
+4. Lo importante no es el open rate — es **cuántas conversiones (handoffs y deals)** genera. Una campaña con 20% open pero 5 handoffs vale más que una con 50% open y 0 handoffs.
 
 ---
 
-## 7. Dashboard
+## 6. Contactos
 
-El dashboard es tu cockpit diario. Se divide en:
+Sección **Contactos** — la base de leads vista desde marketing.
 
-### KPIs principales (fila superior)
-- Pipeline abierto, Ponderado, Ticket promedio, Ganado este mes
-- Los valores se calculan en tiempo real — lo que ves es lo que hay.
+Campos de marketing relevantes en cada contacto:
+- **engagementStatus**, **score**, **tier**, **temperature**
+- **emailOpens**, **emailClicks** — comportamiento de email
+- **source** y **leadSourceDetail** — de dónde vino
+- **industry**, **jobTitle**, **companySize**, **location** — datos de firmografía
+- **emailVerified / emailBounced / emailUnsubscribed** — salud del email
+- **marketingNotes** — tus notas internas
+- **readyForSales** — si ya está marcado para handoff
 
-### Leads calientes
-- Contactos con temperatura **hot** — los 5 más recientes.
-- Clic en cualquiera para ir directo al detalle.
+### Higiene de datos (crítico para marketing)
+- **emailBounced = true** → el email no sirve, no lo cuentes en métricas de envío.
+- **emailUnsubscribed = true** → NO le envíes más, es legal y de reputación.
+- **emailVerified = false** → verifica antes de incluirlo en campañas grandes.
 
-### Follow-ups vencidos
-- Seguimientos que ya pasaron su fecha sin completarse.
-- Prioridad máxima — resuélvelos primero.
-
-### Próximas Acciones (NBA)
-- Lista priorizada automáticamente por el motor de inteligencia.
-- Urgencia alta (rojo) = actúa hoy.
-- Urgencia media (amarillo) = esta semana.
-- Urgencia baja (gris) = cuando puedas.
-
-### Pipeline por etapa
-- Barras horizontales con el valor total en cada etapa.
+Mantén la lista limpia: una base con muchos bounces/unsubscribes daña la reputación de envío de TODOS tus emails.
 
 ---
 
-## 8. Command Center M+S
+## 7. Handoff Center
 
-Acceso: barra lateral → **Command Center**
+**La sección más importante para la alineación M+S.** Aquí pasas leads calificados a ventas.
 
-Vista unificada para que Marketing y Ventas estén alineados. Muestra:
+El badge junto a "Handoff Center" en la barra muestra cuántos leads están listos (`readyForSales`).
 
-### Health Score M+S
-Puntuación 0–100 de la alineación entre Marketing y Ventas. Calculada sobre:
-- Tasa de aceptación de handoffs MQL→SQL
-- Tasa de retorno de leads
-- Conversión MQL→SQL
-- Leads estancados
-- Volumen de nuevos leads
+### Cómo hacer un handoff
+1. Entra a **Handoff Center**.
+2. Verás los contactos marcados como listos para ventas.
+3. Revisa que cada uno cumpla el criterio del SLA (score, engagement, fit).
+4. Confirma el handoff — esto setea `passedToSalesAt` y el lead pasa al pipeline de ventas como MQL.
 
-**Objetivo:** mantener el score sobre 65. Bajo 45 es crítico.
+### Regla del SLA
+- Existe un **SLA (acuerdo de nivel de servicio)** entre Marketing y Ventas. Define cuántas horas tiene ventas para contactar un MQL (por defecto 24h).
+- Tu responsabilidad: solo pasar MQLs que **realmente** cumplan el ICP. Si pasas basura, ventas la devuelve y baja el Health Score M+S.
+- Puedes ver el SLA vigente en el **Command Center** del CRM (banner superior).
 
-### Banner SLA
-Muestra la versión activa del SLA y cuántas horas tiene ventas para responder a un MQL. Si hay incumplimientos, aparece en rojo con el conteo.
-
-- Editar el SLA: **Ajustes → SLA** (o clic en "Editar SLA →" en el banner)
-
-### Breaches SLA
-Lista de MQLs que llevan más horas de las permitidas sin ser contactados. Prioridad urgente.
-
-### Embudo de ciclo de vida
-Distribución de todos los contactos por etapa. Identifica dónde se acumulan leads sin avanzar.
-
-### Leads estancados
-Contactos en lead/MQL/SQL con más de 14 días sin actualización. Son pérdidas potenciales.
-
-### Motivos de retorno
-Los top 6 motivos por los que ventas devolvió leads a marketing en los últimos 30 días. Úsalos para mejorar la calidad de los MQLs.
+### Qué hace un buen handoff
+- El lead tiene engagement hot o warm
+- Score suficiente (revisa el umbral del SLA)
+- Email verificado y datos de firmografía completos
+- Una nota de marketing que le da contexto a ventas (qué le interesó, de qué campaña vino)
 
 ---
 
-## 9. Marketing
+## 8. Re-engagement Queue
 
-Acceso: barra lateral → **Marketing**
+Sección **Re-engagement**. Aquí caen los leads que **ventas devolvió a marketing**.
 
-El módulo de marketing tiene secciones en la barra lateral izquierda interna:
+### Por qué un lead vuelve
+Ventas devuelve un lead cuando no está listo para cerrar. Las razones típicas:
+- No es buen fit
+- Mal timing
+- Necesita educación
+- Duplicado
+- Sin presupuesto
 
-### Campañas
-- Crear y gestionar campañas de nurturing.
-- Cada campaña tiene: nombre, segmento objetivo, cadencia, status.
-- Ver métricas: handoffs generados, deals, revenue atribuido.
+### Qué hacer con ellos
+1. Lee la **razón de retorno** — te dice por qué no cerró.
+2. Según la razón, decide la estrategia:
+   - *Mal timing* → nurturing de largo plazo, recontactar en X meses
+   - *Necesita educación* → secuencia de contenido educativo
+   - *Sin presupuesto* → nurturing hasta que el presupuesto se libere
+   - *No es buen fit* → considerar sacarlo del nurturing activo
+3. Re-asigna a una campaña de re-engagement.
 
-### Forecast de marketing
-- Proyecciones a 30, 60 y 90 días basadas en tasas históricas de conversión.
-- Embudo proyectado: cuántos leads → MQLs → SQLs → clientes esperados.
-- Úsalo en reuniones de planeación mensual.
-
-### Atribución Multi-touch
-Muestra cuánto revenue atribuir a cada campaña según 5 modelos:
-| Modelo | Lógica |
-|--------|--------|
-| First touch | 100% al primer canal que tocó al lead |
-| Last touch | 100% al último canal antes de cerrar |
-| Linear | Distribuido igual entre todos los toques |
-| U-shaped | 40% primer toque, 40% handoff, 20% resto |
-| W-shaped | 30% primer toque, 30% MQL, 30% cierre, 10% resto |
-
-**Tip:** Usa U-shaped como referencia principal. First touch para evaluar canales de adquisición, last touch para evaluar canales de cierre.
-
-### Listas
-Segmentos de contactos para campañas. Se crean por filtros (temperatura, score, fuente, etc.).
-
-### Secuencias (desde Prospecting Engine)
-Cadencias de emails/mensajes automatizadas para nutrición de leads.
+### Aprende del patrón
+Si muchos leads vuelven con la misma razón (ej. "no es buen fit"), tu segmentación o targeting está mal. Ajústalo. Los motivos de retorno también se ven agregados en el **Command Center**.
 
 ---
 
-## 10. Módulos de inteligencia
+## 9. Audience Intelligence
 
-### Próximas Acciones (NBA) — Motor de prioridad
-El sistema evalúa todos los contactos activos contra 6 reglas y genera una lista priorizada:
+### Segment Health
+Salud de cada segmento de tu audiencia:
+- **Engagement rate** del segmento (% hot+warm)
+- Cuántos contactos están **dead**
+- **Acción sugerida** automática:
+  - Engagement <15% → "Revisar copy" (tu mensaje no conecta)
+  - Conversión 0% pero engagement >30% → "Revisar handoff" (interactúan pero no pasan a ventas)
 
-| Regla | Condición | Acción sugerida | Urgencia |
-|-------|-----------|-----------------|----------|
-| 1 | Score ≥70 + sin actividad 3 días | Llamar hoy | Alta |
-| 2 | MQL estancado ≥7 días | Asignar a ventas | Alta |
-| 3 | Deal abierto + sin movimiento 5 días | Confirmar propuesta | Alta |
-| 4 | Temperatura hot + sin contacto 2 días | Email follow-up | Media |
-| 5 | Warm + score ≥55 + 2 interacciones recientes | Llamar esta semana | Media |
-| 6 | Sin email capturado | Capturar email | Baja |
+Úsalo para diagnosticar dónde está el problema: ¿es el mensaje o es el proceso de handoff?
+
+### ICP Insights / ICP Scorer
+Mide qué tan cerca está tu audiencia del **Perfil de Cliente Ideal**:
+- Por industry, tamaño de empresa, cargo, ubicación.
+- Te dice qué segmentos tienen mejor fit → enfoca presupuesto ahí.
+
+### Listas Brevo
+Las listas sincronizadas con Brevo. Aquí gestionas qué contactos están en qué lista de envío.
+
+### Smart Segments
+Constructor de segmentos dinámicos. Crea un segmento con filtros (engagement, score, fuente, industry) y nómbralo. El segmento se actualiza solo conforme los contactos cambian.
+
+### Funnel
+El embudo de marketing: cuántos contactos hay en cada etapa (lead → MQL → SQL → ...). Identifica dónde se atascan los leads.
+
+---
+
+## 10. Pipeline Visibility
+
+### Vista Pipeline
+Vista de **solo lectura** del pipeline de ventas. Sirve para que marketing vea qué pasa con los leads que pasó: en qué etapa están, cuáles avanzan, cuáles se estancan. No editas deals desde aquí — solo observas.
+
+### Lead Velocity
+Mide la **velocidad** con la que los leads avanzan por las etapas. Un lead velocity alto = tu nurturing está funcionando. Si los leads se mueven lento, hay fricción en algún punto.
+
+---
+
+## 11. Performance 360
+
+### Analytics
+Métricas de desempeño del marketing: tendencias de engagement, crecimiento de la base, rendimiento por canal y fuente.
+
+### Intelligence
+Insights generados automáticamente. El sistema detecta patrones (ej. "los leads de LinkedIn convierten 3× más que los de eventos") y te los presenta como recomendaciones accionables.
+
+---
+
+## 12. Content & Planning
+
+### Calendario
+Calendario de contenido y campañas. Planea cuándo sale cada email/campaña y visualiza el cronograma del mes.
+
+### ABM Board (Account-Based Marketing)
+Tablero para trabajar cuentas estratégicas de forma personalizada (no leads individuales, sino empresas objetivo completas). Útil para deals grandes donde varias personas de la misma empresa están involucradas.
+
+---
+
+## 13. Reportes
 
 ### Forecast
-- Proyecta revenue a 30/60/90 días basado en el pipeline actual y tasas históricas.
-- Ver en: **Revenue Intelligence → Forecast**
+Proyección de marketing a **30, 60 y 90 días**:
+- Basado en tasas históricas de conversión (últimos 180 días).
+- Proyecta cuántos leads → MQLs → SQLs → clientes esperas generar.
+- Úsalo en planeación mensual para comprometerte con números realistas.
 
-### Deal Intelligence
-- Analiza la salud de cada deal individual.
-- Detecta deals en riesgo (sin actividad, estancados, overdue).
+### Atribución Multi-Touch
+Distribuye el revenue entre las campañas que tocaron a cada cliente, según 5 modelos:
+| Modelo | Lógica | Cuándo usarlo |
+|--------|--------|---------------|
+| **First touch** | 100% al primer canal | Evaluar canales de adquisición |
+| **Last touch** | 100% al último canal | Evaluar canales de cierre |
+| **Linear** | Igual entre todos los toques | Vista balanceada |
+| **U-shaped** | 40% primer toque, 40% handoff, 20% resto | Referencia principal |
+| **W-shaped** | 30% primer toque, 30% MQL, 30% cierre, 10% resto | Ciclos largos B2B |
 
-### Win / Loss
-- Análisis de deals ganados vs perdidos.
-- Por fuente, por etapa de pérdida, por razón de pérdida.
+**Recomendación:** usa **U-shaped** como tu modelo principal. Compara con first-touch para ver qué canales atraen, y con last-touch para ver qué canales cierran.
 
-### ICP Scorer
-- Calcula qué tan cerca está un contacto del perfil de cliente ideal (ICP).
-- Considera: industry, tamaño, fuente, comportamiento.
+### Digest Semanal
+Resumen automático por email del desempeño de marketing de la semana. Configúralo para recibirlo o enviárselo al equipo.
 
----
+### ROI
+Retorno de inversión por campaña: cuánto costó vs cuánto revenue atribuido generó. La métrica que justifica tu presupuesto.
 
-## 11. Ajustes clave
-
-Acceso: barra lateral → **Ajustes**
-
-### SLA (Ajustes → SLA)
-Define el acuerdo de nivel de servicio entre Marketing y Ventas:
-- **Horas de respuesta a MQL** — cuánto tiene ventas para contactar un MQL nuevo
-- **Horas de calificación de formulario** — tiempo para calificar leads de formulario
-- **Máx. retornos por mes** — límite de devoluciones a marketing
-- **Razones permitidas de retorno** — lista editable
-
-Tanto Marketing como Ventas deben "Aceptar" el SLA activo. Cada cambio genera una nueva versión con historial.
-
-### Automatizaciones (Ajustes → Automatizaciones)
-**Reglas de auto-handoff:**
-- Avanza contactos automáticamente entre etapas cuando cumplen condiciones.
-- Ejemplo: "Lead caliente con score ≥60 → promover a MQL automáticamente"
-- Se ejecutan manualmente con "Ejecutar ahora" o se pueden programar.
-- Siempre revisa los resultados después de ejecutar.
-
-**Workflows:**
-- Disparan acciones (webhooks, notificaciones Slack, logs) cuando ocurren eventos en el CRM.
-
-### Scoring ICP (Ajustes → Scoring ICP)
-Pesos de los factores que determinan el score de un contacto:
-- Puedes ajustar qué tanto pesa la fuente, la industria, el engagement, etc.
-- Cambios aplican al siguiente recálculo de scores.
-
-### Usuarios (Ajustes → Usuarios — solo Superadmin)
-- Crear, editar, activar/desactivar usuarios.
-- Cambiar roles: superadmin / marketing / sales.
-
-### Pipeline (Ajustes → Pipeline)
-- Configurar etapas del pipeline: nombre, color, probabilidad por defecto.
-- Las etapas "Cerrado Ganado" e "Cerrado Perdido" son especiales — no eliminar.
+### Exportar
+Exporta contactos y datos de marketing a CSV para reportes externos o análisis en hojas de cálculo.
 
 ---
 
-## 12. Flujos de trabajo diarios
+## 14. Integraciones (Brevo)
+
+- Conecta el módulo de marketing con **Brevo** para envío de emails y sincronización de contactos/listas/campañas.
+- Una vez conectado, los `brevoId` de contactos y `brevoCampaignId` de campañas mantienen ambos sistemas sincronizados.
+- Desde aquí gestionas la conexión y el estado de sincronización.
+
+---
+
+## 15. Flujos diarios
 
 ### Inicio del día (10 min)
-1. Abrir **Dashboard** → revisar Próximas Acciones urgentes (urgencia alta primero)
-2. Revisar **Follow-ups vencidos** → resolverlos o reprogramarlos
-3. Abrir **Command Center** → verificar breaches SLA. Si hay MQLs sin contactar, llamarlos primero.
+1. **Engagement Board** → ¿cuántos contactos están hot hoy? Son candidatos a handoff.
+2. **Handoff Center** → revisa el badge. Si hay leads listos, califícalos y pásalos a ventas (cumpliendo el SLA).
+3. **Re-engagement** → ¿ventas devolvió algo? Lee las razones y re-asígnalos.
 
-### Gestión de leads nuevos (según llegan)
-1. El lead entra como **Lead** (manual o vía formulario web)
-2. Calificar: ¿cumple el ICP? Si sí → mover a **MQL** manualmente o esperar auto-handoff
-3. Registrar primer contacto como actividad (llamada/email)
-4. Si hay interés → crear deal, mover a **SQL** y mover deal a "Contactado"
-5. Crear follow-up para el próximo paso
+### Gestión de campañas (semanal)
+1. **Campañas** → revisa open/click/reply de las campañas activas.
+2. **Segment Health** → ¿qué segmentos están sanos y cuáles muriendo?
+3. Ajusta copy o segmentación según las acciones sugeridas.
 
-### Cierre de semana (30 min)
-1. Revisar todos los deals sin actividad en los últimos 7 días → agregar nota o follow-up
-2. Revisar **Deal Intelligence** → identificar deals en riesgo
-3. Actualizar probabilidades de deals si cambiaron las circunstancias
-4. Revisar **Forecast** → ¿el pipeline cubre el objetivo del mes?
+### Cierre de mes
+1. **Forecast** → ¿el pipeline de marketing cubre el objetivo del próximo mes?
+2. **Atribución Multi-Touch** + **ROI** → qué campañas y canales valieron la pena.
+3. **Funnel** → dónde se atascaron leads para mejorar el mes siguiente.
+4. Limpia la base: revisa bounces, unsubscribes y contactos dead.
 
-### Reunión semanal M+S (usando Command Center)
-1. Abrir **Command Center** → revisar Health Score
-2. Revisar embudo de ciclo de vida: ¿dónde se acumulan leads?
-3. Revisar motivos de retorno: ¿hay patrones? ¿qué tipo de leads está mandando marketing?
-4. Ajustar SLA si es necesario (Ajustes → SLA)
+### Alineación con ventas (semanal, vía Command Center)
+1. Abre el **Command Center** del CRM.
+2. Revisa el **Health Score M+S** — tu objetivo es mantenerlo sobre 65.
+3. Revisa **motivos de retorno** — ¿qué tipo de leads te está rebotando ventas?
+4. Ajusta tu criterio de handoff para subir la tasa de aceptación.
 
 ---
 
-## 13. Errores comunes
+## 16. Tips
 
-### "Eliminé un contacto por error"
-No hay papelera de reciclaje. **Nunca elimines contactos activos.** Si un lead no sirve, usa "Devolver a Marketing" o cambia su temperatura a cold.
+### La calidad del handoff es tu reputación
+Un handoff de basura le cuesta tiempo a ventas y baja el Health Score. **Es mejor pasar 5 MQLs excelentes que 20 mediocres.** Ventas confiará en tus handoffs y los trabajará rápido.
 
-### "El pipeline muestra deals que ya cerramos"
-Verifica que los deals estén en la etapa "Cerrado Ganado" o "Cerrado Perdido". Si siguen en etapas activas, muévelos manualmente.
+### Open rate no es el objetivo
+El open rate mide si tu asunto funciona, no si el negocio crece. Optimiza para **conversiones (handoffs y deals atribuidos)**, no para vanity metrics.
 
-### "El score no cambia aunque registro actividades"
-El score se recalcula en eventos clave (nuevo deal, cambio de etapa, etc.). Puedes forzarlo desde Ajustes → Scoring ICP → "Recalcular scores".
+### Usa los motivos de retorno como brújula
+Cada lead devuelto es feedback gratis sobre tu targeting. Si el 40% vuelve por "no es buen fit", tu ICP o tu segmentación necesita ajuste urgente.
 
-### "Un contacto devuelto a marketing sigue apareciendo"
-Después de devolverlo, la página debe recargarse. Si sigue apareciendo tras recargar, es un bug — reportar.
+### Segmenta antes de enviar
+Nunca envíes la misma campaña a toda la base. Usa **Smart Segments** para crear segmentos por engagement + industry + score, y personaliza el mensaje. Un segmento de 50 hot vale más que un blast de 5000.
 
-### "Creé un deal con el contacto equivocado"
-Edita el deal → cambia el contactId. Si no puedes editarlo, elimina el deal y créalo de nuevo con el contacto correcto.
+### Re-engagement antes de descartar
+Un lead cold no está muerto. Antes de sacarlo, méltelo en una campaña de re-engagement con un ángulo distinto. Muchos "muertos" reviven con el mensaje correcto.
 
-### "Las métricas del dashboard no cuadran con lo que veo en Pipeline"
-El Dashboard usa datos calculados en el momento de la carga. Recarga la página para actualizar. Si aún no cuadran, verifica que no haya deals en stages especiales (Won/Lost) que excluyan del conteo abierto.
+### Notas de marketing = contexto para ventas
+Cuando hagas handoff, deja una **marketingNote** con: de qué campaña vino, qué contenido le interesó, y cualquier señal de intención. Ventas cierra más rápido cuando tiene contexto.
 
----
+### Mira el Lead Velocity, no solo el volumen
+Generar muchos leads que avanzan lento es peor que pocos que avanzan rápido. Lead Velocity te dice si tu nurturing realmente mueve la aguja.
 
-## 14. Tips avanzados
-
-### Atajos de navegación
-- La barra de búsqueda global (Ctrl/Cmd + K desde cualquier página) busca contactos y deals.
-- Desde un contacto puedes crear deal, actividad o devolverlo a marketing sin salir del detalle.
-
-### Usar temperatura estratégicamente
-- **Cold** = lead nuevo o inactivo. Bajo nurturing.
-- **Warm** = mostró interés. Merece seguimiento activo.
-- **Hot** = listo para comprar o en conversación activa. Prioridad máxima.
-- Actualiza la temperatura después de cada interacción significativa.
-
-### Score como guía, no como regla absoluta
-El score es una ayuda, no una sentencia. Un lead con score 45 puede cerrar si el timing es perfecto. Úsalo para priorizar tu tiempo, no para descartar.
-
-### Notas con contexto
-Al registrar una nota, incluye siempre:
-- Qué se habló
-- Cuál es el siguiente paso acordado
-- Quién es el decisor real en la empresa
-
-### Sequencias para leads fríos
-Los leads con temperatura cold que no responden al outreach manual → meterlos en una Secuencia automatizada de nurturing (Prospecting Engine → Secuencias). Así marketing los trabaja mientras ventas se enfoca en los hot/warm.
-
-### Portal del cliente (Ajustes → Cliente)
-Puedes crear un portal personalizado para cada cliente activo donde verán sus métricas, el avance de sus deals y reportes. Configura los widgets que quieres mostrar y envíales el enlace.
-
-### Exportar datos
-- Contactos y deals se pueden exportar como CSV desde la API (/api/export?type=contacts o ?type=deals).
-- Útil para reportes en Google Sheets o presentaciones.
-
-### Sincronización con Apollo
-Si usas Apollo.io para prospección, puedes sincronizar contactos vía **Sincronizar Apollo CSV** (al fondo de la barra lateral).
+### ABM para los peces gordos
+Para cuentas objetivo grandes, usa el **ABM Board** en lugar de tratarlas como leads sueltos. Coordina toques a varios contactos de la misma empresa.
 
 ---
 
-## Glosario rápido
+## 17. Glosario de marketing
 
 | Término | Significado |
 |---------|-------------|
-| MQL | Marketing Qualified Lead — calificado por marketing |
-| SQL | Sales Qualified Lead — calificado por ventas |
-| ICP | Ideal Customer Profile — perfil del cliente ideal |
-| NBA | Next Best Action — próxima acción recomendada |
-| SLA | Service Level Agreement — acuerdo de tiempos entre M+S |
-| Handoff | Transferencia de un lead de marketing a ventas |
-| Pipeline | Embudo de ventas con sus etapas |
-| Deal | Oportunidad de venta concreta con valor monetario |
-| Score | Puntuación 0-100 de calidad e interés del lead |
-| Temperatura | Nivel de interés: cold / warm / hot |
-| Retorno | Devolver un lead de ventas a marketing para re-nutrir |
-| Health Score M+S | Puntuación de alineación entre los dos equipos |
+| MQL | Marketing Qualified Lead — lead calificado por marketing |
+| SQL | Sales Qualified Lead — lead aceptado por ventas |
+| ICP | Ideal Customer Profile — perfil de cliente ideal |
+| Engagement status | hot / warm / cold / dead según interacción con emails |
+| Handoff | Transferir un lead calificado de marketing a ventas |
+| Nurturing | Nutrir un lead con contenido hasta que esté listo |
+| Re-engagement | Reactivar leads fríos o devueltos |
+| Open rate | % de emails abiertos |
+| Click rate | % de clics sobre emails enviados |
+| Reply rate | % de respuestas |
+| Bounce | Email que no se pudo entregar |
+| Unsubscribe | Contacto que se dio de baja — no enviar más |
+| Atribución | Asignar crédito de revenue a las campañas/canales |
+| Lead velocity | Velocidad con que los leads avanzan por el funnel |
+| Tier | Nivel de prioridad del contacto (1 = máxima) |
+| Score | Puntuación 0-100 de calificación del lead |
+| SLA | Acuerdo de tiempos de respuesta entre M+S |
+| ABM | Account-Based Marketing — marketing por cuenta |
+| Brevo | Plataforma de email marketing integrada |
+| Health Score M+S | Puntuación de alineación marketing-ventas |
 
 ---
 
-*Última actualización: Mayo 2026 — BlackScale Nexus v1.x*
+*Última actualización: Mayo 2026 — BlackScale Nexus · Módulo de Marketing*
