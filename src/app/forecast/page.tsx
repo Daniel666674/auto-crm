@@ -5,10 +5,9 @@ import { formatCurrency } from "@/lib/constants";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getMonthlyTarget } from "@/lib/targets";
 
 export const dynamic = "force-dynamic";
-
-const MONTHLY_TARGET = 90_000_000;
 
 function fDate(ts: Date | null) {
   if (!ts) return "Sin fecha";
@@ -113,7 +112,8 @@ export default async function ForecastPage() {
   const possible = activeDeals.filter(d => d.probability < 50);
 
   const committedTotal = committed.reduce((s, d) => s + d.value, 0);
-  const gap = MONTHLY_TARGET - committedTotal;
+  const monthlyTarget = getMonthlyTarget();
+  const gap = monthlyTarget - committedTotal;
 
   return (
     <div>
@@ -124,7 +124,7 @@ export default async function ForecastPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
         <StatCard label="Comprometido >80%" value={formatCurrency(committedTotal)} accent="#22c55e" />
-        <StatCard label="Meta mensual" value={formatCurrency(MONTHLY_TARGET)} />
+        <StatCard label="Meta mensual" value={formatCurrency(monthlyTarget)} />
         <StatCard
           label={gap > 0 ? "Gap vs meta" : "Exceso vs meta"}
           value={formatCurrency(Math.abs(gap))}

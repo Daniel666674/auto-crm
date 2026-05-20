@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const GOLD = "#D19C15";
-const MONTHLY_TARGET = 90000000; // COP — matches revenue screen
+const DEFAULT_MONTHLY_TARGET = 90000000; // COP — fallback when no quota configured
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,6 +101,7 @@ function FactorRow({ label, detail, tip, score, max }: { label: string; detail: 
 export default function PipelineHealthPage() {
   const [deals, setDeals] = useState<DealRow[]>([]);
   const [activities, setActivities] = useState<ActivityRow[]>([]);
+  const [monthlyTarget, setMonthlyTarget] = useState(DEFAULT_MONTHLY_TARGET);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,6 +112,10 @@ export default function PipelineHealthPage() {
       .then(([d, a]) => { setDeals(d); setActivities(a); })
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetch("/api/targets/current")
+      .then(r => r.ok ? r.json() : null)
+      .then(t => { if (t?.monthlyTarget) setMonthlyTarget(t.monthlyTarget); })
+      .catch(() => {});
   }, []);
 
   const activeDeals = deals.filter(d => !d.stageIsWon && !d.stageIsLost);
@@ -118,7 +123,7 @@ export default function PipelineHealthPage() {
 
   // ── Factor 1: Coverage ratio (weighted pipeline vs monthly target, max 30 pts)
   const weightedPipeline = activeDeals.reduce((s, d) => s + d.value * (d.probability / 100), 0);
-  const coverageRatio = MONTHLY_TARGET > 0 ? Math.min(2, weightedPipeline / MONTHLY_TARGET) : 0;
+  const coverageRatio = monthlyTarget > 0 ? Math.min(2, weightedPipeline / monthlyTarget) : 0;
   const coverageScore = Math.round(coverageRatio * 30);
 
   // ── Factor 2: Average deal age — lower is better (max 25 pts)
@@ -204,7 +209,7 @@ export default function PipelineHealthPage() {
             label="Coverage ratio (pipeline ponderado vs meta)"
             score={coverageScore}
             max={30}
-            detail={`${fmtCOP(weightedPipeline)} ponderado vs ${fmtCOP(MONTHLY_TARGET)} meta mensual`}
+            detail={`${fmtCOP(weightedPipeline)} ponderado vs ${fmtCOP(monthlyTarget)} meta mensual`}
             tip={coverageRatio < 1 ? "Pipeline insuficiente para alcanzar la meta del mes — agrega más deals." : "Cobertura buena, el pipeline supera la meta."}
           />
 
@@ -237,7 +242,7 @@ export default function PipelineHealthPage() {
             <div className="rounded-lg p-4 mt-1" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
               <div className="text-xs font-bold mb-2" style={{ color: "#f59e0b" }}>Acciones recomendadas</div>
               <ul className="text-xs flex flex-col gap-1.5" style={{ color: "var(--muted-foreground)" }}>
-                {coverageRatio < 1 && <li>→ Añade al menos {fmtCOP(MONTHLY_TARGET - weightedPipeline)} en deals ponderados para cubrir la meta.</li>}
+                {coverageRatio < 1 && <li>→ Añade al menos {fmtCOP(monthlyTarget - weightedPipeline)} en deals ponderados para cubrir la meta.</li>}
                 {stalledCount > 0 && <li>→ Registra actividad en los {stalledCount} deal{stalledCount !== 1 ? "s" : ""} estancado{stalledCount !== 1 ? "s" : ""}.</li>}
                 {avgDays > 20 && <li>→ Revisa los deals más antiguos y decide: avanzar, nurture, o cerrar como perdido.</li>}
                 {singleScore < 15 && <li>→ Identifica otros contactos en las empresas con un solo punto de contacto.</li>}
