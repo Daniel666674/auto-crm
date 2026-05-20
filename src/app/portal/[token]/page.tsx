@@ -90,6 +90,8 @@ function NotFound() {
   return (
     <div style={{
       minHeight: "100vh",
+      width: "100%",
+      flex: 1,
       background: "#0a0a09",
       display: "flex",
       alignItems: "center",
@@ -255,6 +257,8 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
     <div
       style={{
         minHeight: "100vh",
+        width: "100%",
+        flex: 1,
         background: "#0a0a09",
         color: "#D7D2CB",
         fontFamily: "system-ui, -apple-system, sans-serif",

@@ -7,7 +7,9 @@ import { Header } from "@/components/layout/Header";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/login") {
+  // Standalone routes render with no CRM chrome (no sidebar/header).
+  // Portals are client-facing and must NEVER expose the internal CRM.
+  if (pathname === "/login" || pathname.startsWith("/portal")) {
     return <>{children}</>;
   }
 
