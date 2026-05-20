@@ -10,6 +10,7 @@ import { ArrowLeft, Calendar, DollarSign, Percent, FileText } from "lucide-react
 import { formatCurrency, formatUSD, formatDate, formatRelativeDate } from "@/lib/constants";
 import { ACTIVITY_TYPE_CONFIG } from "@/lib/constants";
 import { WompiPaymentCard } from "@/components/deals/WompiPaymentCard";
+import { CustomFieldValues, parseCustomFields } from "@/components/shared/CustomFields";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +133,8 @@ export default async function DealDetailPage({
         paymentReference={deal.paymentReference ?? null}
         paidAt={deal.paidAt ?? null}
       />
+
+      <CustomFieldValues entity="deal" values={parseCustomFields((deal as { customFields?: string | null }).customFields)} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {deal.notes && (

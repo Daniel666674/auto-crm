@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CustomFieldValues, parseCustomFields } from "@/components/shared/CustomFields";
 import { ConsentBadge } from "./ConsentBadge";
 import { DataDeletionModal } from "./DataDeletionModal";
 import { ContactForm } from "./ContactForm";
@@ -70,6 +71,7 @@ interface ContactDetailClientProps {
     returnedToMarketingReason?: string | null;
     firstTouchCampaignId?: string | null;
     lastTouchCampaignId?: string | null;
+    customFields?: string | null;
   };
   deals: Array<{
     id: string;
@@ -353,6 +355,9 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
               {contact.notes}
             </div>
           )}
+
+          {/* Custom fields */}
+          <CustomFieldValues entity="contact" values={parseCustomFields(contact.customFields)} />
 
           {/* Action buttons */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4 }}>

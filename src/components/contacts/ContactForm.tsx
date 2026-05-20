@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useState } from "react";
+import { CustomFieldInputs } from "@/components/shared/CustomFields";
 
 const contactSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -49,6 +51,7 @@ interface ContactFormProps {
 export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
   const router = useRouter();
   const isEditing = !!initialData?.id;
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
 
   const {
     register,
@@ -85,7 +88,10 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          customFields: Object.keys(customFields).length > 0 ? customFields : null,
+        }),
       });
 
       if (!res.ok) throw new Error("Error al guardar");
@@ -212,6 +218,8 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
             <Label htmlFor="notes">Notas</Label>
             <Textarea id="notes" {...register("notes")} placeholder="Notas sobre el contacto..." rows={3} />
           </div>
+
+          <CustomFieldInputs entity="contact" values={customFields} onChange={setCustomFields} />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} className="cursor-pointer">

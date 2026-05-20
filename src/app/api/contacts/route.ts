@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "JSON invalido" }, { status: 400 });
   }
 
-  const { name, email, phone, company, source, temperature, score, notes, title, industry, location, linkedinUrl, whatsappNumber } =
+  const { name, email, phone, company, source, temperature, score, notes, title, industry, location, linkedinUrl, whatsappNumber, customFields } =
     body;
 
   if (!name) {
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         location: location || null,
         linkedinUrl: linkedinUrl || null,
         whatsappNumber: whatsappNumber || null,
+        customFields: customFields ? JSON.stringify(customFields) : null,
         createdAt: now,
         updatedAt: now,
       })

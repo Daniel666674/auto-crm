@@ -84,6 +84,7 @@ export async function PUT(
   if (body.whatsappNumber !== undefined) updateData.whatsappNumber = body.whatsappNumber || null;
   if (body.tags !== undefined) updateData.tags = body.tags || null;
   if (body.lifecycleStage !== undefined) updateData.lifecycleStage = body.lifecycleStage || "lead";
+  if (body.customFields !== undefined) updateData.customFields = body.customFields ? JSON.stringify(body.customFields) : null;
 
   const result = db
     .update(contacts)

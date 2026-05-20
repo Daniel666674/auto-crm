@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "JSON invalido" }, { status: 400 });
   }
-  const { title, value, usdValue, fxRate, stageId, contactId, expectedClose, probability, notes, ownerId } = body;
+  const { title, value, usdValue, fxRate, stageId, contactId, expectedClose, probability, notes, ownerId, customFields } = body;
 
   if (!title || !contactId) {
     return NextResponse.json(
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
         probability: Math.max(0, Math.min(100, Number(probability) || 0)),
         notes: notes || null,
         ownerId: ownerId || session?.user?.id || null,
+        customFields: customFields ? JSON.stringify(customFields) : null,
         createdAt: now,
         updatedAt: now,
       })

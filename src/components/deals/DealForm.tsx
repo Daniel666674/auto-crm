@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { CustomFieldInputs } from "@/components/shared/CustomFields";
 
 const dealSchema = z.object({
   title: z.string().min(1, "El titulo es requerido"),
@@ -50,6 +51,7 @@ export function DealForm({ open, onClose }: DealFormProps) {
   const router = useRouter();
   const [contactsList, setContacts] = useState<Array<{ id: string; name: string }>>([]);
   const [stagesList, setStages] = useState<Array<{ id: string; name: string }>>([]);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
 
   const {
     register,
@@ -78,6 +80,7 @@ export function DealForm({ open, onClose }: DealFormProps) {
 
   useEffect(() => {
     if (open) {
+      setCustomFields({});
       fetch("/api/contacts").then((r) => r.json()).then(setContacts);
       fetch("/api/pipeline").then((r) => r.json()).then(setStages);
       // Prefill the negotiation FX rate from settings
@@ -113,6 +116,7 @@ export function DealForm({ open, onClose }: DealFormProps) {
           competitor: data.competitor || null,
           isRecurring: data.isRecurring,
           recurringInterval: data.isRecurring ? data.recurringInterval : null,
+          customFields: Object.keys(customFields).length > 0 ? customFields : null,
         }),
       });
 
@@ -267,6 +271,8 @@ export function DealForm({ open, onClose }: DealFormProps) {
               </Select>
             )}
           </div>
+
+          <CustomFieldInputs entity="deal" values={customFields} onChange={setCustomFields} />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} className="cursor-pointer">

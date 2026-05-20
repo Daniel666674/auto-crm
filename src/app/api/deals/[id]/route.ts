@@ -62,6 +62,7 @@ export async function PUT(
   if (body.competitor !== undefined) updateData.competitor = body.competitor || null;
   if (body.isRecurring !== undefined) updateData.isRecurring = Boolean(body.isRecurring);
   if (body.recurringInterval !== undefined) updateData.recurringInterval = body.recurringInterval || null;
+  if (body.customFields !== undefined) updateData.customFields = body.customFields ? JSON.stringify(body.customFields) : null;
 
   // Handle stage change — detect won/lost to set closedAt/closedBy
   if (body.stageId !== undefined && body.stageId !== existing.stageId) {
