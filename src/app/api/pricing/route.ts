@@ -26,11 +26,24 @@ const DEFAULT_PRICING = {
 
 export async function GET() {
   const row = db.select().from(crmSettings).where(eq(crmSettings.key, PRICING_KEY)).get();
-  if (!row) return NextResponse.json(DEFAULT_PRICING);
+  let config = DEFAULT_PRICING;
+  if (row) {
+    try { config = JSON.parse(row.value); } catch { config = DEFAULT_PRICING; }
+  }
+  // Overlay the global FX rate so the calculator and deals share one rate.
+  return NextResponse.json({ ...config, usdToCop: globalFxRate(config.usdToCop ?? DEFAULT_PRICING.usdToCop) });
+}
+
+// Single source of truth for USD→COP: the global FX rate (Ajustes → Negocio).
+function globalFxRate(fallback: number): number {
+  const row = db.select().from(crmSettings).where(eq(crmSettings.key, "default_fx_rate")).get();
+  if (!row?.value) return fallback;
   try {
-    return NextResponse.json(JSON.parse(row.value));
+    const parsed = JSON.parse(row.value) as { rate?: number };
+    return Number(parsed.rate) > 0 ? Number(parsed.rate) : fallback;
   } catch {
-    return NextResponse.json(DEFAULT_PRICING);
+    const n = Number(row.value);
+    return n > 0 ? n : fallback;
   }
 }
 

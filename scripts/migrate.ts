@@ -324,6 +324,26 @@ if (!hasColumn("deals", "fx_rate")) {
 }
 
 // ---------------------------------------------------------------------------
+// Migration 13: calendar_events table (shared marketing/content calendar)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking calendar_events table...");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS calendar_events (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    date TEXT NOT NULL,
+    time TEXT NOT NULL DEFAULT '10:00',
+    duration INTEGER NOT NULL DEFAULT 60,
+    type TEXT NOT NULL DEFAULT 'Reunión',
+    participants TEXT NOT NULL DEFAULT '[]',
+    notes TEXT,
+    created_by TEXT,
+    created_at INTEGER NOT NULL
+  )
+`);
+console.log("[migrate] calendar_events table: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

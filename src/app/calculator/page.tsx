@@ -85,7 +85,7 @@ function EditPricingModal({ config, onClose, onSave }: EditPricingModalProps) {
           </button>
         </div>
 
-        {/* USD/COP rate */}
+        {/* USD/COP rate — synced with global FX setting */}
         <div className="mb-5">
           <label className="block text-xs mb-1.5 font-semibold uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
             TRM USD → COP
@@ -93,10 +93,13 @@ function EditPricingModal({ config, onClose, onSave }: EditPricingModalProps) {
           <input
             type="number"
             value={draft.usdToCop}
-            onChange={e => setDraft(d => ({ ...d, usdToCop: +e.target.value }))}
+            disabled
             className="w-40 px-3 py-2 rounded-lg text-sm"
-            style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+            style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--muted-foreground)", opacity: 0.7 }}
           />
+          <p className="text-xs mt-1.5" style={{ color: "var(--muted-foreground)" }}>
+            Sincronizado con <a href="/settings" style={{ color: "#C39A4C" }}>Ajustes → Negocio</a> (tasa global del día).
+          </p>
         </div>
 
         {/* Packages */}

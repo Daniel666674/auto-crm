@@ -267,6 +267,18 @@ function initTables(db: Database.Database): void {
     )`,
     `ALTER TABLE client_portals ADD COLUMN config_json TEXT NOT NULL DEFAULT '{}'`,
     `ALTER TABLE client_portals ADD COLUMN client_company TEXT`,
+    `CREATE TABLE IF NOT EXISTS calendar_events (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      time TEXT NOT NULL DEFAULT '10:00',
+      duration INTEGER NOT NULL DEFAULT 60,
+      type TEXT NOT NULL DEFAULT 'Reunión',
+      participants TEXT NOT NULL DEFAULT '[]',
+      notes TEXT,
+      created_by TEXT,
+      created_at INTEGER NOT NULL
+    )`,
   ];
 
   for (const sql of migrations) {

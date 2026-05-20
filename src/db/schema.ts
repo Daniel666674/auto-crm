@@ -119,6 +119,19 @@ export const crmSettings = sqliteTable("crm_settings", {
   value: text("value").notNull(),
 });
 
+export const calendarEvents = sqliteTable("calendar_events", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  date: text("date").notNull(), // ISO yyyy-mm-dd
+  time: text("time").notNull().default("10:00"),
+  duration: integer("duration").notNull().default(60),
+  type: text("type").notNull().default("Reunión"),
+  participants: text("participants").notNull().default("[]"), // JSON array of emails
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
 export const auditLog = sqliteTable("audit_log", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userName: text("user_name").notNull(),

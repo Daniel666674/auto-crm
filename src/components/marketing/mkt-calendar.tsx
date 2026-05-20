@@ -27,13 +27,12 @@ const TYPE_COLORS: Record<EventType, { bg: string; color: string }> = {
   Evento:    { bg: "rgba(72,187,120,0.18)",  color: "#48bb78" },
 };
 
-const LS_KEY = "nexus_calendar_events";
-
-function loadEvents(): CalEvent[] {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
-}
-function saveEvents(evs: CalEvent[]) {
-  localStorage.setItem(LS_KEY, JSON.stringify(evs));
+async function fetchEvents(): Promise<CalEvent[]> {
+  try {
+    const res = await fetch("/api/marketing/calendar");
+    if (!res.ok) return [];
+    return await res.json();
+  } catch { return []; }
 }
 
 function pad2(n: number) { return String(n).padStart(2, "0"); }
@@ -74,20 +73,23 @@ export function MktCalendar() {
     notes: "",
   });
 
-  useEffect(() => { setEvents(loadEvents()); }, []);
+  const refresh = useCallback(async () => { setEvents(await fetchEvents()); }, []);
 
-  const refresh = useCallback(() => setEvents(loadEvents()), []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const handleDelete = (id: string) => {
-    const updated = loadEvents().filter(e => e.id !== id);
-    saveEvents(updated); refresh();
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/marketing/calendar?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    await refresh();
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ev: CalEvent = { ...form, id: `evt_${Date.now()}` };
-    const all = [...loadEvents(), ev];
-    saveEvents(all); refresh();
+    await fetch("/api/marketing/calendar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    await refresh();
 
     // Open Google Calendar pre-filled
     const dates = toGCalDate(form.date, form.time, form.duration);
