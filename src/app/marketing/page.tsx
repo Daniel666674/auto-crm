@@ -26,6 +26,9 @@ import { MktSegmentsBuilder } from "@/components/marketing/mkt-segments-builder"
 import { MKT_THEME_VARS, MKT_PRESETS, getMktThemeVars } from "@/components/marketing/mkt-utils";
 import { MktForecast } from "@/components/marketing/mkt-forecast";
 import { MktAttributionModel } from "@/components/marketing/mkt-attribution-model";
+import { MktIntegrations } from "@/components/marketing/mkt-integrations";
+import { MktExport } from "@/components/marketing/mkt-export";
+import { MktAbm } from "@/components/marketing/mkt-abm";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
 const SECTION_LABELS: Record<MktSection, string> = {
@@ -672,19 +675,6 @@ function MktSettings() {
   );
 }
 
-function MktPlaceholder({ label }: { label: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "center",
-      height: "40vh", flexDirection: "column", gap: 8,
-      color: "var(--mkt-text-muted)", fontSize: 14,
-    }}>
-      <div style={{ fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 12 }}>En desarrollo — próximamente.</div>
-    </div>
-  );
-}
-
 // ── Main content ─────────────────────────────────────────────────────────────
 const MKT_FONT_MAP: Record<string, string> = {
   inter: "'Inter', -apple-system, sans-serif",
@@ -755,11 +745,11 @@ function MarketingContent() {
       case "pipeline-view": return <MktPipelineView />;
       case "lead-velocity": return <MktLeadVelocity />;
       case "calendar": return <MktCalendar />;
-      case "abm": return <MktPlaceholder label="ABM Board" />;
+      case "abm": return <MktAbm />;
       case "digest": return <MktDigest />;
       case "roi": return <MktCampaignRevenue />;
-      case "export": return <MktPlaceholder label="Exportar" />;
-      case "integrations": return <MktPlaceholder label="Integraciones" />;
+      case "export": return <MktExport />;
+      case "integrations": return <MktIntegrations />;
       case "settings": return <MktSettings />;
     }
   };
