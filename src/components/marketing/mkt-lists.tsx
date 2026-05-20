@@ -11,10 +11,10 @@ interface BrevoList {
   folderId?: number;
 }
 
-const S: Record<string, React.CSSProperties> = {
-  card: { background: "#111111", border: "1px solid #1e1e1e", borderRadius: 10 },
-  th: { padding: "10px 14px", fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "left", borderBottom: "1px solid #1e1e1e", whiteSpace: "nowrap" },
-  td: { padding: "12px 14px", fontSize: 12, color: "#e2e8f0", borderBottom: "1px solid #1e1e1e", verticalAlign: "middle" },
+const S = {
+  card: { background: "#111111", border: "1px solid #1e1e1e", borderRadius: 10 } as React.CSSProperties,
+  th: { padding: "10px 14px", fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "left", borderBottom: "1px solid #1e1e1e", whiteSpace: "nowrap" } as React.CSSProperties,
+  td: { padding: "12px 14px", fontSize: 12, color: "#e2e8f0", borderBottom: "1px solid #1e1e1e", verticalAlign: "middle" } as React.CSSProperties,
   pill: (active: boolean): React.CSSProperties => ({ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "1px solid #1e1e1e", background: active ? "#C39A4C" : "transparent", color: active ? "#0a0a0a" : "#718096" }),
 };
 

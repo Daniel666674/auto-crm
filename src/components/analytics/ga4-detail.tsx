@@ -239,7 +239,7 @@ export function GA4Detail() {
             </div>
           )}
 
-          {data.range && (
+          {(data as any).range && (
             <div style={{ fontSize: 10, color: "var(--mkt-text-muted, var(--muted-foreground))", opacity: 0.7 }}>
               Rango: {(data as any).range.startDate} → {(data as any).range.endDate}
             </div>

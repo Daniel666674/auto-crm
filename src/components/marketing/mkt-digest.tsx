@@ -28,7 +28,7 @@ export function MktDigest() {
   const newContacts = contacts.filter(c => (c.lastActivity || 0) >= weekAgo).length;
   const handoffsWeek = contacts.filter(c => c.readyForSales && c.passedToSalesAt && c.passedToSalesAt >= weekAgo).length;
 
-  const totalSent = campaigns.reduce((s, c) => s + (c.totalSent || 0), 0);
+  const totalSent = campaigns.reduce((s, c) => s + (c.totalContacts || 0), 0);
   const avgOpenRate = campaigns.length > 0
     ? campaigns.reduce((s, c) => s + (c.openRate || 0), 0) / campaigns.length
     : 0;

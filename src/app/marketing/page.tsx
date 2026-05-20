@@ -16,7 +16,7 @@ import { MktLeadVelocity } from "@/components/marketing/mkt-lead-velocity";
 import { MktAnalytics } from "@/components/marketing/mkt-analytics";
 import { MktCalendar } from "@/components/marketing/mkt-calendar";
 import { MktDigest } from "@/components/marketing/mkt-digest";
-import { MktROI } from "@/components/marketing/mkt-roi";
+import { MktCampaignRevenue } from "@/components/marketing/mkt-campaign-revenue";
 import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
 import { MktAdvancedSettings } from "@/components/marketing/mkt-advanced-settings";
 import { MktContactsView } from "@/components/marketing/mkt-contacts-view";
@@ -757,7 +757,7 @@ function MarketingContent() {
       case "calendar": return <MktCalendar />;
       case "abm": return <MktPlaceholder label="ABM Board" />;
       case "digest": return <MktDigest />;
-      case "roi": return <MktROI />;
+      case "roi": return <MktCampaignRevenue />;
       case "export": return <MktPlaceholder label="Exportar" />;
       case "integrations": return <MktPlaceholder label="Integraciones" />;
       case "settings": return <MktSettings />;

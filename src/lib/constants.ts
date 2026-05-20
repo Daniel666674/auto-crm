@@ -36,9 +36,10 @@ export const ACTIVITY_TYPE_CONFIG: Record<
 };
 
 export function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat("es-MX", {
+  return new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "MXN",
+    currency: "COP",
+    maximumFractionDigits: 0,
   }).format(cents / 100);
 }
 

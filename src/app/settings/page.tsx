@@ -1473,7 +1473,7 @@ function TabCliente() {
     toast.success("Widgets restablecidos");
   };
 
-  // KPI target helpers: store cents internally; surface MXN to the user.
+  // KPI target helpers: store cents internally; surface COP to the user.
   const setKpiTarget = (key: "monthlyRevenueTarget" | "monthlyLeadsTarget" | "pipelineCoverageTarget", value: number | undefined) => {
     setConfig(prev => ({
       ...prev,
@@ -1694,7 +1694,7 @@ function TabCliente() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               <div>
-                <span style={S.label}>Revenue mensual (MXN)</span>
+                <span style={S.label}>Revenue mensual (COP)</span>
                 <input
                   type="number"
                   min={0}
