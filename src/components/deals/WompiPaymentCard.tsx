@@ -73,7 +73,8 @@ export function WompiPaymentCard({ dealId, dealValue, paymentLinkUrl, paymentSta
   }
 
   const status = paymentStatus ? STATUS_CFG[paymentStatus] ?? { label: paymentStatus, color: "#94a3b8", bg: "rgba(148,163,184,0.12)", icon: <Clock size={14} /> } : null;
-  const hasLink = !!paymentLinkUrl;
+  const linkUrl = paymentLinkUrl;
+  const hasLink = !!linkUrl;
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 18, background: "var(--card)" }}>
@@ -111,18 +112,18 @@ export function WompiPaymentCard({ dealId, dealValue, paymentLinkUrl, paymentSta
         </div>
       )}
 
-      {hasLink && (
+      {linkUrl && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 4 }}>Link de pago</div>
             <div style={{ display: "flex", gap: 6 }}>
               <code style={{ flex: 1, padding: "8px 10px", borderRadius: 6, background: "var(--background)", border: "1px solid var(--border)", fontSize: 11, fontFamily: "monospace", color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {paymentLinkUrl}
+                {linkUrl}
               </code>
               <button onClick={copyLink} title="Copiar" style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
                 <Copy size={12} /> {copied ? "Copiado" : "Copiar"}
               </button>
-              <a href={paymentLinkUrl ?? "#"} target="_blank" rel="noopener noreferrer" style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, textDecoration: "none" }}>
+              <a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, textDecoration: "none" }}>
                 <ExternalLink size={12} /> Abrir
               </a>
             </div>
