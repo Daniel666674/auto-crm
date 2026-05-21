@@ -11,13 +11,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json(
-      { error: "RESEND_API_KEY no configurado" },
-      { status: 400 }
-    );
-  }
-
   let body: { contactId?: string; to?: string; subject?: string; body?: string };
   try {
     body = await request.json();

@@ -3,6 +3,7 @@ import { emailSuppressions, emailEvents } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export const EMAIL_FROM = process.env.DIGEST_FROM || "nexus@blackscale.consulting";
+export const SENDER_NAME = process.env.SENDER_NAME || "BlackScale";
 
 export function getBaseUrl(): string {
   return (
@@ -129,10 +130,43 @@ export interface SendEmailResult {
   id?: string;
 }
 
-/** Low-level Resend transport. Throws on misconfiguration or provider error. */
+/**
+ * Sends an email through the best available transport:
+ *   1. Google Workspace (Gmail) if an account is connected — sends as the real
+ *      mailbox, ideal for personal sequences.
+ *   2. Resend as fallback (or when EMAIL_TRANSPORT=resend forces it).
+ * Throws if neither transport is available/working.
+ */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  const forceResend = process.env.EMAIL_TRANSPORT === "resend";
+
+  if (!forceResend) {
+    try {
+      const { getGmailSenderUserId, sendViaGmail } = await import("./google-gmail");
+      const senderUserId = getGmailSenderUserId();
+      if (senderUserId) {
+        const r = await sendViaGmail(senderUserId, {
+          to: input.to,
+          subject: input.subject,
+          html: input.html,
+          fromName: SENDER_NAME,
+          replyTo: input.replyTo,
+        });
+        return { id: r.id };
+      }
+    } catch (err) {
+      // No Resend fallback configured → surface the Gmail error.
+      if (!process.env.RESEND_API_KEY) {
+        throw err instanceof Error ? err : new Error("Error al enviar vía Gmail");
+      }
+      // otherwise fall through to Resend below
+    }
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("RESEND_API_KEY no configurado");
+  if (!apiKey) {
+    throw new Error("No hay transporte de email configurado (conecta Google Workspace o define RESEND_API_KEY)");
+  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
