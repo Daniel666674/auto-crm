@@ -12,6 +12,8 @@ interface SequenceStep {
   delay: number;
   type: "email" | "call" | "task" | "follow_up";
   description: string;
+  subject?: string;
+  body?: string;
 }
 
 interface Sequence {
@@ -32,6 +34,9 @@ interface Enrollment {
   currentStep: number;
   status: string;
   startedAt: string;
+  nextActionAt?: string | null;
+  lastSentAt?: string | null;
+  lastError?: string | null;
 }
 
 const STEP_TYPES = [
@@ -213,7 +218,7 @@ export default function SequencesPage() {
       <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>Secuencias de Seguimiento</h2>
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 4 }}>Crea flujos multi-paso e inscribe contactos</p>
+          <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 4 }}>Flujos multi-paso · los pasos de email se envían automáticamente vía BlackScale</p>
         </div>
         <button
           onClick={openNew}
@@ -254,7 +259,23 @@ export default function SequencesPage() {
                         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>días</span>
                       </div>
                     </div>
-                    <input value={step.description} onChange={e => updateStep(i, "description", e.target.value)} placeholder="Descripción del paso..." style={inputStyle} />
+                    {step.type === "email" ? (
+                      <>
+                        <input value={step.subject ?? ""} onChange={e => updateStep(i, "subject", e.target.value)} placeholder="Asunto del email..." style={inputStyle} />
+                        <textarea
+                          value={step.body ?? ""}
+                          onChange={e => updateStep(i, "body", e.target.value)}
+                          placeholder={"Escribe el mensaje. Usa {{firstName}}, {{company}}, {{senderName}} para personalizar."}
+                          rows={5}
+                          style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+                        />
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                          Variables: <code>{"{{firstName}}"}</code> · <code>{"{{name}}"}</code> · <code>{"{{company}}"}</code> · <code>{"{{senderName}}"}</code> — se envía automáticamente vía BlackScale.
+                        </div>
+                      </>
+                    ) : (
+                      <input value={step.description} onChange={e => updateStep(i, "description", e.target.value)} placeholder="Descripción del paso..." style={inputStyle} />
+                    )}
                   </div>
                   <button onClick={() => removeStep(i)} style={{ padding: 6, borderRadius: 6, border: "none", background: "rgba(239,68,68,0.1)", color: "#ef4444", cursor: "pointer", flexShrink: 0 }}>
                     <X size={13} />
@@ -353,8 +374,15 @@ export default function SequencesPage() {
                         <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                           {step.delay === 0 ? "Inmediato" : `Día ${step.delay}`}
                         </span>
+                        {step.type === "email" && (
+                          <span style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>· auto-envío</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: 13, color: "var(--foreground)" }}>{step.description || <span style={{ color: "var(--muted-foreground)" }}>Sin descripción</span>}</div>
+                      <div style={{ fontSize: 13, color: "var(--foreground)" }}>
+                        {step.type === "email"
+                          ? (step.subject || <span style={{ color: "var(--muted-foreground)" }}>Sin asunto</span>)
+                          : (step.description || <span style={{ color: "var(--muted-foreground)" }}>Sin descripción</span>)}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -392,21 +420,34 @@ export default function SequencesPage() {
                         </button>
                       </div>
                     </div>
-                    {en.status === "active" && selectedSteps.length > 0 && (
-                      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                          Paso {Math.min(en.currentStep + 1, selectedSteps.length)}/{selectedSteps.length}
+                    {en.status === "active" && selectedSteps.length > 0 && (() => {
+                      const curStep = selectedSteps[en.currentStep];
+                      const isEmail = curStep?.type === "email";
+                      return (
+                        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                              Paso {Math.min(en.currentStep + 1, selectedSteps.length)}/{selectedSteps.length}
+                            </div>
+                            {isEmail ? (
+                              <span style={{ fontSize: 11, color: "#22c55e" }}>
+                                {en.nextActionAt ? `Próximo envío: ${new Date(en.nextActionAt).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Programado"}
+                              </span>
+                            ) : en.currentStep < selectedSteps.length ? (
+                              <button
+                                onClick={() => advanceStep(en)}
+                                style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--foreground)", fontSize: 11, cursor: "pointer" }}
+                              >
+                                <Check size={11} /> Completar paso
+                              </button>
+                            ) : null}
+                          </div>
+                          {en.lastError && (
+                            <div style={{ fontSize: 10, color: "#f59e0b" }}>⚠ {en.lastError}</div>
+                          )}
                         </div>
-                        {en.currentStep < selectedSteps.length && (
-                          <button
-                            onClick={() => advanceStep(en)}
-                            style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--foreground)", fontSize: 11, cursor: "pointer" }}
-                          >
-                            <Check size={11} /> Completar paso
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

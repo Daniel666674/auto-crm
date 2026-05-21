@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
 import { activities } from "@/db/schema";
+import { sendEmail, isSuppressed } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -10,8 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!process.env.RESEND_API_KEY) {
     return NextResponse.json(
       { error: "RESEND_API_KEY no configurado" },
       { status: 400 }
@@ -33,34 +33,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const from =
-    process.env.DIGEST_FROM || "nexus@blackscale.consulting";
+  if (isSuppressed(to)) {
+    return NextResponse.json(
+      { error: "Este email canceló su suscripción y está en la lista de exclusión" },
+      { status: 400 }
+    );
+  }
 
   let resendId: string | undefined;
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to,
-        subject,
-        html: emailBody.replace(/\n/g, "<br>"),
-        text: emailBody,
-      }),
+    const result = await sendEmail({
+      to,
+      subject,
+      html: emailBody.replace(/\n/g, "<br>"),
+      text: emailBody,
     });
-
-    const data = (await res.json()) as { id?: string; message?: string; name?: string };
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: data.message || data.name || "Error al enviar email" },
-        { status: res.status }
-      );
-    }
-    resendId = data.id;
+    resendId = result.id;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error de red";
     return NextResponse.json({ error: msg }, { status: 500 });

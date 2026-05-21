@@ -1,0 +1,158 @@
+import { db } from "@/db";
+import { emailSuppressions, emailEvents } from "@/db/schema";
+import { eq } from "drizzle-orm";
+
+export const EMAIL_FROM = process.env.DIGEST_FROM || "nexus@blackscale.consulting";
+
+export function getBaseUrl(): string {
+  return (
+    process.env.APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
+}
+
+/** Replace {{key}} merge tags with values. Unknown tags become empty strings. */
+export function renderTemplate(tpl: string, vars: Record<string, string | undefined>): string {
+  return tpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => vars[key] ?? "");
+}
+
+export function isSuppressed(email: string): boolean {
+  if (!email) return true;
+  const row = db
+    .select({ email: emailSuppressions.email })
+    .from(emailSuppressions)
+    .where(eq(emailSuppressions.email, email.toLowerCase().trim()))
+    .get();
+  return !!row;
+}
+
+export function suppress(email: string, reason = "unsubscribe"): void {
+  if (!email) return;
+  try {
+    db.insert(emailSuppressions)
+      .values({ email: email.toLowerCase().trim(), reason, createdAt: new Date() })
+      .onConflictDoNothing()
+      .run();
+  } catch {
+    /* already suppressed */
+  }
+}
+
+export function logEmailEvent(e: {
+  contactId?: string | null;
+  sequenceId?: string | null;
+  enrollmentId?: string | null;
+  messageId?: string | null;
+  type: string;
+  url?: string | null;
+}): void {
+  try {
+    db.insert(emailEvents)
+      .values({
+        contactId: e.contactId ?? null,
+        sequenceId: e.sequenceId ?? null,
+        enrollmentId: e.enrollmentId ?? null,
+        messageId: e.messageId ?? null,
+        type: e.type,
+        url: e.url ?? null,
+        createdAt: new Date(),
+      })
+      .run();
+  } catch {
+    /* non-fatal */
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+interface TrackingCtx {
+  contactId?: string | null;
+  enrollmentId?: string | null;
+  sequenceId?: string | null;
+  messageId: string;
+  unsubEmail?: string | null;
+}
+
+/**
+ * Turns a plain-text body into tracked HTML: linkifies bare URLs through the
+ * click tracker, appends a 1x1 open-tracking pixel and an unsubscribe footer.
+ */
+export function buildTrackedHtml(bodyText: string, ctx: TrackingCtx): string {
+  const base = getBaseUrl();
+  const q = (extra: Record<string, string>) =>
+    new URLSearchParams({
+      m: ctx.messageId,
+      ...(ctx.contactId ? { c: ctx.contactId } : {}),
+      ...(ctx.enrollmentId ? { e: ctx.enrollmentId } : {}),
+      ...(ctx.sequenceId ? { s: ctx.sequenceId } : {}),
+      ...extra,
+    }).toString();
+
+  // Escape, then linkify http(s) URLs through the click tracker.
+  const escaped = escapeHtml(bodyText);
+  const linked = escaped.replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+    const tracked = `${base}/api/email/track/click?${q({ u: encodeURIComponent(url) })}`;
+    return `<a href="${tracked}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+  const htmlBody = linked.replace(/\n/g, "<br>");
+
+  const pixel = `<img src="${base}/api/email/track/open?${q({})}" width="1" height="1" alt="" style="display:none" />`;
+
+  const unsubUrl = ctx.unsubEmail
+    ? `${base}/api/email/unsubscribe?${new URLSearchParams({ a: ctx.unsubEmail, ...(ctx.contactId ? { c: ctx.contactId } : {}) }).toString()}`
+    : "";
+  const footer = unsubUrl
+    ? `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e5e5;font-size:11px;color:#999;font-family:Arial,sans-serif">` +
+      `BlackScale · <a href="${unsubUrl}" style="color:#999">Cancelar suscripción</a>` +
+      `</div>`
+    : "";
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222">${htmlBody}${footer}${pixel}</div>`;
+}
+
+export interface SendEmailInput {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  from?: string;
+  replyTo?: string;
+}
+
+export interface SendEmailResult {
+  id?: string;
+}
+
+/** Low-level Resend transport. Throws on misconfiguration or provider error. */
+export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY no configurado");
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: input.from || EMAIL_FROM,
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      text: input.text ?? input.html.replace(/<[^>]+>/g, ""),
+      ...(input.replyTo ? { reply_to: input.replyTo } : {}),
+    }),
+  });
+
+  const data = (await res.json()) as { id?: string; message?: string; name?: string };
+  if (!res.ok) {
+    throw new Error(data.message || data.name || "Error al enviar email");
+  }
+  return { id: data.id };
+}

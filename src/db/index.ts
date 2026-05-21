@@ -301,6 +301,28 @@ function initTables(db: Database.Database): void {
       "order" INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     )`,
+    // Sequence execution engine (BlackScale email)
+    `ALTER TABLE sequence_enrollments ADD COLUMN next_action_at INTEGER`,
+    `ALTER TABLE sequence_enrollments ADD COLUMN last_sent_at INTEGER`,
+    `ALTER TABLE sequence_enrollments ADD COLUMN last_error TEXT`,
+    `CREATE TABLE IF NOT EXISTS email_events (
+      id TEXT PRIMARY KEY,
+      contact_id TEXT,
+      sequence_id TEXT,
+      enrollment_id TEXT,
+      message_id TEXT,
+      type TEXT NOT NULL,
+      url TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS email_suppressions (
+      email TEXT PRIMARY KEY,
+      reason TEXT NOT NULL DEFAULT 'unsubscribe',
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_email_events_contact ON email_events(contact_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_email_events_type ON email_events(type)`,
+    `CREATE INDEX IF NOT EXISTS idx_seq_enroll_next ON sequence_enrollments(next_action_at)`,
   ];
 
   for (const sql of migrations) {

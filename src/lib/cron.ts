@@ -21,6 +21,16 @@ export function initCronJobs() {
     });
   }
 
+  // Sequence execution engine: every 15 minutes
+  cron.schedule("*/15 * * * *", async () => {
+    try {
+      const { processSequenceSends } = await import("./sequences");
+      await processSequenceSends();
+    } catch (err) {
+      console.error("[cron:sequences]", err);
+    }
+  });
+
   // Data retention check: daily at 03:00
   cron.schedule("0 3 * * *", () => {
     try {

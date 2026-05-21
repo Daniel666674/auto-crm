@@ -373,6 +373,29 @@ export const sequenceEnrollments = sqliteTable("sequence_enrollments", {
   status: text("status").notNull().default("active"),
   startedAt: integer("started_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   completedAt: integer("completed_at", { mode: "timestamp" }),
+  // When the current step becomes due to execute (null = awaiting manual advance / nothing scheduled)
+  nextActionAt: integer("next_action_at", { mode: "timestamp" }),
+  lastSentAt: integer("last_sent_at", { mode: "timestamp" }),
+  lastError: text("last_error"),
+});
+
+// Email events from BlackScale-sent mail (sequences, campaigns) — replaces Brevo's event stream
+export const emailEvents = sqliteTable("email_events", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contactId: text("contact_id").references(() => contacts.id),
+  sequenceId: text("sequence_id"),
+  enrollmentId: text("enrollment_id"),
+  messageId: text("message_id"),
+  type: text("type").notNull(), // sent | open | click | bounce | unsubscribe | complaint
+  url: text("url"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// Suppression list — emails that must never receive automated mail again
+export const emailSuppressions = sqliteTable("email_suppressions", {
+  email: text("email").primaryKey(),
+  reason: text("reason").notNull().default("unsubscribe"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 export const mktSegments = sqliteTable("mkt_segments", {

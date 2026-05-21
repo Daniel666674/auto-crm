@@ -388,6 +388,46 @@ db.exec(`
 console.log("[migrate] deal_line_items: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 16: sequence execution engine (BlackScale email) + email tracking
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking sequence engine columns + email tables...");
+if (!hasColumn("sequence_enrollments", "next_action_at")) {
+  db.exec(`ALTER TABLE sequence_enrollments ADD COLUMN next_action_at INTEGER`);
+  console.log("[migrate] Added sequence_enrollments.next_action_at");
+}
+if (!hasColumn("sequence_enrollments", "last_sent_at")) {
+  db.exec(`ALTER TABLE sequence_enrollments ADD COLUMN last_sent_at INTEGER`);
+  console.log("[migrate] Added sequence_enrollments.last_sent_at");
+}
+if (!hasColumn("sequence_enrollments", "last_error")) {
+  db.exec(`ALTER TABLE sequence_enrollments ADD COLUMN last_error TEXT`);
+  console.log("[migrate] Added sequence_enrollments.last_error");
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS email_events (
+    id TEXT PRIMARY KEY,
+    contact_id TEXT,
+    sequence_id TEXT,
+    enrollment_id TEXT,
+    message_id TEXT,
+    type TEXT NOT NULL,
+    url TEXT,
+    created_at INTEGER NOT NULL
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS email_suppressions (
+    email TEXT PRIMARY KEY,
+    reason TEXT NOT NULL DEFAULT 'unsubscribe',
+    created_at INTEGER NOT NULL
+  )
+`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_email_events_contact ON email_events(contact_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_email_events_type ON email_events(type)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_seq_enroll_next ON sequence_enrollments(next_action_at)`);
+console.log("[migrate] sequence engine + email tables: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();
