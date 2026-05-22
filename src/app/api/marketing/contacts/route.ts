@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { mktDb } from "@/db/mkt-db";
 import { fireTriggers } from "@/lib/triggers";
+import { getEngagementSource, computeLocalEngagementByEmail } from "@/lib/mkt-engagement";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,22 @@ function mapRow(row: MktContactRow) {
 export async function GET() {
   try {
     const rows = mktDb.prepare("SELECT * FROM mkt_contacts ORDER BY score DESC, last_activity DESC").all() as MktContactRow[];
-    return NextResponse.json(rows.map(mapRow));
+    const mapped = rows.map(mapRow);
+
+    // Phase 3: when the engagement source is "local", override the Brevo-synced
+    // engagement signals with values derived from the local email_events store.
+    if (getEngagementSource() === "local") {
+      const local = computeLocalEngagementByEmail();
+      for (const m of mapped) {
+        const e = m.email ? local.get(m.email.trim().toLowerCase()) : undefined;
+        m.engagementStatus = e ? e.status : "cold";
+        m.emailOpens = e ? e.opens : 0;
+        m.emailClicks = e ? e.clicks : 0;
+        if (e?.lastActivity) m.lastActivity = e.lastActivity;
+      }
+    }
+
+    return NextResponse.json(mapped);
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

@@ -14,6 +14,7 @@ import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings
 import { DealAgingSettings } from "@/components/settings/DealAgingSettings";
 import { ScoringWeightsSettings } from "@/components/settings/ScoringWeightsSettings";
 import { SlackSettings } from "@/components/settings/SlackSettings";
+import { EngagementSourceSettings } from "@/components/settings/EngagementSourceSettings";
 import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
 import { HandoffRulesSettings } from "@/components/settings/HandoffRulesSettings";
@@ -940,6 +941,9 @@ function TabIntegraciones({ role }: { role: string }) {
           </div>
         )}
       </IntSection>
+
+      {/* Engagement source (Brevo → BlackScale local, Phase 3) */}
+      <EngagementSourceSettings role={role} />
 
       {/* Apollo */}
       <IntSection title="Apollo — Lead Intelligence" icon={<span style={{ fontSize: 14, color: "#6366f1" }}>◉</span>}>
