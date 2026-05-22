@@ -297,7 +297,7 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
           <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 4 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               {contact.email ? (
-                <EmailButton email={contact.email} contactName={contact.name} companyName={contact.company} title={contact.title} />
+                <EmailButton email={contact.email} contactName={contact.name} companyName={contact.company} title={contact.title} contactId={contact.id} />
               ) : (
                 <button onClick={() => setShowEditForm(true)} style={{ ...qaBtn("#3b82f6"), border: "1px dashed #3b82f655", background: "rgba(59,130,246,0.06)" }} title="Agregar email para enviar mensajes">
                   ✉️ Agregar email
