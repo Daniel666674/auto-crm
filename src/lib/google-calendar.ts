@@ -61,11 +61,15 @@ export function getAuthUrl(state?: string): string {
   return oauth.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
+    // Same full scope set as the NextAuth sign-in so a reconnect never drops the
+    // Analytics/Search Console grants (and vice-versa).
     scope: [
       "https://www.googleapis.com/auth/calendar.readonly",
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/gmail.send",
       "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/analytics.readonly",
+      "https://www.googleapis.com/auth/webmasters.readonly",
     ],
     ...(state ? { state } : {}),
   });

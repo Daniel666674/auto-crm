@@ -24,7 +24,21 @@ export const authOptions: NextAuthOptions = {
           prompt: "select_account consent",
           hd: ALLOWED_DOMAIN,
           access_type: "offline",
-          scope: "openid email profile https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/webmasters.readonly",
+          // Full scope set so a normal sign-in produces a token usable by every
+          // integration (Analytics, Search Console, Calendar, Gmail send/read).
+          // Both this flow and the calendar reconnect request the SAME scopes so
+          // neither one ever downgrades the stored token.
+          scope: [
+            "openid",
+            "email",
+            "profile",
+            "https://www.googleapis.com/auth/analytics.readonly",
+            "https://www.googleapis.com/auth/webmasters.readonly",
+            "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/gmail.readonly",
+          ].join(" "),
         },
       },
     }),
