@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { db } from "@/db";
-import { googleTokens } from "@/db/schema";
+import { googleTokens, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getOAuthClient, decryptToken, storeTokens } from "./google-calendar";
 
@@ -108,10 +108,20 @@ export async function sendViaGmail(
 
   const gmail = google.gmail({ version: "v1", auth: oauth });
 
-  // Resolve the authenticated mailbox address for the From header.
-  const profile = await gmail.users.getProfile({ userId: "me" });
-  const address = profile.data.emailAddress || "";
-  if (!address) throw new Error("No se pudo resolver la cuenta de Gmail");
+  // Resolve the From address from the connected CRM user's mailbox (their
+  // Workspace account). Avoids depending on a Gmail read scope just to send.
+  let address = "";
+  const user = db.select({ email: users.email }).from(users).where(eq(users.id, userId)).get();
+  if (user?.email) address = user.email.trim();
+  if (!address) {
+    try {
+      const profile = await gmail.users.getProfile({ userId: "me" });
+      address = profile.data.emailAddress || "";
+    } catch {
+      /* no read scope available — fall through to the error below */
+    }
+  }
+  if (!address) throw new Error("No se pudo resolver la dirección del remitente de Gmail");
   const from = opts.fromName ? `${opts.fromName} <${address}>` : address;
 
   const raw = buildRawMessage({ from, to: opts.to, subject: opts.subject, html: opts.html, replyTo: opts.replyTo });

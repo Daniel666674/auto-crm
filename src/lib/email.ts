@@ -145,25 +145,21 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const forceResend = process.env.EMAIL_TRANSPORT === "resend";
 
   if (!forceResend) {
-    try {
-      const { getGmailSenderUserId, sendViaGmail } = await import("./google-gmail");
-      const senderUserId = getGmailSenderUserId();
-      if (senderUserId) {
-        const r = await sendViaGmail(senderUserId, {
-          to: input.to,
-          subject: input.subject,
-          html: input.html,
-          fromName: SENDER_NAME,
-          replyTo: input.replyTo,
-        });
-        return { id: r.id };
-      }
-    } catch (err) {
-      // No Resend fallback configured → surface the Gmail error.
-      if (!process.env.RESEND_API_KEY) {
-        throw err instanceof Error ? err : new Error("Error al enviar vía Gmail");
-      }
-      // otherwise fall through to Resend below
+    const { getGmailSenderUserId, sendViaGmail } = await import("./google-gmail");
+    const senderUserId = getGmailSenderUserId();
+    if (senderUserId) {
+      // Gmail is connected and is the chosen transport. Use it authoritatively
+      // and surface its errors directly — never mask a Gmail failure with a
+      // (possibly misconfigured) Resend fallback. Resend only serves when no
+      // Google account is connected, or when EMAIL_TRANSPORT=resend forces it.
+      const r = await sendViaGmail(senderUserId, {
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        fromName: SENDER_NAME,
+        replyTo: input.replyTo,
+      });
+      return { id: r.id };
     }
   }
 
