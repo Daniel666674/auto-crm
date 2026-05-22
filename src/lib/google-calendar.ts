@@ -23,12 +23,28 @@ export function encryptToken(plaintext: string): string {
   return [iv.toString("hex"), enc.toString("hex"), tag.toString("hex")].join(":");
 }
 
-export function decryptToken(ciphertext: string): string {
-  const [ivHex, encHex, tagHex] = ciphertext.split(":");
-  const key = getEncryptionKey();
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(ivHex, "hex"));
-  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
-  return decipher.update(Buffer.from(encHex, "hex")).toString("utf8") + decipher.final("utf8");
+export function decryptToken(value: string): string {
+  if (!value) return value;
+  // Encrypted values are exactly iv:ciphertext:tag, all lowercase hex, with a
+  // 12-byte (24-hex) IV. Some subsystems historically stored tokens UNENCRYPTED
+  // in these columns; anything that isn't our format is treated as plaintext and
+  // returned as-is, so a legacy raw token never crashes the decrypt path.
+  const parts = value.split(":");
+  const looksEncrypted =
+    parts.length === 3 &&
+    parts[0].length === 24 &&
+    parts.every((p) => p.length % 2 === 0 && /^[0-9a-f]+$/i.test(p));
+  if (!looksEncrypted) return value;
+  try {
+    const [ivHex, encHex, tagHex] = parts;
+    const key = getEncryptionKey();
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(ivHex, "hex"));
+    decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+    return decipher.update(Buffer.from(encHex, "hex")).toString("utf8") + decipher.final("utf8");
+  } catch {
+    // Wrong key or corrupt value — return as-is rather than throwing.
+    return value;
+  }
 }
 
 export function getOAuthClient() {

@@ -4,6 +4,7 @@ import { upsertGoogleUser } from "@/db/users";
 import { db } from "@/db";
 import { googleTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { encryptToken } from "@/lib/google-calendar";
 
 const ALLOWED_DOMAIN = "blackscale.consulting";
 
@@ -59,11 +60,16 @@ export const authOptions: NextAuthOptions = {
         if (account.access_token) {
           const expiryDate = account.expires_at ? account.expires_at * 1000 : Date.now() + 3600000;
           const existing = db.select().from(googleTokens).where(eq(googleTokens.userId, dbUser.id)).get();
+          // Sign-in via Google often omits a refresh_token (only returned on the
+          // first consent), so keep the existing one when absent.
+          const refreshEnc = account.refresh_token
+            ? encryptToken(account.refresh_token)
+            : existing?.refreshTokenEnc ?? null;
           if (existing) {
             db.update(googleTokens)
               .set({
-                accessTokenEnc: account.access_token,
-                refreshTokenEnc: account.refresh_token ?? existing.refreshTokenEnc ?? undefined,
+                accessTokenEnc: encryptToken(account.access_token),
+                refreshTokenEnc: refreshEnc ?? undefined,
                 expiryDate,
                 updatedAt: new Date(),
               })
@@ -72,8 +78,8 @@ export const authOptions: NextAuthOptions = {
           } else {
             db.insert(googleTokens).values({
               userId: dbUser.id,
-              accessTokenEnc: account.access_token,
-              refreshTokenEnc: account.refresh_token ?? null,
+              accessTokenEnc: encryptToken(account.access_token),
+              refreshTokenEnc: refreshEnc,
               expiryDate,
             }).run();
           }
