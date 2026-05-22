@@ -8,10 +8,11 @@ import { computeNextActionAt, parseSteps } from "@/lib/sequences";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { id } = await params;
   const enrollments = db.select({
     id: sequenceEnrollments.id,
     contactId: sequenceEnrollments.contactId,
@@ -27,20 +28,21 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   })
     .from(sequenceEnrollments)
     .leftJoin(contacts, eq(sequenceEnrollments.contactId, contacts.id))
-    .where(eq(sequenceEnrollments.sequenceId, params.id))
+    .where(eq(sequenceEnrollments.sequenceId, id))
     .all();
 
   return NextResponse.json(enrollments);
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { id } = await params;
   const body = await req.json();
   if (!body.contactId) return NextResponse.json({ error: "contactId required" }, { status: 400 });
 
-  const seq = db.select().from(sequences).where(eq(sequences.id, params.id)).get();
+  const seq = db.select().from(sequences).where(eq(sequences.id, id)).get();
   if (!seq) return NextResponse.json({ error: "Sequence not found" }, { status: 404 });
 
   const steps = parseSteps(seq.stepsJson);
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const existing = db.select().from(sequenceEnrollments)
     .where(and(
-      eq(sequenceEnrollments.sequenceId, params.id),
+      eq(sequenceEnrollments.sequenceId, id),
       eq(sequenceEnrollments.contactId, body.contactId),
     )).get();
 
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const row = db.insert(sequenceEnrollments).values({
-    sequenceId: params.id,
+    sequenceId: id,
     contactId: body.contactId,
     currentStep: 0,
     status: "active",
@@ -74,10 +76,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(row, { status: 201 });
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { id } = await params;
   const body = await req.json();
   if (!body.enrollmentId) return NextResponse.json({ error: "enrollmentId required" }, { status: 400 });
 
@@ -85,8 +88,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const now = new Date();
   if (body.currentStep !== undefined) {
     update.currentStep = body.currentStep;
-    // Reschedule the engine for the new step (manual advance of a call/task step).
-    const seq = db.select().from(sequences).where(eq(sequences.id, params.id)).get();
+    const seq = db.select().from(sequences).where(eq(sequences.id, id)).get();
     const steps = parseSteps(seq?.stepsJson);
     if (body.currentStep >= steps.length) {
       update.status = "completed";
@@ -106,17 +108,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const row = db.update(sequenceEnrollments).set(update)
     .where(and(
       eq(sequenceEnrollments.id, body.enrollmentId),
-      eq(sequenceEnrollments.sequenceId, params.id),
+      eq(sequenceEnrollments.sequenceId, id),
     )).returning().get();
 
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(row);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { id } = await params;
   const { searchParams } = new URL(req.url);
   const enrollmentId = searchParams.get("enrollmentId");
   if (!enrollmentId) return NextResponse.json({ error: "enrollmentId required" }, { status: 400 });
@@ -124,7 +127,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   db.delete(sequenceEnrollments)
     .where(and(
       eq(sequenceEnrollments.id, enrollmentId),
-      eq(sequenceEnrollments.sequenceId, params.id),
+      eq(sequenceEnrollments.sequenceId, id),
     )).run();
 
   return NextResponse.json({ ok: true });
