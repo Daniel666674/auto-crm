@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Users, Download, Trash2, Thermometer } from "lucide-react";
@@ -54,6 +54,35 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [savedViews, setSavedViews] = useState<Array<{ name: string; search: string; temp: string; tag: string }>>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("bs_contact_views");
+      if (raw) setSavedViews(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const saveView = () => {
+    if (!search && !filterTemp && !filterTag) return;
+    const name = prompt("Nombre para esta vista:");
+    if (!name) return;
+    const next = [...savedViews.filter(v => v.name !== name), { name, search, temp: filterTemp, tag: filterTag }];
+    setSavedViews(next);
+    localStorage.setItem("bs_contact_views", JSON.stringify(next));
+  };
+
+  const applyView = (v: { name: string; search: string; temp: string; tag: string }) => {
+    setSearch(v.search);
+    setFilterTemp(v.temp as Temperature | "");
+    setFilterTag(v.tag);
+  };
+
+  const deleteView = (name: string) => {
+    const next = savedViews.filter(v => v.name !== name);
+    setSavedViews(next);
+    localStorage.setItem("bs_contact_views", JSON.stringify(next));
+  };
 
   const parseTags = (raw: string | null | undefined): string[] => {
     if (!raw) return [];
@@ -196,6 +225,23 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
           <Download size={12} /> Exportar
         </button>
       </div>
+
+      {/* Saved views row */}
+      {(savedViews.length > 0 || (search || filterTemp || filterTag)) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+          {savedViews.map(v => (
+            <span key={v.name} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "var(--card)", border: "1px solid var(--border)", fontSize: 11, cursor: "pointer" }}>
+              <span onClick={() => applyView(v)} style={{ color: "var(--foreground)", fontWeight: 500 }}>{v.name}</span>
+              <span onClick={() => deleteView(v.name)} style={{ color: "var(--muted-foreground)", cursor: "pointer", fontSize: 10, marginLeft: 2 }}>×</span>
+            </span>
+          ))}
+          {(search || filterTemp || filterTag) && (
+            <button onClick={saveView} style={{ padding: "3px 10px", borderRadius: 20, background: "transparent", border: "1px dashed var(--border)", fontSize: 11, color: "var(--muted-foreground)", cursor: "pointer" }}>
+              + Guardar vista
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Bulk action toolbar */}
       {selected.size > 0 && (

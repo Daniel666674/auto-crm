@@ -106,9 +106,36 @@ interface ContactDetailClientProps {
     isWon: boolean;
     isLost: boolean;
   }>;
+  emailEvents?: Array<{
+    id: string;
+    type: string;
+    messageId: string | null;
+    url: string | null;
+    createdAt: number | Date;
+  }>;
 }
 
-export function ContactDetailClient({ contact, deals, activities, relatedContacts = [], stages = [] }: ContactDetailClientProps) {
+const EMAIL_EVENT_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
+  sent:        { icon: "✉️", label: "Email enviado",         color: "#4299e1" },
+  open:        { icon: "👁️", label: "Email abierto",        color: "#48bb78" },
+  click:       { icon: "🔗", label: "Link clicado",          color: "#9f7aea" },
+  reply:       { icon: "↩️", label: "Respuesta recibida",   color: "#C39A4C" },
+  bounce:      { icon: "⚠️", label: "Email rebotado",        color: "#ef4444" },
+  unsubscribe: { icon: "🚫", label: "Canceló suscripción",  color: "#718096" },
+  complaint:   { icon: "🚨", label: "Marcó como spam",       color: "#ef4444" },
+};
+
+type TimelineItem =
+  | { kind: "activity"; id: string; type: string; description: string; scheduledAt: number | Date | null; completedAt: number | Date | null; createdAt: number | Date }
+  | { kind: "email_event"; id: string; type: string; url: string | null; createdAt: number | Date };
+
+function toMs(val: Date | number | null | undefined): number {
+  if (!val) return 0;
+  if (val instanceof Date) return val.getTime();
+  return (val as number) < 1e10 ? (val as number) * 1000 : (val as number);
+}
+
+export function ContactDetailClient({ contact, deals, activities, relatedContacts = [], stages = [], emailEvents = [] }: ContactDetailClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"stage" | "score" | "nextsteps" | "activities" | "related">("stage");
   const [showEditForm, setShowEditForm] = useState(false);
@@ -187,7 +214,7 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
     { id: "stage" as const, label: "Stage" },
     { id: "score" as const, label: "Score" },
     { id: "nextsteps" as const, label: "Próximos Pasos" },
-    { id: "activities" as const, label: `Actividades (${activities.length})` },
+    { id: "activities" as const, label: `Actividades (${activities.length + emailEvents.length})` },
     { id: "related" as const, label: `Relacionados (${relatedContacts.length})` },
   ];
 
@@ -730,58 +757,98 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
                 </button>
               </div>
 
-              {activities.length === 0 ? (
-                <div style={{ padding: 32, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13, borderRadius: 10, border: "1px dashed var(--border)" }}>
-                  Sin actividades registradas
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {activities.map((a, i) => {
-                    const config = ACTIVITY_TYPE_CONFIG[a.type as ActivityType];
-                    const isPending = !a.completedAt && a.scheduledAt;
-                    return (
-                      <div key={a.id} style={{ display: "flex", gap: 12, paddingBottom: 16, position: "relative" }}>
-                        {/* Timeline line */}
-                        {i < activities.length - 1 && (
-                          <div style={{ position: "absolute", left: 17, top: 36, bottom: 0, width: 1, background: "var(--border)" }} />
-                        )}
-                        {/* Icon */}
-                        <div style={{
-                          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                          background: "var(--card)", border: "1px solid var(--border)",
-                          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
-                          zIndex: 1,
-                        }}>
-                          {ACT_EMOJI[a.type] || "📝"}
-                        </div>
-                        {/* Content */}
-                        <div style={{ flex: 1, paddingTop: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>{config?.label || a.type}</span>
-                            {isPending && (
-                              <button
-                                onClick={() => handleCompleteActivity(a.id)}
-                                style={{
-                                  padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                  border: "1px solid #f59e0b", background: "rgba(245,158,11,0.1)",
-                                  color: "#f59e0b", cursor: "pointer",
-                                }}
-                              >
-                                Pendiente
-                              </button>
+              {(() => {
+                const timeline: TimelineItem[] = [
+                  ...activities.map(a => ({ kind: "activity" as const, ...a })),
+                  ...emailEvents.map(e => ({ kind: "email_event" as const, id: e.id, type: e.type, url: e.url, createdAt: e.createdAt })),
+                ].sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt));
+
+                if (timeline.length === 0) {
+                  return (
+                    <div style={{ padding: 32, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13, borderRadius: 10, border: "1px dashed var(--border)" }}>
+                      Sin actividades registradas
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {timeline.map((item, i) => {
+                      if (item.kind === "activity") {
+                        const a = item;
+                        const config = ACTIVITY_TYPE_CONFIG[a.type as ActivityType];
+                        const isPending = !a.completedAt && a.scheduledAt;
+                        return (
+                          <div key={`act-${a.id}`} style={{ display: "flex", gap: 12, paddingBottom: 16, position: "relative" }}>
+                            {i < timeline.length - 1 && (
+                              <div style={{ position: "absolute", left: 17, top: 36, bottom: 0, width: 1, background: "var(--border)" }} />
                             )}
-                            {a.completedAt && (
-                              <span style={{ fontSize: 10, color: "#22c55e" }}>✓ Completada</span>
-                            )}
+                            <div style={{
+                              width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                              background: "var(--card)", border: "1px solid var(--border)",
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                              zIndex: 1,
+                            }}>
+                              {ACT_EMOJI[a.type] || "📝"}
+                            </div>
+                            <div style={{ flex: 1, paddingTop: 4 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                                <span style={{ fontSize: 12, fontWeight: 600 }}>{config?.label || a.type}</span>
+                                {isPending && (
+                                  <button
+                                    onClick={() => handleCompleteActivity(a.id)}
+                                    style={{
+                                      padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                      border: "1px solid #f59e0b", background: "rgba(245,158,11,0.1)",
+                                      color: "#f59e0b", cursor: "pointer",
+                                    }}
+                                  >
+                                    Pendiente
+                                  </button>
+                                )}
+                                {a.completedAt && (
+                                  <span style={{ fontSize: 10, color: "#22c55e" }}>✓ Completada</span>
+                                )}
+                              </div>
+                              <p style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4, margin: "0 0 4px" }}>{a.description}</p>
+                              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{formatRelativeDate(a.createdAt)}</span>
+                            </div>
                           </div>
-                          <p style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4, margin: "0 0 4px" }}>{a.description}</p>
-                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{formatRelativeDate(a.createdAt)}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                        );
+                      } else {
+                        const e = item;
+                        const cfg = EMAIL_EVENT_CONFIG[e.type] ?? { icon: "✉️", label: e.type, color: "#4299e1" };
+                        return (
+                          <div key={`ee-${e.id}`} style={{ display: "flex", gap: 12, paddingBottom: 16, position: "relative" }}>
+                            {i < timeline.length - 1 && (
+                              <div style={{ position: "absolute", left: 17, top: 36, bottom: 0, width: 1, background: "var(--border)" }} />
+                            )}
+                            <div style={{
+                              width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                              background: `${cfg.color}18`, border: `1px solid ${cfg.color}40`,
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                              zIndex: 1,
+                            }}>
+                              {cfg.icon}
+                            </div>
+                            <div style={{ flex: 1, paddingTop: 4 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: cfg.color }}>{cfg.label}</span>
+                              </div>
+                              {e.url && (
+                                <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4, margin: "0 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {e.url}
+                                </p>
+                              )}
+                              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{formatRelativeDate(e.createdAt)}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

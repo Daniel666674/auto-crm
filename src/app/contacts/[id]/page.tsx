@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { contacts, deals, activities, pipelineStages } from "@/db/schema";
+import { contacts, deals, activities, pipelineStages, emailEvents } from "@/db/schema";
 import { eq, desc, and, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { ContactDetailClient } from "@/components/contacts/ContactDetail";
@@ -49,6 +49,18 @@ export default async function ContactDetailPage({
     .orderBy(desc(activities.createdAt))
     .all();
 
+  const contactEmailEvents = db.select({
+    id: emailEvents.id,
+    type: emailEvents.type,
+    messageId: emailEvents.messageId,
+    url: emailEvents.url,
+    createdAt: emailEvents.createdAt,
+  }).from(emailEvents)
+    .where(eq(emailEvents.contactId, id))
+    .orderBy(desc(emailEvents.createdAt))
+    .limit(50)
+    .all();
+
   const relatedContacts = contact.company
     ? db
         .select({ id: contacts.id, name: contacts.name, company: contacts.company, title: contacts.title })
@@ -65,6 +77,7 @@ export default async function ContactDetailPage({
       activities={contactActivities as Parameters<typeof ContactDetailClient>[0]["activities"]}
       relatedContacts={relatedContacts as Parameters<typeof ContactDetailClient>[0]["relatedContacts"]}
       stages={stages}
+      emailEvents={contactEmailEvents}
     />
   );
 }

@@ -28,10 +28,6 @@ interface GoogleEvent {
   htmlLink: string;
 }
 
-const PARTICIPANTS = [
-  { label: "Daniel", email: "daniel.acosta@blackscale.consulting", initials: "D" },
-  { label: "Julian", email: "julian.vallejo@blackscale.consulting", initials: "J" },
-];
 
 const TYPE_COLORS: Record<EventType, { bg: string; color: string }> = {
   Campaña:   { bg: "rgba(195,154,76,0.18)",  color: "#C39A4C" },
@@ -81,6 +77,7 @@ export function MktCalendar() {
   const [month, setMonth] = useState(new Date().getMonth());
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<Array<{email:string;label:string;initials:string}>>([]);
   const [form, setForm] = useState({
     title: "", date: new Date().toISOString().split("T")[0],
     time: "10:00", duration: 60,
@@ -90,6 +87,10 @@ export function MktCalendar() {
   });
 
   const refresh = useCallback(async () => { setEvents(await fetchEvents()); }, []);
+
+  useEffect(() => {
+    fetch("/api/team").then(r => r.ok ? r.json() : []).then((data: Array<{email:string;label:string;initials:string}>) => setTeamMembers(data)).catch(() => {});
+  }, []);
 
   const loadGoogle = useCallback((y: number, mo: number) => {
     const timeMin = new Date(y, mo, 1).toISOString();
@@ -242,7 +243,7 @@ export function MktCalendar() {
                       {day}
                     </div>
                     {dayEvents.map(ev => (
-                      <EventChip key={ev.id} ev={ev} onDelete={handleDelete} />
+                      <EventChip key={ev.id} ev={ev} onDelete={handleDelete} teamMembers={teamMembers} />
                     ))}
                   </>
                 )}
@@ -294,7 +295,7 @@ export function MktCalendar() {
               <div>
                 <label style={labelStyle}>Participantes</label>
                 <div style={{ display: "flex", gap: 10 }}>
-                  {PARTICIPANTS.map(p => (
+                  {teamMembers.map(p => (
                     <label key={p.email} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#e2e8f0", cursor: "pointer" }}>
                       <input type="checkbox" checked={form.participants.includes(p.email)} onChange={() => toggleParticipant(p.email)} style={{ accentColor: "#C39A4C" }} />
                       <span style={{ fontWeight: 600 }}>{p.label}</span>
@@ -323,13 +324,13 @@ export function MktCalendar() {
   );
 }
 
-function EventChip({ ev, onDelete }: { ev: CalEvent; onDelete: (id: string) => void }) {
+function EventChip({ ev, onDelete, teamMembers }: { ev: CalEvent; onDelete: (id: string) => void; teamMembers: Array<{email:string;label:string;initials:string}> }) {
   const [hover, setHover] = useState(false);
   const isGoogle = ev.source === "google";
   const tc = isGoogle
     ? { bg: "rgba(66,133,244,0.18)", color: "#4285f4" }
     : (TYPE_COLORS[ev.type] ?? { bg: "rgba(113,128,150,0.18)", color: "#718096" });
-  const parts = PARTICIPANTS.filter(p => ev.participants.includes(p.email));
+  const parts = teamMembers.filter(p => ev.participants.includes(p.email));
   return (
     <div
       onMouseEnter={() => setHover(true)}
