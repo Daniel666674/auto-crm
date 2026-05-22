@@ -8,7 +8,9 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const url = getAuthUrl();
+  // Optional ?return=integrations lets the callback land back on the integrations tab.
+  const ret = req.nextUrl.searchParams.get("return");
+  const url = getAuthUrl(ret === "integrations" ? "integrations" : undefined);
   return NextResponse.redirect(url);
 }
 

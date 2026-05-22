@@ -40,7 +40,7 @@ export function getOAuthClient() {
   );
 }
 
-export function getAuthUrl(): string {
+export function getAuthUrl(state?: string): string {
   const oauth = getOAuthClient();
   return oauth.generateAuthUrl({
     access_type: "offline",
@@ -50,6 +50,7 @@ export function getAuthUrl(): string {
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/gmail.send",
     ],
+    ...(state ? { state } : {}),
   });
 }
 

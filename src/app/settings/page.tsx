@@ -744,6 +744,15 @@ function TabIntegraciones({ role }: { role: string }) {
   const [ga4Connected, setGa4Connected] = useState<boolean | null>(null);
   const [ga4Checking, setGa4Checking] = useState(false);
   const [envStatus, setEnvStatus] = useState<{ brevo: boolean; apollo: boolean; ga4Property: string | null; gscSiteUrl: string } | null>(null);
+  const [googleConn, setGoogleConn] = useState<{ connected: boolean; email: string | null } | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+
+  const loadGoogleConn = () => {
+    fetch("/api/google/connection")
+      .then(r => r.json())
+      .then(d => setGoogleConn({ connected: !!d.connected, email: d.email ?? null }))
+      .catch(() => setGoogleConn({ connected: false, email: null }));
+  };
 
   useEffect(() => {
     fetch("/api/ga4")
@@ -754,7 +763,27 @@ function TabIntegraciones({ role }: { role: string }) {
       .then(r => r.json())
       .then(d => setEnvStatus(d))
       .catch(() => {});
+    loadGoogleConn();
   }, []);
+
+  const handleGoogleConnect = () => {
+    window.location.href = "/api/google/calendar/auth?return=integrations";
+  };
+
+  const handleGoogleDisconnect = async () => {
+    if (!confirm("¿Desconectar Google Workspace? Las secuencias dejarán de enviarse por Gmail y el calendario se desvinculará hasta reconectar.")) return;
+    setGoogleBusy(true);
+    try {
+      const res = await fetch("/api/google/connection", { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setGoogleConn({ connected: false, email: null });
+      toast.success("Google Workspace desconectado");
+    } catch {
+      toast.error("No se pudo desconectar Google");
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
 
   const [brevoKey, setBrevoKey] = useState("");
   const [savingBrevo, setSavingBrevo] = useState(false);
@@ -960,6 +989,38 @@ function TabIntegraciones({ role }: { role: string }) {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Estado de conexión</span>
             <StatusBadge connected={false} />
+          </div>
+        )}
+      </IntSection>
+
+      {/* Google Workspace — Calendar + Gmail */}
+      <IntSection title="Google Workspace — Calendar + Gmail" icon={<span style={{ fontSize: 14, color: "#4285f4" }}>G</span>}>
+        <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 14 }}>
+          Conecta tu cuenta <code>@blackscale.consulting</code> para sincronizar el calendario y enviar
+          secuencias de email desde tu bandeja vía Gmail. Reconecta si agregaste nuevos permisos (ej. <code>gmail.send</code>).
+        </p>
+        {googleConn === null ? (
+          <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Verificando…</span>
+        ) : googleConn.connected ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <StatusBadge connected={true} />
+            {googleConn.email && (
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{googleConn.email}</span>
+            )}
+            <button style={S.btn("outline")} onClick={handleGoogleConnect} disabled={googleBusy}>
+              <RefreshCw size={13} /> Reconectar
+            </button>
+            <button style={S.btn("outline")} onClick={handleGoogleDisconnect} disabled={googleBusy}>
+              {googleBusy ? <RefreshCw size={13} className="animate-spin" /> : <><Trash2 size={13} /> Desconectar</>}
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <StatusBadge connected={false} />
+            <button style={S.btn()} onClick={handleGoogleConnect} disabled={googleBusy}>
+              <Link2 size={13} /> Conectar Google
+            </button>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Calendar + envío de secuencias por Gmail</span>
           </div>
         )}
       </IntSection>
@@ -1996,6 +2057,19 @@ export default function SettingsPage() {
 
   const visibleTabs = TABS.filter(t => !t.roles || t.roles.includes(userRole));
   const [activeTab, setActiveTab] = useState<Tab>("perfil");
+
+  // Honor deep-links like /settings?tab=integraciones and surface the Google connect result.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab && TABS.some(t => t.id === tab)) setActiveTab(tab as Tab);
+    if (params.get("google") === "connected") toast.success("Google Workspace conectado (Calendar + Gmail)");
+    const gErr = params.get("google_error");
+    if (gErr) toast.error(`No se pudo conectar Google: ${gErr}`);
+    if (tab || params.get("google") || gErr) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const current = visibleTabs.find(t => t.id === activeTab) ? activeTab : visibleTabs[0]?.id ?? "perfil";
 
