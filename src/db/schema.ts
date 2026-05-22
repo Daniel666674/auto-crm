@@ -183,6 +183,7 @@ export const googleTokens = sqliteTable("google_tokens", {
   accessTokenEnc: text("access_token_enc").notNull(),
   refreshTokenEnc: text("refresh_token_enc"),
   expiryDate: integer("expiry_date"),
+  scope: text("scope"), // space-separated granted OAuth scopes
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

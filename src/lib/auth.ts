@@ -79,12 +79,14 @@ export const authOptions: NextAuthOptions = {
           const refreshEnc = account.refresh_token
             ? encryptToken(account.refresh_token)
             : existing?.refreshTokenEnc ?? null;
+          const scope = typeof account.scope === "string" ? account.scope : existing?.scope ?? null;
           if (existing) {
             db.update(googleTokens)
               .set({
                 accessTokenEnc: encryptToken(account.access_token),
                 refreshTokenEnc: refreshEnc ?? undefined,
                 expiryDate,
+                scope,
                 updatedAt: new Date(),
               })
               .where(eq(googleTokens.userId, dbUser.id))
@@ -95,6 +97,7 @@ export const authOptions: NextAuthOptions = {
               accessTokenEnc: encryptToken(account.access_token),
               refreshTokenEnc: refreshEnc,
               expiryDate,
+              scope,
             }).run();
           }
         }

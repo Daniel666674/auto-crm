@@ -77,16 +77,19 @@ export function getAuthUrl(state?: string): string {
 
 export async function storeTokens(
   userId: string,
-  tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null }
+  tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null; scope?: string | null }
 ) {
   if (!tokens.access_token) return;
+  const existing = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
   const row = {
     userId,
     accessTokenEnc: encryptToken(tokens.access_token),
-    refreshTokenEnc: tokens.refresh_token ? encryptToken(tokens.refresh_token) : null,
-    expiryDate: tokens.expiry_date ?? null,
+    // refresh_token only comes back on first consent — never wipe it on a refresh.
+    refreshTokenEnc: tokens.refresh_token ? encryptToken(tokens.refresh_token) : existing?.refreshTokenEnc ?? null,
+    expiryDate: tokens.expiry_date ?? existing?.expiryDate ?? null,
+    // Likewise keep the recorded scope if a refresh doesn't echo it back.
+    scope: tokens.scope ?? existing?.scope ?? null,
   };
-  const existing = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
   if (existing) {
     db.update(googleTokens).set({ ...row, updatedAt: new Date() }).where(eq(googleTokens.userId, userId)).run();
   } else {

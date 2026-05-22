@@ -9,14 +9,22 @@ import { getOAuthClient, decryptToken, storeTokens } from "./google-calendar";
  * or null if none is connected. Prefers SEQUENCE_SENDER_USER_ID if set,
  * otherwise the most recently connected account.
  */
-export function getGmailSenderUserId(): string | null {
-  const preferred = process.env.SEQUENCE_SENDER_USER_ID;
-  if (preferred) {
-    const row = db.select({ userId: googleTokens.userId }).from(googleTokens).where(eq(googleTokens.userId, preferred)).get();
-    if (row) return row.userId;
-  }
-  const any = db.select({ userId: googleTokens.userId }).from(googleTokens).all();
-  return any.length > 0 ? any[any.length - 1].userId : null;
+export function getGmailSenderUserId(preferredUserId?: string): string | null {
+  const rows = db.select({ userId: googleTokens.userId, scope: googleTokens.scope }).from(googleTokens).all();
+  if (rows.length === 0) return null;
+
+  // Prefer tokens we know can send. If none record a scope (legacy rows), fall
+  // back to the full set so behavior is unchanged for older installs.
+  const canSend = (s: string | null) => !!s && s.includes("gmail.send");
+  const withSend = rows.filter((r) => canSend(r.scope));
+  const pool = withSend.length > 0 ? withSend : rows;
+
+  const inPool = (uid?: string | null) => (uid ? pool.find((r) => r.userId === uid)?.userId : undefined);
+  return (
+    inPool(preferredUserId) ||                       // the user performing the action
+    inPool(process.env.SEQUENCE_SENDER_USER_ID) ||   // an explicitly pinned sender
+    pool[pool.length - 1].userId                     // most recently connected
+  );
 }
 
 function buildRawMessage(opts: { from: string; to: string; subject: string; html: string; replyTo?: string }): string {

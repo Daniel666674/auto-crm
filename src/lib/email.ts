@@ -141,12 +141,12 @@ export interface SendEmailResult {
  *   2. Resend as fallback (or when EMAIL_TRANSPORT=resend forces it).
  * Throws if neither transport is available/working.
  */
-export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+export async function sendEmail(input: SendEmailInput, preferredSenderUserId?: string): Promise<SendEmailResult> {
   const forceResend = process.env.EMAIL_TRANSPORT === "resend";
 
   if (!forceResend) {
     const { getGmailSenderUserId, sendViaGmail } = await import("./google-gmail");
-    const senderUserId = getGmailSenderUserId();
+    const senderUserId = getGmailSenderUserId(preferredSenderUserId);
     if (senderUserId) {
       // Gmail is connected and is the chosen transport. Use it authoritatively
       // and surface its errors directly — never mask a Gmail failure with a

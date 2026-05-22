@@ -435,6 +435,10 @@ if (!hasColumn("calendar_events", "google_event_id")) {
   db.exec(`ALTER TABLE calendar_events ADD COLUMN google_event_id TEXT`);
   console.log("[migrate] Added calendar_events.google_event_id");
 }
+if (!hasColumn("google_tokens", "scope")) {
+  db.exec(`ALTER TABLE google_tokens ADD COLUMN scope TEXT`);
+  console.log("[migrate] Added google_tokens.scope");
+}
 if (!hasColumn("email_events", "campaign_id")) {
   db.exec(`ALTER TABLE email_events ADD COLUMN campaign_id TEXT`);
   console.log("[migrate] Added email_events.campaign_id");

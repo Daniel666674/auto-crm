@@ -35,12 +35,15 @@ export async function POST(request: NextRequest) {
 
   let resendId: string | undefined;
   try {
-    const result = await sendEmail({
-      to,
-      subject,
-      html: emailBody.replace(/\n/g, "<br>"),
-      text: emailBody,
-    });
+    const result = await sendEmail(
+      {
+        to,
+        subject,
+        html: emailBody.replace(/\n/g, "<br>"),
+        text: emailBody,
+      },
+      session.user?.id
+    );
     resendId = result.id;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error de red";

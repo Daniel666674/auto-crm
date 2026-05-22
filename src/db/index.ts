@@ -325,6 +325,8 @@ function initTables(db: Database.Database): void {
     `CREATE INDEX IF NOT EXISTS idx_seq_enroll_next ON sequence_enrollments(next_action_at)`,
     // Calendar two-way sync with Google Workspace
     `ALTER TABLE calendar_events ADD COLUMN google_event_id TEXT`,
+    // Track granted OAuth scopes so we can pick a gmail.send-capable token
+    `ALTER TABLE google_tokens ADD COLUMN scope TEXT`,
     // BlackScale bulk email blasts
     `ALTER TABLE email_events ADD COLUMN campaign_id TEXT`,
     `CREATE INDEX IF NOT EXISTS idx_email_events_campaign ON email_events(campaign_id)`,
