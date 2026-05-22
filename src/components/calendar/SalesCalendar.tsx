@@ -14,7 +14,18 @@ interface CalEvent {
   contactId?: string;
   contactName?: string;
   notes: string;
-  source: "activity" | "local";
+  source: "activity" | "local" | "google";
+  htmlLink?: string;
+}
+
+interface GoogleEvent {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  duration: number;
+  allDay: boolean;
+  htmlLink: string;
 }
 
 interface ActivityRow {
@@ -88,9 +99,12 @@ const labelStyle: React.CSSProperties = {
 export function SalesCalendar() {
   const [activityEvents, setActivityEvents] = useState<CalEvent[]>([]);
   const [localEvents, setLocalEvents] = useState<CalEvent[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<CalEvent[]>([]);
+  const [googleConnected, setGoogleConnected] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth());
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: "", date: new Date().toISOString().split("T")[0],
     time: "10:00", duration: 30,
@@ -127,12 +141,37 @@ export function SalesCalendar() {
       .catch(() => setActivityEvents([]));
   }, []);
 
+  const loadGoogle = useCallback((y: number, mo: number) => {
+    const timeMin = new Date(y, mo, 1).toISOString();
+    const timeMax = new Date(y, mo + 1, 0, 23, 59, 59).toISOString();
+    fetch(`/api/calendar/google?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`)
+      .then(r => r.ok ? r.json() : { connected: false, events: [] })
+      .then((d: { connected: boolean; events: GoogleEvent[] }) => {
+        setGoogleConnected(!!d.connected);
+        const mapped: CalEvent[] = (d.events ?? []).map(e => ({
+          id: `g_${e.id}`,
+          title: e.title,
+          date: e.date,
+          time: e.allDay ? "" : e.time,
+          duration: e.duration,
+          type: "Reunión",
+          notes: "",
+          source: "google",
+          htmlLink: e.htmlLink,
+        }));
+        setGoogleEvents(mapped);
+      })
+      .catch(() => { setGoogleConnected(false); setGoogleEvents([]); });
+  }, []);
+
   useEffect(() => {
     setLocalEvents(loadLocal());
     loadActivities();
   }, [loadActivities]);
 
-  const allEvents = [...activityEvents, ...localEvents];
+  useEffect(() => { loadGoogle(year, month); }, [year, month, loadGoogle]);
+
+  const allEvents = [...googleEvents, ...activityEvents, ...localEvents];
 
   const handleDelete = (id: string) => {
     if (id.startsWith("act_")) return; // can't delete activity-backed events here
@@ -140,23 +179,54 @@ export function SalesCalendar() {
     saveLocal(updated); setLocalEvents(updated);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const resetForm = () =>
+    setForm({ title: "", date: new Date().toISOString().split("T")[0], time: "10:00", duration: 30, type: "Reunión", contactName: "", notes: "" });
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
+
+    // Connected → create the real Workspace event via the API, then refresh from Google.
+    if (googleConnected) {
+      setSaving(true);
+      try {
+        const res = await fetch("/api/calendar/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: form.title,
+            date: form.date,
+            time: form.time,
+            duration: form.duration,
+            notes: form.notes,
+          }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || "No se pudo crear el evento en Google Calendar");
+        }
+        loadGoogle(year, month);
+        setShowModal(false);
+        resetForm();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Error al crear evento");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Not connected → keep local + open the Google Calendar compose template (fallback).
     const ev: CalEvent = { ...form, id: `evt_${Date.now()}`, source: "local" };
     const all = [...loadLocal(), ev];
     saveLocal(all); setLocalEvents(all);
 
     const dates = toGCalDate(form.date, form.time, form.duration);
-    const params = new URLSearchParams({
-      action: "TEMPLATE",
-      text: form.title,
-      dates,
-      details: form.notes,
-    });
+    const params = new URLSearchParams({ action: "TEMPLATE", text: form.title, dates, details: form.notes });
     window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, "_blank");
 
     setShowModal(false);
-    setForm({ title: "", date: new Date().toISOString().split("T")[0], time: "10:00", duration: 30, type: "Reunión", contactName: "", notes: "" });
+    resetForm();
   };
 
   const daysInMonth = getDaysInMonth(year, month);
@@ -184,6 +254,13 @@ export function SalesCalendar() {
           </span>
           <button onClick={nextMonth} style={navBtnStyle}>›</button>
           <button onClick={goToday} style={{ ...navBtnStyle, width: "auto", padding: "0 12px", fontSize: 12 }}>Hoy</button>
+          <span title={googleConnected ? "Sincronizado con Google Workspace" : "Conecta Google en Ajustes › Integraciones para sincronizar"}
+            style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 5,
+              background: googleConnected ? "rgba(66,133,244,0.12)" : "rgba(113,128,150,0.12)",
+              color: googleConnected ? "#4285f4" : "var(--muted-foreground)" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: googleConnected ? "#4285f4" : "#718096" }} />
+            {googleConnected ? "Google sincronizado" : "Google no conectado"}
+          </span>
         </div>
         <button onClick={() => setShowModal(true)} style={{
           padding: "8px 16px", borderRadius: 8, border: "none",
@@ -297,9 +374,9 @@ export function SalesCalendar() {
                 <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} placeholder="Detalles..." style={{ ...inputStyle, resize: "vertical", height: 72, fontFamily: "inherit" }} />
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
-                <button type="submit" style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "var(--primary-foreground)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Guardar + Abrir Google Calendar
+                <button type="button" onClick={() => setShowModal(false)} disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", fontSize: 13, cursor: saving ? "not-allowed" : "pointer" }}>Cancelar</button>
+                <button type="submit" disabled={saving} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "var(--primary-foreground)", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
+                  {saving ? "Guardando…" : googleConnected ? "Guardar en Google Calendar" : "Guardar + Abrir Google Calendar"}
                 </button>
               </div>
             </form>
@@ -317,14 +394,17 @@ const navBtnStyle: React.CSSProperties = {
 
 function EventChip({ ev, onDelete }: { ev: CalEvent; onDelete: (id: string) => void }) {
   const [hover, setHover] = useState(false);
-  const tc = TYPE_COLORS[ev.type] ?? TYPE_COLORS["Otro"];
+  const isGoogle = ev.source === "google";
+  const tc = isGoogle ? { bg: "rgba(66,133,244,0.18)", color: "#4285f4" } : (TYPE_COLORS[ev.type] ?? TYPE_COLORS["Otro"]);
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      title={`${ev.time} · ${ev.title}${ev.contactName ? ` · ${ev.contactName}` : ""}`}
-      style={{ position: "relative", marginBottom: 3, padding: "3px 6px", borderRadius: 5, background: tc.bg, display: "flex", alignItems: "center", gap: 4 }}
+      onClick={(e) => { if (isGoogle && ev.htmlLink) { e.stopPropagation(); window.open(ev.htmlLink, "_blank"); } }}
+      title={`${ev.time ? ev.time + " · " : ""}${ev.title}${ev.contactName ? ` · ${ev.contactName}` : ""}${isGoogle ? " · Google Calendar" : ""}`}
+      style={{ position: "relative", marginBottom: 3, padding: "3px 6px", borderRadius: 5, background: tc.bg, display: "flex", alignItems: "center", gap: 4, cursor: isGoogle ? "pointer" : "inherit" }}
     >
+      {isGoogle && <span style={{ fontSize: 8, fontWeight: 800, color: tc.color, flexShrink: 0 }}>G</span>}
       <span style={{ fontSize: 9, fontWeight: 600, color: tc.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
         {ev.time} {ev.title}
       </span>

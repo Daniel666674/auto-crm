@@ -44,6 +44,7 @@ export function logEmailEvent(e: {
   contactId?: string | null;
   sequenceId?: string | null;
   enrollmentId?: string | null;
+  campaignId?: string | null;
   messageId?: string | null;
   type: string;
   url?: string | null;
@@ -54,6 +55,7 @@ export function logEmailEvent(e: {
         contactId: e.contactId ?? null,
         sequenceId: e.sequenceId ?? null,
         enrollmentId: e.enrollmentId ?? null,
+        campaignId: e.campaignId ?? null,
         messageId: e.messageId ?? null,
         type: e.type,
         url: e.url ?? null,
@@ -76,6 +78,7 @@ interface TrackingCtx {
   contactId?: string | null;
   enrollmentId?: string | null;
   sequenceId?: string | null;
+  campaignId?: string | null;
   messageId: string;
   unsubEmail?: string | null;
 }
@@ -92,6 +95,7 @@ export function buildTrackedHtml(bodyText: string, ctx: TrackingCtx): string {
       ...(ctx.contactId ? { c: ctx.contactId } : {}),
       ...(ctx.enrollmentId ? { e: ctx.enrollmentId } : {}),
       ...(ctx.sequenceId ? { s: ctx.sequenceId } : {}),
+      ...(ctx.campaignId ? { cmp: ctx.campaignId } : {}),
       ...extra,
     }).toString();
 

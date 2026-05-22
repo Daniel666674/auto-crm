@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { createCalendarEvent } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export async function GET() {
     type: r.type,
     participants: (() => { try { return JSON.parse(r.participants) as string[]; } catch { return []; } })(),
     notes: r.notes ?? "",
+    googleEventId: r.googleEventId ?? null,
   }));
   return NextResponse.json(events);
 }
@@ -34,14 +36,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "title y date son requeridos" }, { status: 400 });
   }
 
+  const participants = Array.isArray(body.participants) ? (body.participants as string[]) : [];
+
+  // Mirror to the Workspace calendar (best-effort) so it appears in Google too.
+  let googleEventId: string | null = null;
+  try {
+    const g = await createCalendarEvent(session.user.id, {
+      title: String(body.title),
+      date: String(body.date),
+      time: body.time || "10:00",
+      durationMin: Number(body.duration) || 60,
+      notes: body.notes || undefined,
+      attendees: participants,
+    });
+    googleEventId = g.id ?? null;
+  } catch {
+    // Google not connected or failed — keep the local event only.
+  }
+
   const created = db.insert(calendarEvents).values({
     title: String(body.title),
     date: String(body.date),
     time: body.time || "10:00",
     duration: Number(body.duration) || 60,
     type: body.type || "Reunión",
-    participants: JSON.stringify(Array.isArray(body.participants) ? body.participants : []),
+    participants: JSON.stringify(participants),
     notes: body.notes || null,
+    googleEventId,
     createdBy: session.user.id,
     createdAt: new Date(),
   }).returning().get();
@@ -55,6 +76,7 @@ export async function POST(req: NextRequest) {
     type: created.type,
     participants: (() => { try { return JSON.parse(created.participants) as string[]; } catch { return []; } })(),
     notes: created.notes ?? "",
+    googleEventId: created.googleEventId ?? null,
   });
 }
 

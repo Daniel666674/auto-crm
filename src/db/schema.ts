@@ -152,6 +152,7 @@ export const calendarEvents = sqliteTable("calendar_events", {
   type: text("type").notNull().default("Reunión"),
   participants: text("participants").notNull().default("[]"), // JSON array of emails
   notes: text("notes"),
+  googleEventId: text("google_event_id"), // set when mirrored to Google Workspace calendar
   createdBy: text("created_by"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -385,10 +386,29 @@ export const emailEvents = sqliteTable("email_events", {
   contactId: text("contact_id").references(() => contacts.id),
   sequenceId: text("sequence_id"),
   enrollmentId: text("enrollment_id"),
+  campaignId: text("campaign_id"),
   messageId: text("message_id"),
   type: text("type").notNull(), // sent | open | click | bounce | unsubscribe | complaint
   url: text("url"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// One-off bulk email blasts sent through BlackScale email (not Brevo)
+export const blastCampaigns = sqliteTable("blast_campaigns", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  audienceJson: text("audience_json").notNull().default("{}"),
+  status: text("status").notNull().default("draft"), // draft | sending | sent | failed
+  totalRecipients: integer("total_recipients").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  skippedCount: integer("skipped_count").notNull().default(0),
+  lastError: text("last_error"),
+  createdBy: text("created_by"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  sentAt: integer("sent_at", { mode: "timestamp" }),
 });
 
 // Suppression list — emails that must never receive automated mail again

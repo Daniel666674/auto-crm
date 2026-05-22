@@ -323,6 +323,27 @@ function initTables(db: Database.Database): void {
     `CREATE INDEX IF NOT EXISTS idx_email_events_contact ON email_events(contact_id)`,
     `CREATE INDEX IF NOT EXISTS idx_email_events_type ON email_events(type)`,
     `CREATE INDEX IF NOT EXISTS idx_seq_enroll_next ON sequence_enrollments(next_action_at)`,
+    // Calendar two-way sync with Google Workspace
+    `ALTER TABLE calendar_events ADD COLUMN google_event_id TEXT`,
+    // BlackScale bulk email blasts
+    `ALTER TABLE email_events ADD COLUMN campaign_id TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_email_events_campaign ON email_events(campaign_id)`,
+    `CREATE TABLE IF NOT EXISTS blast_campaigns (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      audience_json TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'draft',
+      total_recipients INTEGER NOT NULL DEFAULT 0,
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      skipped_count INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_by TEXT,
+      created_at INTEGER NOT NULL,
+      sent_at INTEGER
+    )`,
   ];
 
   for (const sql of migrations) {

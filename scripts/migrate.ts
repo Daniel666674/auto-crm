@@ -428,6 +428,39 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_seq_enroll_next ON sequence_enrollments(
 console.log("[migrate] sequence engine + email tables: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 17: BlackScale bulk email blasts + calendar sync
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking blast_campaigns table + email_events.campaign_id + calendar sync...");
+if (!hasColumn("calendar_events", "google_event_id")) {
+  db.exec(`ALTER TABLE calendar_events ADD COLUMN google_event_id TEXT`);
+  console.log("[migrate] Added calendar_events.google_event_id");
+}
+if (!hasColumn("email_events", "campaign_id")) {
+  db.exec(`ALTER TABLE email_events ADD COLUMN campaign_id TEXT`);
+  console.log("[migrate] Added email_events.campaign_id");
+}
+db.exec(`CREATE INDEX IF NOT EXISTS idx_email_events_campaign ON email_events(campaign_id)`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS blast_campaigns (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    audience_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'draft',
+    total_recipients INTEGER NOT NULL DEFAULT 0,
+    sent_count INTEGER NOT NULL DEFAULT 0,
+    failed_count INTEGER NOT NULL DEFAULT 0,
+    skipped_count INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    created_by TEXT,
+    created_at INTEGER NOT NULL,
+    sent_at INTEGER
+  )
+`);
+console.log("[migrate] blast_campaigns: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

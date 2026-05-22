@@ -31,6 +31,16 @@ export function initCronJobs() {
     }
   });
 
+  // Inbound reply capture: log replies from contacts on their timeline, every 10 minutes
+  cron.schedule("*/10 * * * *", async () => {
+    try {
+      const { pollInboundReplies } = await import("./email-inbound");
+      await pollInboundReplies();
+    } catch (err) {
+      console.error("[cron:inbound]", err);
+    }
+  });
+
   // Data retention check: daily at 03:00
   cron.schedule("0 3 * * *", () => {
     try {

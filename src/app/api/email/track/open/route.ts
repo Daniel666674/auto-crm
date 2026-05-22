@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
       contactId: searchParams.get("c"),
       sequenceId: searchParams.get("s"),
       enrollmentId: searchParams.get("e"),
+      campaignId: searchParams.get("cmp"),
       messageId: searchParams.get("m"),
       type: "open",
     });

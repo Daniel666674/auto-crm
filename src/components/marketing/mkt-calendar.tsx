@@ -13,6 +13,19 @@ interface CalEvent {
   type: EventType;
   participants: string[];
   notes: string;
+  googleEventId?: string | null;
+  source?: "local" | "google";
+  htmlLink?: string;
+}
+
+interface GoogleEvent {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  duration: number;
+  allDay: boolean;
+  htmlLink: string;
 }
 
 const PARTICIPANTS = [
@@ -62,9 +75,12 @@ const labelStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: 
 
 export function MktCalendar() {
   const [events, setEvents] = useState<CalEvent[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<CalEvent[]>([]);
+  const [googleConnected, setGoogleConnected] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth());
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: "", date: new Date().toISOString().split("T")[0],
     time: "10:00", duration: 60,
@@ -75,7 +91,31 @@ export function MktCalendar() {
 
   const refresh = useCallback(async () => { setEvents(await fetchEvents()); }, []);
 
+  const loadGoogle = useCallback((y: number, mo: number) => {
+    const timeMin = new Date(y, mo, 1).toISOString();
+    const timeMax = new Date(y, mo + 1, 0, 23, 59, 59).toISOString();
+    fetch(`/api/calendar/google?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`)
+      .then(r => r.ok ? r.json() : { connected: false, events: [] })
+      .then((d: { connected: boolean; events: GoogleEvent[] }) => {
+        setGoogleConnected(!!d.connected);
+        setGoogleEvents((d.events ?? []).map(e => ({
+          id: `g_${e.id}`,
+          title: e.title,
+          date: e.date,
+          time: e.allDay ? "" : e.time,
+          duration: e.duration,
+          type: "Evento" as EventType,
+          participants: [],
+          notes: "",
+          source: "google" as const,
+          htmlLink: e.htmlLink,
+        })));
+      })
+      .catch(() => { setGoogleConnected(false); setGoogleEvents([]); });
+  }, []);
+
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { loadGoogle(year, month); }, [year, month, loadGoogle]);
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/marketing/calendar?id=${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -84,23 +124,30 @@ export function MktCalendar() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/marketing/calendar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    if (saving) return;
+    setSaving(true);
+    let mirrored = false;
+    try {
+      const res = await fetch("/api/marketing/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      mirrored = !!data.googleEventId;
+    } finally {
+      setSaving(false);
+    }
     await refresh();
+    loadGoogle(year, month);
 
-    // Open Google Calendar pre-filled
-    const dates = toGCalDate(form.date, form.time, form.duration);
-    const params = new URLSearchParams({
-      action: "TEMPLATE",
-      text: form.title,
-      dates,
-      details: form.notes,
-    });
-    if (form.participants.length > 0) params.set("add", form.participants.join(","));
-    window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, "_blank");
+    // If it wasn't mirrored to Google (not connected), fall back to the compose template.
+    if (!mirrored) {
+      const dates = toGCalDate(form.date, form.time, form.duration);
+      const params = new URLSearchParams({ action: "TEMPLATE", text: form.title, dates, details: form.notes });
+      if (form.participants.length > 0) params.set("add", form.participants.join(","));
+      window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, "_blank");
+    }
 
     setShowModal(false);
     setForm({ title: "", date: new Date().toISOString().split("T")[0], time: "10:00", duration: 60, type: "Reunión", participants: [], notes: "" });
@@ -122,9 +169,16 @@ export function MktCalendar() {
   );
   while (cells.length % 7 !== 0) cells.push(null);
 
+  // Local rows already mirrored to Google carry its id — drop the duplicate Google copy.
+  const mirroredIds = new Set(events.map(e => e.googleEventId).filter(Boolean) as string[]);
+  const mergedEvents = [
+    ...events,
+    ...googleEvents.filter(g => !mirroredIds.has(g.id.startsWith("g_") ? g.id.slice(2) : g.id)),
+  ];
+
   const eventsForDay = (day: number) => {
     const iso = `${year}-${pad2(month + 1)}-${pad2(day)}`;
-    return events.filter(e => e.date === iso);
+    return mergedEvents.filter(e => e.date === iso);
   };
 
   const prevMonth = () => { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); };
@@ -140,6 +194,13 @@ export function MktCalendar() {
             {MONTH_NAMES[month]} {year}
           </span>
           <button onClick={nextMonth} style={{ background: "transparent", border: "1px solid #1e1e1e", borderRadius: 6, color: "#718096", width: 28, height: 28, cursor: "pointer", fontSize: 14 }}>›</button>
+          <span title={googleConnected ? "Sincronizado con Google Workspace" : "Conecta Google en Ajustes › Integraciones para sincronizar"}
+            style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 5,
+              background: googleConnected ? "rgba(66,133,244,0.12)" : "rgba(113,128,150,0.12)",
+              color: googleConnected ? "#4285f4" : "#718096" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: googleConnected ? "#4285f4" : "#718096" }} />
+            {googleConnected ? "Google sincronizado" : "Google no conectado"}
+          </span>
         </div>
         <button onClick={() => setShowModal(true)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#C39A4C", color: "#0a0a0a", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
           + Agregar actividad
@@ -249,9 +310,9 @@ export function MktCalendar() {
                   style={{ ...inputStyle, resize: "vertical", height: 72, fontFamily: "inherit" }} />
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #1e1e1e", background: "transparent", color: "#718096", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
-                <button type="submit" style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#C39A4C", color: "#0a0a0a", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Guardar + Abrir Google Calendar
+                <button type="button" onClick={() => setShowModal(false)} disabled={saving} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #1e1e1e", background: "transparent", color: "#718096", fontSize: 13, cursor: saving ? "not-allowed" : "pointer" }}>Cancelar</button>
+                <button type="submit" disabled={saving} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#C39A4C", color: "#0a0a0a", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
+                  {saving ? "Guardando…" : googleConnected ? "Guardar en Google Calendar" : "Guardar + Abrir Google Calendar"}
                 </button>
               </div>
             </form>
@@ -264,21 +325,27 @@ export function MktCalendar() {
 
 function EventChip({ ev, onDelete }: { ev: CalEvent; onDelete: (id: string) => void }) {
   const [hover, setHover] = useState(false);
-  const tc = TYPE_COLORS[ev.type] ?? { bg: "rgba(113,128,150,0.18)", color: "#718096" };
+  const isGoogle = ev.source === "google";
+  const tc = isGoogle
+    ? { bg: "rgba(66,133,244,0.18)", color: "#4285f4" }
+    : (TYPE_COLORS[ev.type] ?? { bg: "rgba(113,128,150,0.18)", color: "#718096" });
   const parts = PARTICIPANTS.filter(p => ev.participants.includes(p.email));
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{ position: "relative", marginBottom: 3, padding: "3px 6px", borderRadius: 5, background: tc.bg, display: "flex", alignItems: "center", gap: 4, cursor: "default" }}
+      onClick={(e) => { if (isGoogle && ev.htmlLink) { e.stopPropagation(); window.open(ev.htmlLink, "_blank"); } }}
+      title={`${ev.time ? ev.time + " · " : ""}${ev.title}${isGoogle ? " · Google Calendar" : ""}`}
+      style={{ position: "relative", marginBottom: 3, padding: "3px 6px", borderRadius: 5, background: tc.bg, display: "flex", alignItems: "center", gap: 4, cursor: isGoogle ? "pointer" : "default" }}
     >
+      {isGoogle && <span style={{ fontSize: 8, fontWeight: 800, color: tc.color, flexShrink: 0 }}>G</span>}
       <span style={{ fontSize: 9, fontWeight: 600, color: tc.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 80 }}>{ev.title}</span>
       <div style={{ display: "flex", gap: 2, marginLeft: "auto", flexShrink: 0 }}>
         {parts.map(p => (
           <div key={p.email} style={{ width: 14, height: 14, borderRadius: "50%", background: "#C39A4C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, color: "#0a0a0a" }}>{p.initials}</div>
         ))}
       </div>
-      {hover && (
+      {hover && !isGoogle && (
         <button onClick={e => { e.stopPropagation(); onDelete(ev.id); }}
           style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "#6D1F2E", border: "none", color: "#fff", fontSize: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
           ×

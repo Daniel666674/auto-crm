@@ -98,3 +98,82 @@ export async function getUpcomingEvents(userId: string): Promise<calendar_v3.Sch
 
   return res.data.items ?? [];
 }
+
+export const CALENDAR_TZ = process.env.CALENDAR_TZ || "America/Bogota";
+
+/** Authenticated Calendar client for a connected user, or null if not connected. */
+function calendarClient(userId: string): calendar_v3.Calendar | null {
+  const record = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
+  if (!record) return null;
+  const oauth = getOAuthClient();
+  oauth.setCredentials({
+    access_token: decryptToken(record.accessTokenEnc),
+    refresh_token: record.refreshTokenEnc ? decryptToken(record.refreshTokenEnc) : undefined,
+    expiry_date: record.expiryDate ?? undefined,
+  });
+  oauth.on("tokens", (tokens) => { storeTokens(userId, tokens); });
+  return google.calendar({ version: "v3", auth: oauth });
+}
+
+/** Events on the primary calendar within [timeMin, timeMax] (ISO strings). */
+export async function getEventsInRange(
+  userId: string,
+  timeMinISO: string,
+  timeMaxISO: string
+): Promise<calendar_v3.Schema$Event[]> {
+  const cal = calendarClient(userId);
+  if (!cal) return [];
+  const res = await cal.events.list({
+    calendarId: "primary",
+    timeMin: timeMinISO,
+    timeMax: timeMaxISO,
+    maxResults: 250,
+    singleEvents: true,
+    orderBy: "startTime",
+  });
+  return res.data.items ?? [];
+}
+
+export interface CreateEventInput {
+  title: string;
+  date: string; // yyyy-mm-dd
+  time: string; // HH:MM (24h)
+  durationMin: number;
+  notes?: string;
+  attendees?: string[];
+}
+
+/** Creates an event on the user's primary Workspace calendar. */
+export async function createCalendarEvent(
+  userId: string,
+  input: CreateEventInput
+): Promise<{ id?: string; htmlLink?: string }> {
+  const cal = calendarClient(userId);
+  if (!cal) throw new Error("Cuenta de Google no conectada");
+
+  const [y, m, d] = input.date.split("-").map(Number);
+  const [hh, mm] = input.time.split(":").map(Number);
+  const p = (n: number) => String(n).padStart(2, "0");
+  // Treat the components as wall-clock in CALENDAR_TZ; do arithmetic in UTC so
+  // adding the duration never trips over the server's local DST rules.
+  const base = new Date(Date.UTC(y, m - 1, d, hh, mm, 0));
+  const end = new Date(base.getTime() + Math.max(5, input.durationMin) * 60000);
+  const startStr = `${y}-${p(m)}-${p(d)}T${p(hh)}:${p(mm)}:00`;
+  const endStr = `${end.getUTCFullYear()}-${p(end.getUTCMonth() + 1)}-${p(end.getUTCDate())}T${p(end.getUTCHours())}:${p(end.getUTCMinutes())}:00`;
+
+  const attendees = (input.attendees ?? []).filter(Boolean).map((email) => ({ email }));
+
+  const res = await cal.events.insert({
+    calendarId: "primary",
+    sendUpdates: attendees.length ? "all" : "none",
+    requestBody: {
+      summary: input.title,
+      description: input.notes || undefined,
+      start: { dateTime: startStr, timeZone: CALENDAR_TZ },
+      end: { dateTime: endStr, timeZone: CALENDAR_TZ },
+      ...(attendees.length ? { attendees } : {}),
+    },
+  });
+
+  return { id: res.data.id ?? undefined, htmlLink: res.data.htmlLink ?? undefined };
+}

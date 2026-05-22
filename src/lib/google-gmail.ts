@@ -41,6 +41,50 @@ function buildRawMessage(opts: { from: string; to: string; subject: string; html
     .replace(/=+$/, "");
 }
 
+function gmailClient(userId: string) {
+  const record = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
+  if (!record) return null;
+  const oauth = getOAuthClient();
+  oauth.setCredentials({
+    access_token: decryptToken(record.accessTokenEnc),
+    refresh_token: record.refreshTokenEnc ? decryptToken(record.refreshTokenEnc) : undefined,
+    expiry_date: record.expiryDate ?? undefined,
+  });
+  oauth.on("tokens", (tokens) => { storeTokens(userId, tokens); });
+  return google.gmail({ version: "v1", auth: oauth });
+}
+
+export interface InboundMessage {
+  id: string;
+  from: string;
+  subject: string;
+  date: string;
+  snippet: string;
+}
+
+/** Lists inbox messages matching a Gmail search query (metadata only). */
+export async function listInboundMessages(userId: string, q: string, max = 50): Promise<InboundMessage[]> {
+  const gmail = gmailClient(userId);
+  if (!gmail) return [];
+
+  const list = await gmail.users.messages.list({ userId: "me", q, maxResults: max });
+  const ids = (list.data.messages ?? []).map((m) => m.id).filter((id): id is string => !!id);
+
+  const out: InboundMessage[] = [];
+  for (const id of ids) {
+    const msg = await gmail.users.messages.get({
+      userId: "me",
+      id,
+      format: "metadata",
+      metadataHeaders: ["From", "Subject", "Date"],
+    });
+    const headers = msg.data.payload?.headers ?? [];
+    const h = (name: string) => headers.find((x) => x.name?.toLowerCase() === name)?.value ?? "";
+    out.push({ id, from: h("from"), subject: h("subject"), date: h("date"), snippet: msg.data.snippet ?? "" });
+  }
+  return out;
+}
+
 export interface GmailSendResult {
   id?: string;
   from: string;
