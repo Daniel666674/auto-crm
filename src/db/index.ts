@@ -346,6 +346,21 @@ function initTables(db: Database.Database): void {
       created_at INTEGER NOT NULL,
       sent_at INTEGER
     )`,
+    // Firmographic ICP fit score + tier + VA-enriched marketing signals
+    `ALTER TABLE contacts ADD COLUMN company_website TEXT`,
+    `ALTER TABLE contacts ADD COLUMN company_linkedin TEXT`,
+    `ALTER TABLE contacts ADD COLUMN employee_count INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN fit_score INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN fit_tier TEXT DEFAULT 'D'`,
+    `ALTER TABLE contacts ADD COLUMN sig_linkedin_ads INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN sig_post_freq TEXT`,
+    `ALTER TABLE contacts ADD COLUMN sig_dm_active INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN sig_meta_ads INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN sig_google_ads INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN sig_mgr_no_head INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN sig_vacancy INTEGER NOT NULL DEFAULT 0`,
+    `CREATE INDEX IF NOT EXISTS idx_contacts_fit_score ON contacts(fit_score)`,
+    `CREATE INDEX IF NOT EXISTS idx_contacts_fit_tier ON contacts(fit_tier)`,
   ];
 
   for (const sql of migrations) {

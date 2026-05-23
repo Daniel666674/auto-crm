@@ -3,8 +3,21 @@ import * as path from "path";
 import { db } from "@/db";
 import { contacts, crmSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { computeFitScore, getFitWeights, getTierThresholds } from "./fit-scoring";
+import { MQL_THRESHOLD } from "./lead-qualification";
 
 const CSV_PATH = path.join(process.cwd(), "apollo-contacts-export (4).csv");
+
+// Funnel rank — used so re-importing never drags a contact backwards.
+const STAGE_RANK: Record<string, number> = {
+  subscriber: 0, lead: 1, MQL: 2, SQL: 3, opportunity: 4, customer: 5, evangelist: 6,
+};
+
+function parseEmployees(row: Record<string, string>): number | null {
+  const raw = row["# Employees"] || row["Number of Employees"] || "";
+  const n = parseInt(raw.replace(/[^0-9]/g, ""));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 function parseCSV(raw: string): Record<string, string>[] {
   const lines = raw.split(/\r?\n/);
@@ -38,57 +51,6 @@ function parseRow(line: string): string[] {
   }
   result.push(cur);
   return result;
-}
-
-function scoreApollo(row: Record<string, string>): { score: number; temperature: "cold" | "warm" | "hot" } {
-  let score = 0;
-
-  // ── Block 1: Role / Seniority (25 pts max) ──────────────────────────────────
-  const title = (row["Title"] || "").toLowerCase();
-  const seniority = (row["Seniority"] || "").toLowerCase();
-  const titleOrSen = title + " " + seniority;
-
-  if (/ceo|founder|fundador|gerente general|co-founder|owner|president|c-suite|c_suite/.test(titleOrSen)) score += 25;
-  else if (/vp |vice president|director|chief/.test(titleOrSen)) score += 20;
-  else if (/gerente|manager|head of|lead/.test(titleOrSen)) score += 12;
-  else if (/coordinator|coordinador|analyst|analista|specialist/.test(titleOrSen)) score += 4;
-  else score += 1;
-
-  // ── Block 2: Company Size (20 pts max) ──────────────────────────────────────
-  const empStr = row["# Employees"] || row["Number of Employees"] || "";
-  const emp = parseInt(empStr.replace(/[^0-9]/g, "")) || 0;
-  if (emp >= 10 && emp <= 200) score += 20;
-  else if (emp >= 201 && emp <= 500) score += 12;
-  else if (emp >= 5 && emp <= 9) score += 7;
-  else if (emp > 500) score += 3;
-  else score += 1;
-
-  // ── Block 3: Industry Fit (15 pts max) ──────────────────────────────────────
-  const industry = (row["Industry"] || "").toLowerCase();
-  if (/insurance|fintech|financ|seguros|banking|bank/.test(industry)) score += 15;
-  else if (/saas|software|tech|it |information|servicios profesional|consulting/.test(industry)) score += 10;
-  else if (/logistic|manufactur|supply|transport/.test(industry)) score += 8;
-  else if (/real estate|inmob|construction|legal|health|medical/.test(industry)) score += 5;
-  else score += 2;
-
-  // ── Block 4: Qualification & Intent (40 pts max) ────────────────────────────
-  const qualify = (row["Qualify Contact"] || "").toLowerCase();
-  if (qualify === "yes") score += 15;
-
-  const intentPrimary   = parseInt(row["Primary Intent Score"]   || "0") || 0;
-  const intentSecondary = parseInt(row["Secondary Intent Score"] || "0") || 0;
-  const intentBonus = Math.min(17, Math.floor((intentPrimary + intentSecondary) / 10));
-  score += intentBonus;
-
-  // Data completeness signals (up to 8 pts)
-  if (row["Person Linkedin Url"] || row["LinkedIn Url"]) score += 3;
-  if (row["Work Direct Phone"] || row["Mobile Phone"]) score += 3;
-  const funding = (row["Latest Funding Amount"] || row["Latest Funding"] || row["Total Funding"] || "").replace(/[^0-9]/g, "");
-  if (funding && parseInt(funding) > 0) score += 2;
-
-  score = Math.min(100, Math.max(0, score));
-  const temperature: "cold" | "warm" | "hot" = score >= 70 ? "hot" : score >= 40 ? "warm" : "cold";
-  return { score, temperature };
 }
 
 function buildLocation(row: Record<string, string>): string {
@@ -137,12 +99,18 @@ export async function runApolloImport(): Promise<ImportResult> {
     name: contacts.name,
     company: contacts.company,
     apolloId: contacts.apolloId,
+    lifecycleStage: contacts.lifecycleStage,
   }).from(contacts).all();
 
   // Maps for UPDATE lookups
   const byApolloId = new Map(existing.filter(c => c.apolloId).map(c => [c.apolloId!.toLowerCase(), c.id]));
   const byEmail    = new Map(existing.filter(c => c.email).map(c => [c.email!.toLowerCase(), c.id]));
   const byNameCo   = new Map(existing.map(c => [`${(c.name||"").toLowerCase()}|${(c.company||"").toLowerCase()}`, c.id]));
+  const lifecycleById = new Map(existing.map(c => [c.id, c.lifecycleStage || "lead"]));
+
+  // Load scoring weights once so all 2150 rows score against the same config.
+  const fitWeights = getFitWeights();
+  const tiers = getTierThresholds();
 
   let inserted = 0, skipped = 0, updated = 0;
 
@@ -165,12 +133,25 @@ export async function runApolloImport(): Promise<ImportResult> {
     const mobileRaw   = (row["Mobile Phone"] || "").replace(/^'+/, "").trim();
     const workRaw     = (row["Work Direct Phone"] || "").replace(/^'+/, "").trim();
     const whatsapp    = mobileRaw && mobileRaw !== workRaw ? mobileRaw : null;
-    const title       = (row["Title"] || "").trim();
-    const industry    = (row["Industry"] || "").trim();
-    const location    = buildLocation(row);
-    const linkedinUrl = (row["Person Linkedin Url"] || row["LinkedIn Url"] || "").trim();
-    const notes       = buildNotes(row);
-    const { score, temperature } = scoreApollo(row);
+    const title           = (row["Title"] || "").trim();
+    const industry        = (row["Industry"] || "").trim();
+    const location        = buildLocation(row);
+    const linkedinUrl     = (row["Person Linkedin Url"] || row["LinkedIn Url"] || "").trim();
+    const companyWebsite  = (row["Website"] || "").trim();
+    const companyLinkedin = (row["Company Linkedin Url"] || "").trim();
+    const employeeCount   = parseEmployees(row);
+    const notes           = buildNotes(row);
+
+    // Firmographic fit score (Apollo data only; VA marketing signals are filled
+    // later in the CRM and re-score the contact then).
+    const { fitScore, fitTier } = computeFitScore(
+      { title, industry, employeeCount },
+      fitWeights,
+      tiers
+    );
+    // Fresh prospects carry no engagement yet, so temperature starts cold and is
+    // driven thereafter by opens/clicks/replies (see lib/lead-qualification.ts).
+    const temperature = "cold" as const;
 
     // Check if contact already exists (3-layer lookup)
     let existingId: string | undefined;
@@ -179,17 +160,26 @@ export async function runApolloImport(): Promise<ImportResult> {
     if (!existingId)           existingId = byNameCo.get(nameCoKey);
 
     if (existingId) {
+      // Promote to MQL on good fit, but never downgrade a contact already deeper
+      // in the funnel (opportunity/customer stay put).
+      const current = lifecycleById.get(existingId) || "lead";
+      const promoted = fitScore >= MQL_THRESHOLD ? "MQL" : "lead";
+      const lifecycleStage = (STAGE_RANK[current] ?? 1) >= (STAGE_RANK[promoted] ?? 1) ? current : promoted;
+
       // UPDATE existing contact with enriched data from CSV
       db.update(contacts).set({
-        ...(phone       ? { phone }        : {}),
-        ...(title       ? { title }        : {}),
-        ...(industry    ? { industry }     : {}),
-        ...(location    ? { location }     : {}),
-        ...(linkedinUrl ? { linkedinUrl }  : {}),
-        ...(whatsapp    ? { whatsappNumber: whatsapp } : {}),
-        ...(apolloId    ? { apolloId }     : {}),
-        ...(notes       ? { notes }        : {}),
-        score, temperature,
+        ...(phone           ? { phone }            : {}),
+        ...(title           ? { title }            : {}),
+        ...(industry        ? { industry }         : {}),
+        ...(location        ? { location }         : {}),
+        ...(linkedinUrl     ? { linkedinUrl }      : {}),
+        ...(companyWebsite  ? { companyWebsite }   : {}),
+        ...(companyLinkedin ? { companyLinkedin }  : {}),
+        ...(employeeCount   ? { employeeCount }    : {}),
+        ...(whatsapp        ? { whatsappNumber: whatsapp } : {}),
+        ...(apolloId        ? { apolloId }         : {}),
+        ...(notes           ? { notes }            : {}),
+        score: fitScore, fitScore, fitTier, lifecycleStage,
         updatedAt: new Date(),
       }).where(eq(contacts.id, existingId)).run();
 
@@ -205,21 +195,27 @@ export async function runApolloImport(): Promise<ImportResult> {
     db.insert(contacts).values({
       id: crypto.randomUUID(),
       name,
-      email:          email       || null,
-      phone:          phone       || null,
-      company:        company     || null,
-      title:          title       || null,
-      industry:       industry    || null,
-      location:       location    || null,
-      linkedinUrl:    linkedinUrl || null,
-      whatsappNumber: whatsapp    || null,
-      apolloId:       apolloId    || null,
-      source:         "import",
+      email:           email           || null,
+      phone:           phone           || null,
+      company:         company         || null,
+      title:           title           || null,
+      industry:        industry        || null,
+      location:        location        || null,
+      linkedinUrl:     linkedinUrl     || null,
+      companyWebsite:  companyWebsite  || null,
+      companyLinkedin: companyLinkedin || null,
+      employeeCount:   employeeCount   || null,
+      whatsappNumber:  whatsapp        || null,
+      apolloId:        apolloId        || null,
+      source:          "import",
       temperature,
-      score,
-      notes:          notes       || null,
-      createdAt:      new Date(),
-      updatedAt:      new Date(),
+      score:           fitScore,
+      fitScore,
+      fitTier,
+      lifecycleStage:  fitScore >= MQL_THRESHOLD ? "MQL" : "lead",
+      notes:           notes           || null,
+      createdAt:       new Date(),
+      updatedAt:       new Date(),
     }).run();
 
     if (apolloId) byApolloId.set(apolloId, "new");

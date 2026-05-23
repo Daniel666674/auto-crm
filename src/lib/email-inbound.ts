@@ -3,6 +3,7 @@ import { contacts, activities, emailEvents } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getGmailSenderUserId, listInboundMessages } from "./google-gmail";
 import { logEmailEvent } from "./email";
+import { recomputeContact } from "./fit-recompute";
 
 function parseFromEmail(from: string): string {
   const m = from.match(/<([^>]+)>/);
@@ -59,6 +60,13 @@ export async function pollInboundReplies(): Promise<{ logged: number }> {
           createdAt: new Date(),
         })
         .run();
+    } catch {
+      /* non-fatal */
+    }
+    // A reply is a positive intent signal — re-score so the contact jumps HOT
+    // and, if the fit is already there, gets promoted to SQL.
+    try {
+      recomputeContact(contactId);
     } catch {
       /* non-fatal */
     }

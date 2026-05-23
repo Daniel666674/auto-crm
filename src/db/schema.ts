@@ -36,9 +36,23 @@ export const contacts = sqliteTable("contacts", {
   industry: text("industry"),
   location: text("location"),
   linkedinUrl: text("linkedin_url"),
+  companyWebsite: text("company_website"),
+  companyLinkedin: text("company_linkedin"),
+  employeeCount: integer("employee_count"),
   whatsappNumber: text("whatsapp_number"),
   tags: text("tags"),
   apolloId: text("apollo_id"),
+  // Firmographic ICP fit (0-100) + tier A/B/C/D — see lib/fit-scoring.ts
+  fitScore: integer("fit_score").notNull().default(0),
+  fitTier: text("fit_tier").default("D"),
+  // VA-enriched marketing signals that feed the fit score
+  sigLinkedinAds: integer("sig_linkedin_ads", { mode: "boolean" }).notNull().default(false),
+  sigPostFreq: text("sig_post_freq"), // "semanal" | "mensual" | null
+  sigDmActive: integer("sig_dm_active", { mode: "boolean" }).notNull().default(false),
+  sigMetaAds: integer("sig_meta_ads", { mode: "boolean" }).notNull().default(false),
+  sigGoogleAds: integer("sig_google_ads", { mode: "boolean" }).notNull().default(false),
+  sigMgrNoHead: integer("sig_mgr_no_head", { mode: "boolean" }).notNull().default(false),
+  sigVacancy: integer("sig_vacancy", { mode: "boolean" }).notNull().default(false),
   returnedToMarketingAt: integer("returned_to_marketing_at", { mode: "timestamp" }),
   returnedToMarketingReason: text("returned_to_marketing_reason"),
   lifecycleStage: text("lifecycle_stage").notNull().default("lead"),

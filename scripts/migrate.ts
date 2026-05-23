@@ -465,6 +465,34 @@ db.exec(`
 console.log("[migrate] blast_campaigns: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 18: firmographic fit score + tier + VA-enriched marketing signals
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking contacts fit-score columns...");
+const fitCols: [string, string][] = [
+  ["company_website", "TEXT"],
+  ["company_linkedin", "TEXT"],
+  ["employee_count", "INTEGER"],
+  ["fit_score", "INTEGER NOT NULL DEFAULT 0"],
+  ["fit_tier", "TEXT DEFAULT 'D'"],
+  ["sig_linkedin_ads", "INTEGER NOT NULL DEFAULT 0"],
+  ["sig_post_freq", "TEXT"],
+  ["sig_dm_active", "INTEGER NOT NULL DEFAULT 0"],
+  ["sig_meta_ads", "INTEGER NOT NULL DEFAULT 0"],
+  ["sig_google_ads", "INTEGER NOT NULL DEFAULT 0"],
+  ["sig_mgr_no_head", "INTEGER NOT NULL DEFAULT 0"],
+  ["sig_vacancy", "INTEGER NOT NULL DEFAULT 0"],
+];
+for (const [col, type] of fitCols) {
+  if (!hasColumn("contacts", col)) {
+    db.exec(`ALTER TABLE contacts ADD COLUMN ${col} ${type}`);
+    console.log(`[migrate] Added contacts.${col}`);
+  }
+}
+db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_fit_score ON contacts(fit_score)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_fit_tier ON contacts(fit_tier)`);
+console.log("[migrate] fit-score columns: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

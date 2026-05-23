@@ -13,6 +13,7 @@ import { CloseReasonsSettings } from "@/components/settings/CloseReasonsSettings
 import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings";
 import { DealAgingSettings } from "@/components/settings/DealAgingSettings";
 import { ScoringWeightsSettings } from "@/components/settings/ScoringWeightsSettings";
+import { FitScoringSettings } from "@/components/settings/FitScoringSettings";
 import { SlackSettings } from "@/components/settings/SlackSettings";
 import { EngagementSourceSettings } from "@/components/settings/EngagementSourceSettings";
 import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
@@ -2113,7 +2114,12 @@ export default function SettingsPage() {
       {current === "negocio"        && <TabNegocio role={userRole} />}
       {current === "usuarios"       && <TabUsuarios currentUserId={userId} />}
       {current === "objetivos"        && <SalesTargetsSettings currentUserId={userId} />}
-      {current === "scoring"          && <ScoringWeightsSettings role={userRole} />}
+      {current === "scoring"          && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <FitScoringSettings role={userRole} />
+          <ScoringWeightsSettings role={userRole} />
+        </div>
+      )}
       {current === "automatizaciones" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
           <div style={S.card}>
