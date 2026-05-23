@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Users, Download, Trash2, Thermometer } from "lucide-react";
+import { Users, Download, Trash2, Thermometer, Globe } from "lucide-react";
 import { SOURCE_LABELS } from "@/lib/constants";
 import type { Contact, Temperature, LeadSource } from "@/types";
 
@@ -22,6 +22,13 @@ const TEMP_CFG = {
   warm: { label: "Tibio",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   cold: { label: "Frío",     color: "var(--muted-foreground)", bg: "rgba(255,255,255,0.06)" },
 } as const;
+
+const TIER_CFG: Record<string, { color: string; bg: string }> = {
+  A: { color: "#16a34a", bg: "rgba(22,163,74,0.14)" },
+  B: { color: "#C39A4C", bg: "rgba(195,154,76,0.14)" },
+  C: { color: "#4299e1", bg: "rgba(66,153,225,0.14)" },
+  D: { color: "#64748b", bg: "rgba(100,116,139,0.12)" },
+};
 
 const SRC_COLORS: Record<string, { bg: string; color: string }> = {
   website:        { bg: "#3b82f620", color: "#3b82f6" },
@@ -50,7 +57,10 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
   const [search, setSearch] = useState("");
   const [filterTemp, setFilterTemp] = useState<Temperature | "">("");
   const [filterTag, setFilterTag] = useState<string>("");
-  const [sortBy, setSortBy] = useState<"score" | "name" | "company" | "industry">("score");
+  const [filterIndustry, setFilterIndustry] = useState<string>("");
+  const [filterLifecycle, setFilterLifecycle] = useState<string>("");
+  const [filterTier, setFilterTier] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"score" | "name" | "company" | "industry" | "tier">("score");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -91,6 +101,8 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
   };
 
   const allTags = Array.from(new Set(contacts.flatMap(c => parseTags(c.tags)))).sort();
+  const allIndustries = Array.from(new Set(contacts.map(c => c.industry).filter(Boolean) as string[])).sort();
+  const TIER_RANK: Record<string, number> = { A: 4, B: 3, C: 2, D: 1 };
 
   const filtered = contacts
     .filter(c => {
@@ -98,11 +110,15 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
       const ok = !search || c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q)
         || c.company?.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q);
       const tagOk = !filterTag || parseTags(c.tags).includes(filterTag);
-      return ok && (!filterTemp || c.temperature === filterTemp) && tagOk;
+      const indOk = !filterIndustry || c.industry === filterIndustry;
+      const lcOk = !filterLifecycle || (c.lifecycleStage ?? "lead") === filterLifecycle;
+      const tierOk = !filterTier || (c.fitTier ?? "D") === filterTier;
+      return ok && (!filterTemp || c.temperature === filterTemp) && tagOk && indOk && lcOk && tierOk;
     })
     .sort((a, b) => {
       let diff = 0;
       if (sortBy === "score") diff = (a.score ?? 0) - (b.score ?? 0);
+      else if (sortBy === "tier") diff = (TIER_RANK[a.fitTier ?? "D"] ?? 1) - (TIER_RANK[b.fitTier ?? "D"] ?? 1) || (a.score ?? 0) - (b.score ?? 0);
       else if (sortBy === "name") diff = a.name.localeCompare(b.name);
       else if (sortBy === "company") diff = (a.company || "").localeCompare(b.company || "");
       else if (sortBy === "industry") diff = (a.industry || "").localeCompare(b.industry || "");
@@ -200,9 +216,37 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
         {([["", "Todos"], ["hot", "Caliente"], ["warm", "Tibio"], ["cold", "Frío"]] as const).map(([v, l]) => (
           <button key={v} style={pill(filterTemp === v)} onClick={() => setFilterTemp(v)}>{l}</button>
         ))}
+        <select
+          value={filterTier}
+          onChange={e => setFilterTier(e.target.value)}
+          style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: filterTier ? "var(--foreground)" : "var(--muted-foreground)", fontSize: 11, cursor: "pointer" }}
+        >
+          <option value="">Todos los tiers</option>
+          <option value="A">Tier A · MQL</option>
+          <option value="B">Tier B</option>
+          <option value="C">Tier C</option>
+          <option value="D">Tier D</option>
+        </select>
+        <select
+          value={filterLifecycle}
+          onChange={e => setFilterLifecycle(e.target.value)}
+          style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: filterLifecycle ? "var(--foreground)" : "var(--muted-foreground)", fontSize: 11, cursor: "pointer" }}
+        >
+          <option value="">Todos los estados</option>
+          {Object.entries(LIFECYCLE_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        {allIndustries.length > 0 && (
+          <select
+            value={filterIndustry}
+            onChange={e => setFilterIndustry(e.target.value)}
+            style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: filterIndustry ? "var(--foreground)" : "var(--muted-foreground)", fontSize: 11, cursor: "pointer", maxWidth: 160 }}
+          >
+            <option value="">Todas las industrias</option>
+            {allIndustries.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        )}
         {allTags.length > 0 && (
           <>
-            <div style={{ width: 1, height: 20, background: "var(--border)" }} />
             <select
               value={filterTag}
               onChange={e => setFilterTag(e.target.value)}
@@ -216,6 +260,7 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
         <div style={{ width: 1, height: 20, background: "var(--border)" }} />
         <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)} style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--foreground)", fontSize: 11, cursor: "pointer" }}>
           <option value="score">Score</option>
+          <option value="tier">Tier</option>
           <option value="name">Nombre</option>
           <option value="company">Empresa</option>
           <option value="industry">Industria</option>
@@ -279,24 +324,25 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
 
       {/* Table */}
       <div style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 920 }}>
           <thead>
             <tr>
               <th style={hcell}>
                 <input type="checkbox" checked={allSelected} onChange={() => {}} onClick={toggleAll}
                   style={{ cursor: "pointer", accentColor: "var(--primary)" }} />
               </th>
-              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Teléfono", "Score", "LinkedIn", "Fuente", "Lifecycle", "Temperatura"].map(h => (
+              {["#", "Nombre", "Empresa", "Industria", "Cargo", "Teléfono", "Score", "Tier", "LinkedIn", "Fuente", "Lifecycle", "Temperatura"].map(h => (
                 <th key={h} style={hcell}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={12} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
+              <tr><td colSpan={13} style={{ ...cell, textAlign: "center", color: "var(--muted-foreground)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
               const temp = TEMP_CFG[c.temperature as keyof typeof TEMP_CFG] ?? TEMP_CFG.cold;
               const sc = scoreColor(c.score ?? 0);
+              const tier = TIER_CFG[c.fitTier ?? "D"] ?? TIER_CFG.D;
               const src = SRC_COLORS[c.source] ?? { bg: "rgba(255,255,255,0.07)", color: "var(--muted-foreground)" };
               const liUrl = c.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(c.name + (c.company ? " " + c.company : ""))}`;
               const isSelected = selected.has(c.id);
@@ -317,7 +363,21 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
                     <div style={{ fontWeight: 600 }}>{c.name}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.email || "—"}</div>
                   </td>
-                  <td style={cell}>{c.company || "—"}</td>
+                  <td style={cell}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>{c.company || "—"}</span>
+                      {c.companyWebsite && (
+                        <a href={c.companyWebsite.startsWith("http") ? c.companyWebsite : `https://${c.companyWebsite}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          title="Sitio web" style={{ display: "inline-flex", alignItems: "center", color: "var(--muted-foreground)", flexShrink: 0 }}>
+                          <Globe size={12} />
+                        </a>
+                      )}
+                      {c.companyLinkedin && (
+                        <a href={c.companyLinkedin} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          title="LinkedIn empresa" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: 3, background: "#0a66c220", color: "#0a66c2", fontSize: 8, fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>in</a>
+                      )}
+                    </div>
+                  </td>
                   <td style={cell}>{c.industry || "—"}</td>
                   <td style={cell}>{c.title || "—"}</td>
                   <td style={cell}>
@@ -332,6 +392,11 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
                       </div>
                       <span style={{ fontSize: 11, color: sc, fontWeight: 600 }}>{c.score ?? 0}</span>
                     </div>
+                  </td>
+                  <td style={cell}>
+                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: tier.bg, color: tier.color }}>
+                      {c.fitTier ?? "D"}
+                    </span>
                   </td>
                   <td style={cell}>
                     <a href={liUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}

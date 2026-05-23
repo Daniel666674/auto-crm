@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { getGmailSenderUserId, listInboundMessages } from "./google-gmail";
 import { logEmailEvent } from "./email";
 import { recomputeContact } from "./fit-recompute";
+import { fireTriggers } from "./triggers";
 
 function parseFromEmail(from: string): string {
   const m = from.match(/<([^>]+)>/);
@@ -70,6 +71,10 @@ export async function pollInboundReplies(): Promise<{ logged: number }> {
     } catch {
       /* non-fatal */
     }
+    void fireTriggers({
+      event: "contact_replied",
+      data: { contactId, subject: m.subject || "", from: parseFromEmail(m.from) },
+    });
     logged++;
   }
 

@@ -34,6 +34,9 @@ const contactSchema = z.object({
   industry: z.string(),
   location: z.string(),
   linkedinUrl: z.string(),
+  companyWebsite: z.string(),
+  companyLinkedin: z.string(),
+  employeeCount: z.string(),
   whatsappNumber: z.string(),
   source: z.string(),
   temperature: z.enum(["cold", "warm", "hot"]),
@@ -45,7 +48,7 @@ type ContactFormData = z.infer<typeof contactSchema>;
 interface ContactFormProps {
   open: boolean;
   onClose: () => void;
-  initialData?: Partial<ContactFormData> & { id?: string; title?: string | null; industry?: string | null; location?: string | null; linkedinUrl?: string | null; whatsappNumber?: string | null; };
+  initialData?: Partial<Omit<ContactFormData, "employeeCount">> & { id?: string; title?: string | null; industry?: string | null; location?: string | null; linkedinUrl?: string | null; whatsappNumber?: string | null; companyWebsite?: string | null; companyLinkedin?: string | null; employeeCount?: number | null; };
 }
 
 export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
@@ -71,6 +74,9 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
       industry: initialData?.industry || "",
       location: initialData?.location || "",
       linkedinUrl: initialData?.linkedinUrl || "",
+      companyWebsite: initialData?.companyWebsite || "",
+      companyLinkedin: initialData?.companyLinkedin || "",
+      employeeCount: initialData?.employeeCount != null ? String(initialData.employeeCount) : "",
       whatsappNumber: initialData?.whatsappNumber || "",
       source: initialData?.source || "otro",
       temperature: initialData?.temperature || "cold",
@@ -90,6 +96,7 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          employeeCount: data.employeeCount ? Number(data.employeeCount) : null,
           customFields: Object.keys(customFields).length > 0 ? customFields : null,
         }),
       });
@@ -166,6 +173,24 @@ export function ContactForm({ open, onClose, initialData }: ContactFormProps) {
             <div className="space-y-2">
               <Label htmlFor="whatsappNumber">WhatsApp (si difiere del teléfono)</Label>
               <Input id="whatsappNumber" {...register("whatsappNumber")} placeholder="+57 300 123 4567" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="companyWebsite">Sitio web empresa</Label>
+              <Input id="companyWebsite" {...register("companyWebsite")} placeholder="https://empresa.com" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="companyLinkedin">LinkedIn empresa</Label>
+              <Input id="companyLinkedin" {...register("companyLinkedin")} placeholder="https://linkedin.com/company/..." />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="employeeCount">Núm. empleados</Label>
+              <Input id="employeeCount" type="number" {...register("employeeCount")} placeholder="50" />
             </div>
           </div>
 

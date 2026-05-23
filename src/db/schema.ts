@@ -167,6 +167,8 @@ export const calendarEvents = sqliteTable("calendar_events", {
   participants: text("participants").notNull().default("[]"), // JSON array of emails
   notes: text("notes"),
   googleEventId: text("google_event_id"), // set when mirrored to Google Workspace calendar
+  meetLink: text("meet_link"), // Google Meet join URL when mirrored
+  htmlLink: text("html_link"), // Google Calendar event URL when mirrored
   createdBy: text("created_by"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

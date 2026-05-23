@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { Video } from "lucide-react";
+import { toast } from "sonner";
 
 type EventType = "Llamada" | "Reunión" | "Follow-up" | "Email" | "Otro";
 
@@ -16,6 +18,7 @@ interface CalEvent {
   notes: string;
   source: "activity" | "local" | "google";
   htmlLink?: string;
+  meetLink?: string | null;
 }
 
 interface GoogleEvent {
@@ -201,9 +204,14 @@ export function SalesCalendar() {
             notes: form.notes,
           }),
         });
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const d = await res.json().catch(() => ({}));
-          throw new Error(d.error || "No se pudo crear el evento en Google Calendar");
+          throw new Error(data.error || "No se pudo crear el evento en Google Calendar");
+        }
+        const meetLink: string | null = data.meetLink ?? null;
+        if (meetLink) {
+          try { await navigator.clipboard.writeText(meetLink); } catch {}
+          toast.success("Reunión creada — link de Meet copiado");
         }
         loadGoogle(year, month);
         setShowModal(false);
@@ -293,7 +301,7 @@ export function SalesCalendar() {
                   setShowModal(true);
                 }}
                 style={{
-                  minHeight: 90, padding: "6px 8px",
+                  minHeight: 130, padding: "6px 8px",
                   borderRight: (idx + 1) % 7 !== 0 ? "1px solid var(--border)" : "none",
                   borderBottom: idx < cells.length - 7 ? "1px solid var(--border)" : "none",
                   background: !day ? "rgba(255,255,255,0.01)" : "transparent",
@@ -408,6 +416,19 @@ function EventChip({ ev, onDelete }: { ev: CalEvent; onDelete: (id: string) => v
       <span style={{ fontSize: 9, fontWeight: 600, color: tc.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
         {ev.time} {ev.title}
       </span>
+      {ev.meetLink && (
+        <a
+          href={ev.meetLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="Unirse a la reunión de Meet"
+          style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 8, fontWeight: 700, color: "#C39A4C", flexShrink: 0, textDecoration: "none" }}
+        >
+          <Video size={9} />
+          Unirse
+        </a>
+      )}
       {hover && ev.source === "local" && (
         <button onClick={e => { e.stopPropagation(); onDelete(ev.id); }}
           style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "#6D1F2E", border: "none", color: "#fff", fontSize: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>

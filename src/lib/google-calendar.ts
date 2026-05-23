@@ -165,13 +165,16 @@ export interface CreateEventInput {
   durationMin: number;
   notes?: string;
   attendees?: string[];
+  /** Attach a Google Meet link to the event (default true). */
+  addMeet?: boolean;
 }
 
-/** Creates an event on the user's primary Workspace calendar. */
+/** Creates an event on the user's primary Workspace calendar, with a Google
+ * Meet link by default so attendees get a join URL in the invite. */
 export async function createCalendarEvent(
   userId: string,
   input: CreateEventInput
-): Promise<{ id?: string; htmlLink?: string }> {
+): Promise<{ id?: string; htmlLink?: string; meetLink?: string }> {
   const cal = calendarClient(userId);
   if (!cal) throw new Error("Cuenta de Google no conectada");
 
@@ -186,18 +189,39 @@ export async function createCalendarEvent(
   const endStr = `${end.getUTCFullYear()}-${p(end.getUTCMonth() + 1)}-${p(end.getUTCDate())}T${p(end.getUTCHours())}:${p(end.getUTCMinutes())}:00`;
 
   const attendees = (input.attendees ?? []).filter(Boolean).map((email) => ({ email }));
+  const addMeet = input.addMeet !== false;
 
   const res = await cal.events.insert({
     calendarId: "primary",
     sendUpdates: attendees.length ? "all" : "none",
+    conferenceDataVersion: addMeet ? 1 : 0,
     requestBody: {
       summary: input.title,
       description: input.notes || undefined,
       start: { dateTime: startStr, timeZone: CALENDAR_TZ },
       end: { dateTime: endStr, timeZone: CALENDAR_TZ },
       ...(attendees.length ? { attendees } : {}),
+      ...(addMeet
+        ? {
+            conferenceData: {
+              createRequest: {
+                requestId: crypto.randomUUID(),
+                conferenceSolutionKey: { type: "hangoutsMeet" },
+              },
+            },
+          }
+        : {}),
     },
   });
 
-  return { id: res.data.id ?? undefined, htmlLink: res.data.htmlLink ?? undefined };
+  const meetLink =
+    res.data.hangoutLink ??
+    res.data.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri ??
+    undefined;
+
+  return {
+    id: res.data.id ?? undefined,
+    htmlLink: res.data.htmlLink ?? undefined,
+    meetLink,
+  };
 }

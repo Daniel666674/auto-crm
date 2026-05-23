@@ -361,6 +361,9 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE contacts ADD COLUMN sig_vacancy INTEGER NOT NULL DEFAULT 0`,
     `CREATE INDEX IF NOT EXISTS idx_contacts_fit_score ON contacts(fit_score)`,
     `CREATE INDEX IF NOT EXISTS idx_contacts_fit_tier ON contacts(fit_tier)`,
+    // Google Meet join URL + event URL on mirrored calendar events
+    `ALTER TABLE calendar_events ADD COLUMN meet_link TEXT`,
+    `ALTER TABLE calendar_events ADD COLUMN html_link TEXT`,
   ];
 
   for (const sql of migrations) {

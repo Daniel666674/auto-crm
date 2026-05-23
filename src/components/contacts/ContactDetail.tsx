@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Globe, Link2, Users } from "lucide-react";
 import { CustomFieldValues, parseCustomFields } from "@/components/shared/CustomFields";
 import { ConsentBadge } from "./ConsentBadge";
 import { DataDeletionModal } from "./DataDeletionModal";
@@ -24,6 +25,10 @@ const TEMP_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 
 const ACT_EMOJI: Record<string, string> = {
   call: "📞", email: "✉️", meeting: "🤝", note: "📝", follow_up: "⏰",
+};
+
+const TIER_CONFIG: Record<string, string> = {
+  A: "#16a34a", B: "#C39A4C", C: "#4299e1", D: "#64748b",
 };
 
 function qaBtn(color: string): React.CSSProperties {
@@ -64,6 +69,18 @@ interface ContactDetailClientProps {
     industry?: string | null;
     location?: string | null;
     linkedinUrl?: string | null;
+    companyWebsite?: string | null;
+    companyLinkedin?: string | null;
+    employeeCount?: number | null;
+    fitScore?: number | null;
+    fitTier?: string | null;
+    sigLinkedinAds?: boolean | null;
+    sigPostFreq?: string | null;
+    sigDmActive?: boolean | null;
+    sigMetaAds?: boolean | null;
+    sigGoogleAds?: boolean | null;
+    sigMgrNoHead?: boolean | null;
+    sigVacancy?: boolean | null;
     whatsappNumber?: string | null;
     tags?: string | null;
     lifecycleStage?: string | null;
@@ -148,6 +165,34 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
   const [sendToMktOpen, setSendToMktOpen] = useState(false);
   const [sendToMktReason, setSendToMktReason] = useState("");
   const [sendToMktSubmitting, setSendToMktSubmitting] = useState(false);
+
+  const [signals, setSignals] = useState({
+    sigLinkedinAds: contact.sigLinkedinAds ?? false,
+    sigPostFreq: contact.sigPostFreq ?? "",
+    sigDmActive: contact.sigDmActive ?? false,
+    sigMetaAds: contact.sigMetaAds ?? false,
+    sigGoogleAds: contact.sigGoogleAds ?? false,
+    sigMgrNoHead: contact.sigMgrNoHead ?? false,
+    sigVacancy: contact.sigVacancy ?? false,
+  });
+
+  const updateSignal = async (field: keyof typeof signals, value: boolean | string) => {
+    const prev = signals[field];
+    setSignals(s => ({ ...s, [field]: value }));
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Señal actualizada");
+      router.refresh();
+    } catch {
+      setSignals(s => ({ ...s, [field]: prev }));
+      toast.error("Error al actualizar la señal");
+    }
+  };
 
   const temp = TEMP_CONFIG[contact.temperature] ?? TEMP_CONFIG.cold;
   const initials = contact.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -279,6 +324,15 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: temp.color, display: "inline-block" }} />
               {temp.label}
             </span>
+            {contact.fitTier && TIER_CONFIG[contact.fitTier] && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: `${TIER_CONFIG[contact.fitTier]}1f`, color: TIER_CONFIG[contact.fitTier],
+              }}>
+                Fit {contact.fitTier}{contact.fitScore != null ? ` · ${contact.fitScore}` : ""}
+              </span>
+            )}
             <ConsentBadge consentGiven={consentGiven} />
           </div>
 
@@ -310,6 +364,28 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                 <span style={{ color: "var(--muted-foreground)" }}>📍</span>
                 <span style={{ color: "var(--muted-foreground)" }}>{contact.location}</span>
+              </div>
+            )}
+            {contact.companyWebsite && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <Globe size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+                <a href={contact.companyWebsite} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {contact.companyWebsite.replace(/^https?:\/\//, "")}
+                </a>
+              </div>
+            )}
+            {contact.companyLinkedin && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <Link2 size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+                <a href={contact.companyLinkedin} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  LinkedIn empresa
+                </a>
+              </div>
+            )}
+            {contact.employeeCount != null && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                <Users size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+                <span style={{ color: "var(--muted-foreground)" }}>{contact.employeeCount} empleados</span>
               </div>
             )}
             {contact.engagementStatus && (
@@ -375,6 +451,43 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
 
           {/* Tags */}
           <TagsEditor contactId={contact.id} initial={contact.tags} />
+
+          {/* Marketing signals editor (VA) */}
+          <div style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Señales de Marketing (Scoring)</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {([
+                { field: "sigLinkedinAds", label: "Pauta activa en LinkedIn Ads" },
+                { field: "sigDmActive", label: "Decision maker activo en LinkedIn (30d)" },
+                { field: "sigMetaAds", label: "Pauta en Meta Ads" },
+                { field: "sigGoogleAds", label: "Pauta en Google Ads" },
+                { field: "sigMgrNoHead", label: "Marketing Manager sin Head/Director" },
+                { field: "sigVacancy", label: "Vacante abierta en Marketing" },
+              ] as const).map(({ field, label }) => (
+                <label key={field} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, cursor: "pointer", color: "var(--foreground)" }}>
+                  <input
+                    type="checkbox"
+                    checked={!!signals[field]}
+                    onChange={e => updateSignal(field, e.target.checked)}
+                    style={{ marginTop: 1, cursor: "pointer" }}
+                  />
+                  <span style={{ lineHeight: 1.3 }}>{label}</span>
+                </label>
+              ))}
+              <div style={{ marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600, marginBottom: 4 }}>Frecuencia de posts</div>
+                <select
+                  value={signals.sigPostFreq}
+                  onChange={e => updateSignal("sigPostFreq", e.target.value)}
+                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", background: "var(--background)", padding: "6px 10px", fontSize: 12, color: "var(--foreground)", cursor: "pointer" }}
+                >
+                  <option value="">Ninguna</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="mensual">Mensual</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
           {/* Notes */}
           {contact.notes && (
@@ -941,6 +1054,9 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
           industry: contact.industry || "",
           location: contact.location || "",
           linkedinUrl: contact.linkedinUrl || "",
+          companyWebsite: contact.companyWebsite || "",
+          companyLinkedin: contact.companyLinkedin || "",
+          employeeCount: contact.employeeCount ?? null,
           whatsappNumber: contact.whatsappNumber || "",
           source: contact.source,
           temperature: contact.temperature as "cold" | "warm" | "hot",

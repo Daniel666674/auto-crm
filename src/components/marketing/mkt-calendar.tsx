@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { Video } from "lucide-react";
+import { toast } from "sonner";
 
 type EventType = "Campaña" | "Reunión" | "Contenido" | "Evento";
 
@@ -15,7 +17,8 @@ interface CalEvent {
   notes: string;
   googleEventId?: string | null;
   source?: "local" | "google";
-  htmlLink?: string;
+  htmlLink?: string | null;
+  meetLink?: string | null;
 }
 
 interface GoogleEvent {
@@ -110,6 +113,7 @@ export function MktCalendar() {
           notes: "",
           source: "google" as const,
           htmlLink: e.htmlLink,
+          meetLink: (e as GoogleEvent & { meetLink?: string | null }).meetLink ?? null,
         })));
       })
       .catch(() => { setGoogleConnected(false); setGoogleEvents([]); });
@@ -128,6 +132,7 @@ export function MktCalendar() {
     if (saving) return;
     setSaving(true);
     let mirrored = false;
+    let meetLink: string | null = null;
     try {
       const res = await fetch("/api/marketing/calendar", {
         method: "POST",
@@ -136,9 +141,11 @@ export function MktCalendar() {
       });
       const data = await res.json().catch(() => ({}));
       mirrored = !!data.googleEventId;
+      meetLink = data.meetLink ?? null;
     } finally {
       setSaving(false);
     }
+    if (mirrored && meetLink) toast.success("Reunión creada con link de Meet");
     await refresh();
     loadGoogle(year, month);
 
@@ -230,7 +237,7 @@ export function MktCalendar() {
                   setShowModal(true);
                 }}
                 style={{
-                  minHeight: 80, padding: "6px 8px",
+                  minHeight: 130, padding: "8px 8px",
                   borderRight: (idx + 1) % 7 !== 0 ? "1px solid #1e1e1e" : "none",
                   borderBottom: idx < cells.length - 7 ? "1px solid #1e1e1e" : "none",
                   background: !day ? "rgba(255,255,255,0.01)" : "transparent",
@@ -341,6 +348,19 @@ function EventChip({ ev, onDelete, teamMembers }: { ev: CalEvent; onDelete: (id:
     >
       {isGoogle && <span style={{ fontSize: 8, fontWeight: 800, color: tc.color, flexShrink: 0 }}>G</span>}
       <span style={{ fontSize: 9, fontWeight: 600, color: tc.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 80 }}>{ev.title}</span>
+      {ev.meetLink && (
+        <a
+          href={ev.meetLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="Unirse a la reunión de Meet"
+          style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 8, fontWeight: 700, color: "#C39A4C", flexShrink: 0, textDecoration: "none" }}
+        >
+          <Video size={9} />
+          Unirse
+        </a>
+      )}
       <div style={{ display: "flex", gap: 2, marginLeft: "auto", flexShrink: 0 }}>
         {parts.map(p => (
           <div key={p.email} style={{ width: 14, height: 14, borderRadius: "50%", background: "#C39A4C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, color: "#0a0a0a" }}>{p.initials}</div>

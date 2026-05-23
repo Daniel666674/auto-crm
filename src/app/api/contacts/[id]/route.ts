@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { contacts, deals, activities } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { recomputeContact } from "@/lib/fit-recompute";
 
 export async function GET(
   _request: NextRequest,
@@ -81,18 +82,36 @@ export async function PUT(
   if (body.industry !== undefined) updateData.industry = body.industry || null;
   if (body.location !== undefined) updateData.location = body.location || null;
   if (body.linkedinUrl !== undefined) updateData.linkedinUrl = body.linkedinUrl || null;
+  if (body.companyWebsite !== undefined) updateData.companyWebsite = body.companyWebsite || null;
+  if (body.companyLinkedin !== undefined) updateData.companyLinkedin = body.companyLinkedin || null;
+  if (body.employeeCount !== undefined) updateData.employeeCount = body.employeeCount ? Math.max(0, parseInt(String(body.employeeCount)) || 0) : null;
   if (body.whatsappNumber !== undefined) updateData.whatsappNumber = body.whatsappNumber || null;
   if (body.tags !== undefined) updateData.tags = body.tags || null;
   if (body.lifecycleStage !== undefined) updateData.lifecycleStage = body.lifecycleStage || "lead";
   if (body.customFields !== undefined) updateData.customFields = body.customFields ? JSON.stringify(body.customFields) : null;
 
-  const result = db
-    .update(contacts)
-    .set(updateData)
-    .where(eq(contacts.id, id))
-    .returning()
-    .get();
+  // VA-enriched marketing signals that feed the fit score
+  const SIGNAL_FIELDS = ["sigLinkedinAds", "sigPostFreq", "sigDmActive", "sigMetaAds", "sigGoogleAds", "sigMgrNoHead", "sigVacancy"] as const;
+  let signalsChanged = false;
+  for (const f of SIGNAL_FIELDS) {
+    if (body[f] !== undefined) {
+      updateData[f] = f === "sigPostFreq" ? (body[f] || null) : !!body[f];
+      signalsChanged = true;
+    }
+  }
+  // Editing firmographics also changes the fit score.
+  const fitFieldsChanged = signalsChanged ||
+    body.title !== undefined || body.industry !== undefined || body.employeeCount !== undefined;
 
+  db.update(contacts).set(updateData).where(eq(contacts.id, id)).run();
+
+  // Recompute fit score + qualification when scoring inputs changed, then return
+  // the freshly-scored row.
+  if (fitFieldsChanged) {
+    try { recomputeContact(id); } catch { /* non-fatal */ }
+  }
+
+  const result = db.select().from(contacts).where(eq(contacts.id, id)).get();
   return NextResponse.json(result);
 }
 

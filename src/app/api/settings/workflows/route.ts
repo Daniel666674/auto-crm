@@ -36,10 +36,22 @@ export async function POST(request: NextRequest) {
 
   const VALID_EVENTS = [
     "deal_stage_changed",
-    "contact_score_reached",
-    "lead_created",
+    "deal_won",
+    "deal_lost",
     "deal_created",
+    "contact_score_reached",
+    "contact_tier_reached",
+    "lead_created",
+    "contact_replied",
+    "meeting_booked",
+    "lifecycle_changed",
+    "became_mql",
+    "became_sql",
     "followup_overdue",
+    "campaign_created",
+    "campaign_completed",
+    "mkt_handoff",
+    "mkt_engagement_changed",
   ];
 
   if (!name?.trim()) {

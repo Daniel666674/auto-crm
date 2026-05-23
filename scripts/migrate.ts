@@ -493,6 +493,20 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_fit_tier ON contacts(fit_tier)`
 console.log("[migrate] fit-score columns: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 19: Google Meet link + event URL on calendar events
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking calendar_events meet/html link columns...");
+if (!hasColumn("calendar_events", "meet_link")) {
+  db.exec(`ALTER TABLE calendar_events ADD COLUMN meet_link TEXT`);
+  console.log("[migrate] Added calendar_events.meet_link");
+}
+if (!hasColumn("calendar_events", "html_link")) {
+  db.exec(`ALTER TABLE calendar_events ADD COLUMN html_link TEXT`);
+  console.log("[migrate] Added calendar_events.html_link");
+}
+console.log("[migrate] calendar meet links: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

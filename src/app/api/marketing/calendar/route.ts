@@ -23,6 +23,8 @@ export async function GET() {
     participants: (() => { try { return JSON.parse(r.participants) as string[]; } catch { return []; } })(),
     notes: r.notes ?? "",
     googleEventId: r.googleEventId ?? null,
+    meetLink: r.meetLink ?? null,
+    htmlLink: r.htmlLink ?? null,
   }));
   return NextResponse.json(events);
 }
@@ -38,8 +40,11 @@ export async function POST(req: NextRequest) {
 
   const participants = Array.isArray(body.participants) ? (body.participants as string[]) : [];
 
-  // Mirror to the Workspace calendar (best-effort) so it appears in Google too.
+  // Mirror to the Workspace calendar (best-effort) so it appears in Google too,
+  // with a Google Meet link the participants can join.
   let googleEventId: string | null = null;
+  let meetLink: string | null = null;
+  let htmlLink: string | null = null;
   try {
     const g = await createCalendarEvent(session.user.id, {
       title: String(body.title),
@@ -50,6 +55,8 @@ export async function POST(req: NextRequest) {
       attendees: participants,
     });
     googleEventId = g.id ?? null;
+    meetLink = g.meetLink ?? null;
+    htmlLink = g.htmlLink ?? null;
   } catch {
     // Google not connected or failed — keep the local event only.
   }
@@ -63,6 +70,8 @@ export async function POST(req: NextRequest) {
     participants: JSON.stringify(participants),
     notes: body.notes || null,
     googleEventId,
+    meetLink,
+    htmlLink,
     createdBy: session.user.id,
     createdAt: new Date(),
   }).returning().get();
@@ -77,6 +86,8 @@ export async function POST(req: NextRequest) {
     participants: (() => { try { return JSON.parse(created.participants) as string[]; } catch { return []; } })(),
     notes: created.notes ?? "",
     googleEventId: created.googleEventId ?? null,
+    meetLink: created.meetLink ?? null,
+    htmlLink: created.htmlLink ?? null,
   });
 }
 

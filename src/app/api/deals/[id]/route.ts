@@ -82,19 +82,21 @@ export async function PUT(
         value: body.value ?? existing.value,
       };
       notifySlackDealClosed(dealForSlack, newStage, contact?.name ?? "—").catch(() => {});
-      fireTriggers({
-        event: "deal_stage_changed",
-        data: {
-          dealId: existing.id,
-          dealTitle: body.title ?? existing.title,
-          stageId: body.stageId,
-          stageName: newStage.name,
-          isWon: newStage.isWon ? "true" : "false",
-          isLost: newStage.isLost ? "true" : "false",
-          contactName: contact?.name ?? "",
-          value: String(body.value ?? existing.value),
-        },
-      }).catch(() => {});
+      const triggerData = {
+        dealId: existing.id,
+        dealTitle: body.title ?? existing.title,
+        stageId: body.stageId,
+        stageName: newStage.name,
+        isWon: newStage.isWon ? "true" : "false",
+        isLost: newStage.isLost ? "true" : "false",
+        contactId: existing.contactId,
+        contactName: contact?.name ?? "",
+        name: contact?.name ?? "",
+        value: String(body.value ?? existing.value),
+      };
+      fireTriggers({ event: "deal_stage_changed", data: triggerData }).catch(() => {});
+      if (newStage.isWon) fireTriggers({ event: "deal_won", data: triggerData }).catch(() => {});
+      if (newStage.isLost) fireTriggers({ event: "deal_lost", data: triggerData }).catch(() => {});
     } else if (newStage && !newStage.isWon && !newStage.isLost) {
       // Moving back to an active stage — clear closure
       updateData.closedAt = null;
