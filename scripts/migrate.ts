@@ -507,7 +507,21 @@ if (!hasColumn("calendar_events", "html_link")) {
 console.log("[migrate] calendar meet links: OK");
 
 // ---------------------------------------------------------------------------
-// Migration 20: Dapta AI meeting intelligence — transcript + meeting ID
+// Migration 20: Scoring v2 — rebalanced weights (force-write new defaults)
+// ---------------------------------------------------------------------------
+console.log("[migrate] Writing scoring v2 weights...");
+const SCORING_V2 = {
+  linkedinAds: 10, postsWeekly: 8, postsMonthly: 3, dmActiveLinkedin: 8,
+  metaAds: 3, googleAds: 7, mgrNoHead: 6, vacancy: 6,
+  size1to10: 20, size11to50: 18, size51to200: 6,
+  industryTech: 15, industryOther: 8,
+  roleCeo: 20, roleCmo: 20, roleMktMgr: 12, roleCsuite: 10, roleOther: 0,
+};
+db.exec(`INSERT OR REPLACE INTO crm_settings (key, value) VALUES ('fit_scoring_weights', '${JSON.stringify(SCORING_V2)}')`);
+console.log("[migrate] Scoring v2 weights: OK");
+
+// ---------------------------------------------------------------------------
+// Migration 21: Dapta AI meeting intelligence — transcript + meeting ID
 // ---------------------------------------------------------------------------
 console.log("[migrate] Checking activities dapta columns...");
 if (!hasColumn("activities", "transcript_text")) {

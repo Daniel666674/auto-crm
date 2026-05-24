@@ -40,23 +40,27 @@ export interface TierThresholds {
 }
 
 export const DEFAULT_FIT_WEIGHTS: FitWeights = {
-  linkedinAds: 12,
-  postsWeekly: 12,
-  postsMonthly: 4,
-  dmActiveLinkedin: 12,
-  metaAds: 4,
-  googleAds: 8,
-  mgrNoHead: 8,
-  vacancy: 8,
-  size1to10: 12,
-  size11to50: 4,
-  size51to200: 0,
-  industryTech: 12,
-  industryOther: 4,
-  roleCeo: 12,
-  roleCmo: 12,
-  roleMktMgr: 8,
-  roleCsuite: 4,
+  // Marketing signals — VA-enriched (max ~51 combined)
+  linkedinAds: 10,
+  postsWeekly: 8,
+  postsMonthly: 3,
+  dmActiveLinkedin: 8,
+  metaAds: 3,
+  googleAds: 7,
+  mgrNoHead: 6,
+  vacancy: 6,
+  // Company size — 1-50 both prime; 51-200 some value
+  size1to10: 20,
+  size11to50: 18,
+  size51to200: 6,
+  // Industry — tech best, but B2B services/finance/consulting are valid targets
+  industryTech: 15,
+  industryOther: 8,
+  // Role — CMO/CEO equal top; ops C-suite meaningful at small companies
+  roleCeo: 20,
+  roleCmo: 20,
+  roleMktMgr: 12,
+  roleCsuite: 10,
   roleOther: 0,
 };
 
@@ -90,24 +94,31 @@ export function roleScore(title: string | null | undefined, w: FitWeights): numb
   const t = (title || "").toLowerCase();
   if (!t) return w.roleOther;
 
+  // Marketing leadership — highest priority (they BUY marketing services)
   const isMktLeader =
     /\bcmo\b/.test(t) ||
-    (/(marketing|mercadeo)/.test(t) && /(director|head|jefe|vp|vice president|chief)/.test(t));
+    /\bchief marketing\b/.test(t) ||
+    (/(marketing|mercadeo|growth)/.test(t) &&
+      /(director|head|jefe|vp\b|vice president|chief|subdirector|líder|lider)/.test(t));
   if (isMktLeader) return w.roleCmo;
 
+  // Marketing manager / growth practitioner
   const isMktMgr =
-    (/(marketing|mercadeo)/.test(t) && /(manager|gerente|lead|líder|lider)/.test(t)) ||
-    /\b(growth|demand gen|demand generation)\b/.test(t);
+    (/(marketing|mercadeo)/.test(t) && /(manager|gerente|lead|líder|lider|coordinador|specialist|especialista)/.test(t)) ||
+    /\b(growth hacker|demand gen|demand generation|brand manager|content manager|digital manager|performance\b)/.test(t);
   if (isMktMgr) return w.roleMktMgr;
 
+  // CEO / Founder — decision-maker at small companies (often doubles as CMO)
   const isCeo =
-    /\b(ceo|founder|co-?founder|cofounder|owner|president|presidente)\b/.test(t) ||
-    /(director general|managing director|fundador|propietario|due[ñn]o)/.test(t);
+    /\b(ceo|founder|co-?founder|cofounder|owner|president|presidente|socio|partner)\b/.test(t) ||
+    /(director general|managing director|fundador|propietario|due[ñn]o|gerente general|general manager)/.test(t);
   if (isCeo) return w.roleCeo;
 
+  // Ops/Finance/Tech C-suite — can be decision-maker at small companies
   const isCsuite =
-    /\b(coo|cfo|cto|cio|ciso)\b/.test(t) ||
-    /(gerente general|general manager|chief operating|chief financial|chief technology)/.test(t);
+    /\b(coo|cfo|cto|cio|ciso|cao|cro|cso)\b/.test(t) ||
+    /(chief operating|chief financial|chief technology|chief revenue|chief sales|chief information|director de operaciones|director financiero|director de tecnolog)/.test(t) ||
+    /\b(vp|vice president|vicepresidente)\b/.test(t);
   if (isCsuite) return w.roleCsuite;
 
   return w.roleOther;
@@ -124,8 +135,9 @@ export function sizeScore(employeeCount: number | null | undefined, w: FitWeight
 export function industryScore(industry: string | null | undefined, w: FitWeights): number {
   const i = (industry || "").toLowerCase();
   if (!i) return 0;
+  // Tech/digital-native — highest marketing maturity
   const isTech =
-    /(software|saas|fintech|information technology|computer|internet|telecommunication|telecom|\bit\b|tech\b|technolog)/.test(i);
+    /(software|saas|fintech|information technology|computer|internet|telecommunication|telecom|\bit\b|tech\b|technolog|digital|e-?commerce|ecommerce|marketplace|startup|artificial intelligence|\bai\b|machine learning|cybersecurity|cloud)/.test(i);
   return isTech ? w.industryTech : w.industryOther;
 }
 
