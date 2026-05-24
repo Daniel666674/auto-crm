@@ -95,6 +95,9 @@ export function recomputeAllScores(): { updated: number } {
       hasOpenDeal: openDeal.has(c.id),
       hasWonDeal: wonDeal.has(c.id),
       currentLifecycle: c.lifecycleStage,
+      sigDmActive: c.sigDmActive,
+      sigLinkedinAds: c.sigLinkedinAds,
+      sigPostFreq: c.sigPostFreq,
     });
 
     db.update(contacts)
@@ -170,6 +173,9 @@ export function recomputeContact(contactId: string): void {
   const qual = qualifyLead({
     fitScore, opens, clicks, replies, meetingBooked, demoed: false,
     hasOpenDeal, hasWonDeal, currentLifecycle: c.lifecycleStage,
+    sigDmActive: c.sigDmActive,
+    sigLinkedinAds: c.sigLinkedinAds,
+    sigPostFreq: c.sigPostFreq,
   });
 
   db.update(contacts)

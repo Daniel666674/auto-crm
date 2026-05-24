@@ -40,15 +40,15 @@ export interface TierThresholds {
 }
 
 export const DEFAULT_FIT_WEIGHTS: FitWeights = {
-  // Marketing signals — VA-enriched (max ~51 combined)
-  linkedinAds: 10,
-  postsWeekly: 8,
-  postsMonthly: 3,
-  dmActiveLinkedin: 8,
-  metaAds: 3,
-  googleAds: 7,
-  mgrNoHead: 6,
-  vacancy: 6,
+  // Marketing signals — VA-enriched. Strong weights so VA-worked contacts reliably reach Tier A.
+  linkedinAds: 12,
+  postsWeekly: 12,
+  postsMonthly: 4,
+  dmActiveLinkedin: 12,
+  metaAds: 4,
+  googleAds: 8,
+  mgrNoHead: 8,
+  vacancy: 8,
   // Company size — 1-50 both prime; 51-200 some value
   size1to10: 20,
   size11to50: 18,

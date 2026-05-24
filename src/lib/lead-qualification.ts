@@ -21,6 +21,10 @@ export interface QualInput {
   hasOpenDeal: boolean;
   hasWonDeal: boolean;
   currentLifecycle?: string | null;
+  // VA signals — contribute to temperature even without email engagement
+  sigDmActive?: boolean | null;
+  sigLinkedinAds?: boolean | null;
+  sigPostFreq?: string | null;
 }
 
 export interface QualResult {
@@ -61,6 +65,8 @@ export function qualifyLead(i: QualInput): QualResult {
   let temperature: QualResult["temperature"] = "cold";
   if (positiveIntent || i.clicks > 0 || i.opens >= 2) temperature = "hot";
   else if (i.opens > 0) temperature = "warm";
+  // VA signals: a contact actively running ads, DM-reachable, or posting regularly is behaviorally warm
+  else if (i.sigDmActive || i.sigLinkedinAds || i.sigPostFreq === "semanal" || i.sigPostFreq === "weekly") temperature = "warm";
 
   // Compute the funnel stage this contact's signals justify, then keep whichever
   // is further along between that and where the contact already sits.

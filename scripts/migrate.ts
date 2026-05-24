@@ -507,12 +507,12 @@ if (!hasColumn("calendar_events", "html_link")) {
 console.log("[migrate] calendar meet links: OK");
 
 // ---------------------------------------------------------------------------
-// Migration 20: Scoring v2 — rebalanced weights (force-write new defaults)
+// Migration 20: Scoring v2.1 — restored VA signal weights so enriched contacts reliably reach Tier A
 // ---------------------------------------------------------------------------
-console.log("[migrate] Writing scoring v2 weights...");
+console.log("[migrate] Writing scoring v2.1 weights...");
 const SCORING_V2 = {
-  linkedinAds: 10, postsWeekly: 8, postsMonthly: 3, dmActiveLinkedin: 8,
-  metaAds: 3, googleAds: 7, mgrNoHead: 6, vacancy: 6,
+  linkedinAds: 12, postsWeekly: 12, postsMonthly: 4, dmActiveLinkedin: 12,
+  metaAds: 4, googleAds: 8, mgrNoHead: 8, vacancy: 8,
   size1to10: 20, size11to50: 18, size51to200: 6,
   industryTech: 15, industryOther: 8,
   roleCeo: 20, roleCmo: 20, roleMktMgr: 12, roleCsuite: 10, roleOther: 0,
