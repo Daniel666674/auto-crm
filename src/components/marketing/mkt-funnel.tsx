@@ -12,6 +12,16 @@ interface FunnelData {
   }[];
   returnedCount: number;
   totalContacts: number;
+  tierCounts: { A: number; B: number; C: number; D: number };
+  tempCounts: { hot: number; warm: number; cold: number };
+  sourceCounts: Record<string, number>;
+  emailPerf: { sent: number; opens: number; clicks: number; replies: number; openRate: number; clickRate: number; replyRate: number };
+  mqlCount: number;
+  sqlCount: number;
+  mqlToSqlRate: number;
+  winRate: number;
+  wonCount: number;
+  lostCount: number;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -22,10 +32,46 @@ const STAGE_COLORS: Record<string, string> = {
   subscriber: "#94a3b8", lead: "#60a5fa", MQL: "#a78bfa",
   SQL: "#f59e0b", opportunity: "#f97316", customer: "#22c55e", evangelist: "#ec4899",
 };
+const TIER_COLORS: Record<string, string> = { A: "#16a34a", B: "#C39A4C", C: "#4299e1", D: "#64748b" };
+const TEMP_COLORS: Record<string, string> = { hot: "#ef4444", warm: "#f97316", cold: "#60a5fa" };
+const TEMP_LABELS: Record<string, string> = { hot: "Caliente", warm: "Tibio", cold: "Frío" };
 
 function formatCOP(cents: number): string {
   const cop = Math.round(cents / 100);
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(cop);
+}
+
+function KpiCard({ label, value, color, sub }: { label: string; value: string; color?: string; sub?: string }) {
+  return (
+    <div style={{ padding: 14, borderRadius: 10, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: color ?? "var(--mkt-text)" }}>{value}</div>
+      {sub && <div style={{ fontSize: 10, color: "var(--mkt-text-muted)", marginTop: 3 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function SectionBox({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ padding: 18, borderRadius: 12, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)" }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--mkt-text)", marginBottom: 14 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function RateBar({ label, rate, color, note }: { label: string; rate: number; color: string; note?: string }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 12, color: "var(--mkt-text)", fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color }}>{rate}%{note ? <span style={{ fontWeight: 400, color: "var(--mkt-text-muted)", marginLeft: 4 }}>{note}</span> : null}</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 4, background: "var(--mkt-bg)", overflow: "hidden" }}>
+        <div style={{ width: `${Math.min(rate, 100)}%`, height: "100%", background: color, transition: "width 0.4s" }} />
+      </div>
+    </div>
+  );
 }
 
 export function MktFunnel() {
@@ -55,39 +101,138 @@ export function MktFunnel() {
   const wonValue = wonStages.reduce((sum, s) => sum + s.value, 0);
   const wonCount = wonStages.reduce((sum, s) => sum + s.count, 0);
 
+  const totalTier = Object.values(data.tierCounts).reduce((a, b) => a + b, 0) || 1;
+  const totalTemp = Object.values(data.tempCounts).reduce((a, b) => a + b, 0) || 1;
+
+  const sortedSources = Object.entries(data.sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const maxSource = Math.max(...sortedSources.map(([, v]) => v), 1);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
         <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--mkt-text)", margin: "0 0 4px" }}>
-          Funnel Dashboard
+          Funnel de Alto Rendimiento
         </h2>
         <p style={{ fontSize: 12, color: "var(--mkt-text-muted)", margin: 0 }}>
-          Conversión completa: del Suscriptor al Cliente. Incluye la cola de re-engagement.
+          Vista completa: calidad del pipeline, engagement, email y conversión hasta cierre.
         </p>
       </div>
 
-      {/* KPI strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-        {[
-          { label: "Contactos totales", value: data.totalContacts.toString(), color: "var(--mkt-text)" },
-          { label: "Clientes", value: (data.lifecycleCounts.customer ?? 0).toString(), color: "#22c55e" },
-          { label: "Deals ganados", value: wonCount.toString(), color: "#22c55e" },
-          { label: "Valor ganado", value: formatCOP(wonValue), color: "var(--mkt-accent)" },
-          { label: "Pipeline activo", value: formatCOP(totalPipelineValue), color: "var(--mkt-text)" },
-          { label: "En re-engagement", value: data.returnedCount.toString(), color: "#a78bfa" },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ padding: 14, borderRadius: 10, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{label}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color }}>{value}</div>
-          </div>
-        ))}
+      {/* Top-level KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+        <KpiCard label="Contactos totales" value={data.totalContacts.toString()} />
+        <KpiCard label="MQLs calificados" value={data.mqlCount.toString()} color="#a78bfa" sub="fitScore ≥ 60" />
+        <KpiCard label="SQLs listos" value={data.sqlCount.toString()} color="#f59e0b" sub="MQL + intención" />
+        <KpiCard label="MQL → SQL" value={`${data.mqlToSqlRate}%`} color={data.mqlToSqlRate >= 30 ? "#22c55e" : "#f59e0b"} />
+        <KpiCard label="Win rate" value={`${data.winRate}%`} color={data.winRate >= 40 ? "#22c55e" : data.winRate >= 20 ? "#f97316" : "#ef4444"} sub={`${data.wonCount}G / ${data.lostCount}P`} />
+        <KpiCard label="Clientes" value={(data.lifecycleCounts.customer ?? 0).toString()} color="#22c55e" />
+        <KpiCard label="Valor ganado" value={formatCOP(wonValue)} color="var(--mkt-accent)" />
+        <KpiCard label="Pipeline activo" value={formatCOP(totalPipelineValue)} />
+        <KpiCard label="Re-engagement" value={data.returnedCount.toString()} color="#a78bfa" />
       </div>
 
-      {/* Lifecycle funnel bars */}
-      <div style={{ padding: 18, borderRadius: 12, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--mkt-text)", marginBottom: 14 }}>
-          Lifecycle (Suscriptor → Evangelista)
+      {/* Fit Tier + Temperature row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Tier distribution */}
+        <SectionBox title="Distribución de Fit (ICP)">
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {(["A", "B", "C", "D"] as const).map(tier => (
+              <div key={tier} style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "var(--mkt-bg)", border: `2px solid ${TIER_COLORS[tier]}22` }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: TIER_COLORS[tier] }}>{data.tierCounts[tier]}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TIER_COLORS[tier], marginTop: 2 }}>Tier {tier}</div>
+                <div style={{ fontSize: 9, color: "var(--mkt-text-muted)", marginTop: 1 }}>
+                  {Math.round((data.tierCounts[tier] / totalTier) * 100)}%
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Segment bar */}
+          <div style={{ height: 10, borderRadius: 5, overflow: "hidden", display: "flex" }}>
+            {(["A", "B", "C", "D"] as const).map(tier => (
+              <div key={tier} style={{ width: `${(data.tierCounts[tier] / totalTier) * 100}%`, background: TIER_COLORS[tier], transition: "width 0.4s" }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+            {(["A", "B", "C", "D"] as const).map(tier => (
+              <div key={tier} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: TIER_COLORS[tier] }} />
+                <span style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>Tier {tier}</span>
+              </div>
+            ))}
+          </div>
+        </SectionBox>
+
+        {/* Temperature split */}
+        <SectionBox title="Temperatura de Leads">
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {(["hot", "warm", "cold"] as const).map(t => (
+              <div key={t} style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "var(--mkt-bg)", border: `2px solid ${TEMP_COLORS[t]}22` }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: TEMP_COLORS[t] }}>{data.tempCounts[t]}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TEMP_COLORS[t], marginTop: 2 }}>{TEMP_LABELS[t]}</div>
+                <div style={{ fontSize: 9, color: "var(--mkt-text-muted)", marginTop: 1 }}>
+                  {Math.round((data.tempCounts[t] / totalTemp) * 100)}%
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ height: 10, borderRadius: 5, overflow: "hidden", display: "flex" }}>
+            {(["hot", "warm", "cold"] as const).map(t => (
+              <div key={t} style={{ width: `${(data.tempCounts[t] / totalTemp) * 100}%`, background: TEMP_COLORS[t], transition: "width 0.4s" }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+            {(["hot", "warm", "cold"] as const).map(t => (
+              <div key={t} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: TEMP_COLORS[t] }} />
+                <span style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>{TEMP_LABELS[t]}</span>
+              </div>
+            ))}
+          </div>
+        </SectionBox>
+      </div>
+
+      {/* Email performance */}
+      <SectionBox title="Rendimiento de Email">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 10, marginBottom: 16 }}>
+          {[
+            { label: "Enviados", value: data.emailPerf.sent.toString(), color: "var(--mkt-text)" },
+            { label: "Aperturas", value: data.emailPerf.opens.toString(), color: "#60a5fa" },
+            { label: "Clics", value: data.emailPerf.clicks.toString(), color: "#a78bfa" },
+            { label: "Respuestas", value: data.emailPerf.replies.toString(), color: "#22c55e" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "var(--mkt-bg)" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color }}>{value}</div>
+              <div style={{ fontSize: 10, color: "var(--mkt-text-muted)", marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
         </div>
+        <RateBar label="Open Rate" rate={data.emailPerf.openRate} color="#60a5fa" note={`${data.emailPerf.opens} aperturas`} />
+        <RateBar label="Click Rate" rate={data.emailPerf.clickRate} color="#a78bfa" note={`${data.emailPerf.clicks} clics`} />
+        <RateBar label="Reply Rate" rate={data.emailPerf.replyRate} color="#22c55e" note={`${data.emailPerf.replies} respuestas`} />
+      </SectionBox>
+
+      {/* Sources */}
+      {sortedSources.length > 0 && (
+        <SectionBox title="Contactos por Fuente">
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {sortedSources.map(([src, count]) => (
+              <div key={src} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 100, fontSize: 12, color: "var(--mkt-text)", fontWeight: 600, textTransform: "capitalize" }}>{src}</div>
+                <div style={{ flex: 1, height: 16, borderRadius: 4, background: "var(--mkt-bg)", overflow: "hidden" }}>
+                  <div style={{ width: `${(count / maxSource) * 100}%`, height: "100%", background: "var(--mkt-accent)", opacity: 0.75, transition: "width 0.4s" }} />
+                </div>
+                <div style={{ width: 36, textAlign: "right", fontSize: 12, fontWeight: 700, color: "var(--mkt-text)" }}>{count}</div>
+                <div style={{ width: 40, textAlign: "right", fontSize: 10, color: "var(--mkt-text-muted)" }}>
+                  {Math.round((count / data.totalContacts) * 100)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionBox>
+      )}
+
+      {/* Lifecycle funnel bars */}
+      <SectionBox title="Lifecycle (Suscriptor → Evangelista)">
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {stages.map((stageId, i) => {
             const count = data.lifecycleCounts[stageId];
@@ -120,13 +265,10 @@ export function MktFunnel() {
             );
           })}
         </div>
-      </div>
+      </SectionBox>
 
       {/* Deal stage funnel */}
-      <div style={{ padding: 18, borderRadius: 12, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--mkt-text)", marginBottom: 14 }}>
-          Pipeline de Sales (por etapa)
-        </div>
+      <SectionBox title="Pipeline de Sales (por etapa)">
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {(() => {
             const maxDealCount = Math.max(...data.dealStageBreakdown.map(s => s.count), 1);
@@ -142,7 +284,7 @@ export function MktFunnel() {
             ));
           })()}
         </div>
-      </div>
+      </SectionBox>
     </div>
   );
 }
