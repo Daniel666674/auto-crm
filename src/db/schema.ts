@@ -33,6 +33,7 @@ export const contacts = sqliteTable("contacts", {
   retentionReviewDate: integer("retention_review_date", { mode: "timestamp" }),
   engagementScore: integer("engagement_score"),
   title: text("title"),
+  seniority: text("seniority"), // Apollo seniority (Founder / C suite / Director / Head / VP …)
   industry: text("industry"),
   location: text("location"),
   linkedinUrl: text("linkedin_url"),

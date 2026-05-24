@@ -71,6 +71,7 @@ const TIERS_KEY = "fit_scoring_tiers";
 
 export interface FitInput {
   title?: string | null;
+  seniority?: string | null; // Apollo seniority — role fallback when title is ambiguous
   industry?: string | null;
   employeeCount?: number | null;
   sigLinkedinAds?: boolean | null;
@@ -89,10 +90,11 @@ export interface FitResult {
 }
 
 /** Decision-maker role points. Marketing leadership is checked before generic
- * C-level so a CMO never falls through to the ops bucket. */
-export function roleScore(title: string | null | undefined, w: FitWeights): number {
+ * C-level so a CMO never falls through to the ops bucket. When the title is
+ * ambiguous, the Apollo `seniority` field is used as a fallback so a Founder /
+ * C-suite contact still scores as a decision-maker. */
+export function roleScore(title: string | null | undefined, w: FitWeights, seniority?: string | null): number {
   const t = (title || "").toLowerCase();
-  if (!t) return w.roleOther;
 
   // Marketing leadership — highest priority (they BUY marketing services)
   const isMktLeader =
@@ -111,7 +113,7 @@ export function roleScore(title: string | null | undefined, w: FitWeights): numb
   // CEO / Founder — decision-maker at small companies (often doubles as CMO)
   const isCeo =
     /\b(ceo|founder|co-?founder|cofounder|owner|president|presidente|socio|partner)\b/.test(t) ||
-    /(director general|managing director|fundador|propietario|due[ñn]o|gerente general|general manager)/.test(t);
+    /(chief executive|director general|managing director|fundador|propietario|due[ñn]o|gerente general|general manager)/.test(t);
   if (isCeo) return w.roleCeo;
 
   // Ops/Finance/Tech C-suite — can be decision-maker at small companies
@@ -120,6 +122,15 @@ export function roleScore(title: string | null | undefined, w: FitWeights): numb
     /(chief operating|chief financial|chief technology|chief revenue|chief sales|chief information|director de operaciones|director financiero|director de tecnolog)/.test(t) ||
     /\b(vp|vice president|vicepresidente)\b/.test(t);
   if (isCsuite) return w.roleCsuite;
+
+  // Fallback to Apollo seniority when the title alone is inconclusive.
+  const s = (seniority || "").toLowerCase();
+  if (s) {
+    if (/founder|owner/.test(s)) return w.roleCeo;
+    if (/c.?suite|cxo|partner/.test(s)) return w.roleCsuite;
+    if (/head|director|vp/.test(s)) return /marketing|mercadeo|growth/.test(t) ? w.roleCmo : w.roleCsuite;
+    if (/manager/.test(s) && /marketing|mercadeo|growth/.test(t)) return w.roleMktMgr;
+  }
 
   return w.roleOther;
 }
@@ -160,7 +171,7 @@ export function computeFitScore(
   weights: FitWeights = DEFAULT_FIT_WEIGHTS,
   tiers: TierThresholds = DEFAULT_TIERS
 ): FitResult {
-  const role = roleScore(input.title, weights);
+  const role = roleScore(input.title, weights, input.seniority);
   const size = sizeScore(input.employeeCount, weights);
   const industry = industryScore(input.industry, weights);
   const signals = signalsScore(input, weights);

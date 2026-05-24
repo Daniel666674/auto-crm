@@ -521,6 +521,14 @@ db.exec(`INSERT OR REPLACE INTO crm_settings (key, value) VALUES ('fit_scoring_w
 console.log("[migrate] Scoring v2 weights: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 20b: Apollo seniority — role fallback for the fit score
+// ---------------------------------------------------------------------------
+if (!hasColumn("contacts", "seniority")) {
+  db.exec(`ALTER TABLE contacts ADD COLUMN seniority TEXT`);
+  console.log("[migrate] Added contacts.seniority");
+}
+
+// ---------------------------------------------------------------------------
 // Migration 21: Dapta AI meeting intelligence — transcript + meeting ID
 // ---------------------------------------------------------------------------
 console.log("[migrate] Checking activities dapta columns...");

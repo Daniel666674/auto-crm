@@ -70,6 +70,7 @@ export function recomputeAllScores(): { updated: number } {
     const { fitScore, fitTier } = computeFitScore(
       {
         title: c.title,
+        seniority: c.seniority,
         industry: c.industry,
         employeeCount: c.employeeCount,
         sigLinkedinAds: c.sigLinkedinAds,
@@ -128,6 +129,7 @@ export function recomputeContact(contactId: string): void {
   const { fitScore, fitTier } = computeFitScore(
     {
       title: c.title,
+      seniority: c.seniority,
       industry: c.industry,
       employeeCount: c.employeeCount,
       sigLinkedinAds: c.sigLinkedinAds,
