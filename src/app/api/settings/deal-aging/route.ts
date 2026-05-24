@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const role = (session.user as { role?: string }).role;
-  if (role !== "superadmin") return NextResponse.json({ error: "Solo superadmin" }, { status: 403 });
+  if (role !== "superadmin" && role !== "marketing") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { agingDays } = await req.json();
   const days = Number(agingDays);

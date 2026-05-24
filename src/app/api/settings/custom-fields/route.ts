@@ -15,7 +15,7 @@ function slugify(label: string): string {
     .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || `field_${Date.now()}`;
 }
 
-function isSuperadmin(role?: string) { return role === "superadmin"; }
+function isSuperadmin(role?: string) { return role === "superadmin" || role === "marketing"; }
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);

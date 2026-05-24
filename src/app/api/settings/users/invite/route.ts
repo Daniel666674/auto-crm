@@ -11,11 +11,16 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const role = (session.user as { role?: string }).role;
-  if (role !== "superadmin") return NextResponse.json({ error: "Solo superadmin" }, { status: 403 });
+  if (role !== "superadmin" && role !== "marketing") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { email, role: newRole, name } = await req.json();
   if (!email || !newRole) return NextResponse.json({ error: "email y role son requeridos" }, { status: 400 });
   if (!VALID_ROLES.includes(newRole)) return NextResponse.json({ error: "Rol inválido" }, { status: 400 });
+
+  // Privilege-escalation guard: marketing may not invite superadmins.
+  if (role === "marketing" && newRole === "superadmin") {
+    return NextResponse.json({ error: "Marketing no puede invitar superadmin" }, { status: 403 });
+  }
 
   const normalEmail = String(email).toLowerCase().trim();
   const existing = db.select().from(users).where(eq(users.email, normalEmail)).get();

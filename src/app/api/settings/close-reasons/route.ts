@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
   }
 
   const role = (session.user as { role?: string }).role;
-  if (role !== "superadmin") {
-    return NextResponse.json({ error: "Solo superadmin" }, { status: 403 });
+  if (role !== "superadmin" && role !== "marketing") {
+    return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   }
 
   let body: { type?: string; label?: string };

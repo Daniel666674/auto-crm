@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const role = (session.user as { role?: string }).role;
-  if (role !== "superadmin") return NextResponse.json({ error: "Solo superadmin" }, { status: 403 });
+  if (role !== "superadmin" && role !== "marketing") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { id } = await params;
   const stage = db.select().from(pipelineStages).where(eq(pipelineStages.id, id)).get();
@@ -33,7 +33,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const role = (session.user as { role?: string }).role;
-  if (role !== "superadmin") return NextResponse.json({ error: "Solo superadmin" }, { status: 403 });
+  if (role !== "superadmin" && role !== "marketing") return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
 
   const { id } = await params;
   const stage = db.select().from(pipelineStages).where(eq(pipelineStages.id, id)).get();

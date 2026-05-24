@@ -2085,58 +2085,60 @@ export default function SettingsPage() {
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 0 40px" }}>
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Configuración</h1>
         <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 4 }}>Perfil, apariencia, integraciones y preferencias del CRM</p>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
-        {visibleTabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            style={{
-              padding: "8px 16px", borderRadius: "8px 8px 0 0", fontSize: 13, fontWeight: 500,
-              cursor: "pointer", border: "1px solid transparent", display: "flex", alignItems: "center", gap: 6,
-              background: current === t.id ? "var(--card)" : "transparent",
-              color: current === t.id ? "var(--foreground)" : "var(--muted-foreground)",
-              borderColor: current === t.id ? "var(--border)" : "transparent",
-              borderBottomColor: current === t.id ? "var(--card)" : "transparent",
-              marginBottom: current === t.id ? -1 : 0,
-              transition: "all 0.12s",
-            }}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
+      <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
+        {/* Left vertical nav — every option stays visible, never cut off */}
+        <nav style={{ width: 210, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2, position: "sticky", top: 16 }}>
+          {visibleTabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 8,
+                fontSize: 13, fontWeight: current === t.id ? 600 : 500, cursor: "pointer",
+                border: `1px solid ${current === t.id ? "var(--border)" : "transparent"}`,
+                background: current === t.id ? "var(--card)" : "transparent",
+                color: current === t.id ? "var(--foreground)" : "var(--muted-foreground)",
+                width: "100%", textAlign: "left", transition: "all 0.12s",
+              }}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </nav>
 
-      {/* Content */}
-      {current === "perfil"         && <TabPerfil session={session} />}
-      {current === "apariencia"     && <TabApariencia />}
-      {current === "negocio"        && <TabNegocio role={userRole} />}
-      {current === "usuarios"       && <TabUsuarios currentUserId={userId} />}
-      {current === "objetivos"        && <SalesTargetsSettings currentUserId={userId} />}
-      {current === "scoring"          && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <FitScoringSettings role={userRole} />
-          <ScoringWeightsSettings role={userRole} />
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {current === "perfil"         && <TabPerfil session={session} />}
+          {current === "apariencia"     && <TabApariencia />}
+          {current === "negocio"        && <TabNegocio role={userRole} />}
+          {current === "usuarios"       && <TabUsuarios currentUserId={userId} />}
+          {current === "objetivos"        && <SalesTargetsSettings currentUserId={userId} />}
+          {current === "scoring"          && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <FitScoringSettings role={userRole} />
+              <ScoringWeightsSettings role={userRole} />
+            </div>
+          )}
+          {current === "automatizaciones" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              <div style={S.card}>
+                <WorkflowTriggers role={userRole} />
+              </div>
+              <HandoffRulesSettings />
+            </div>
+          )}
+          {current === "campos"         && <div style={S.card}><CustomFieldsSettings /></div>}
+          {current === "integraciones"  && <TabIntegraciones role={userRole} />}
+          {current === "pipeline"       && <TabPipeline role={userRole} />}
+          {current === "notificaciones" && <TabNotificaciones />}
+          {current === "cliente"        && <TabCliente />}
         </div>
-      )}
-      {current === "automatizaciones" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          <div style={S.card}>
-            <WorkflowTriggers role={userRole} />
-          </div>
-          <HandoffRulesSettings />
-        </div>
-      )}
-      {current === "campos"         && <div style={S.card}><CustomFieldsSettings /></div>}
-      {current === "integraciones"  && <TabIntegraciones role={userRole} />}
-      {current === "pipeline"       && <TabPipeline role={userRole} />}
-      {current === "notificaciones" && <TabNotificaciones />}
-      {current === "cliente"        && <TabCliente />}
+      </div>
     </div>
   );
 }

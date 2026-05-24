@@ -18,7 +18,6 @@ import { MktCalendar } from "@/components/marketing/mkt-calendar";
 import { MktDigest } from "@/components/marketing/mkt-digest";
 import { MktCampaignRevenue } from "@/components/marketing/mkt-campaign-revenue";
 import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
-import { MktAdvancedSettings } from "@/components/marketing/mkt-advanced-settings";
 import { MktContactsView } from "@/components/marketing/mkt-contacts-view";
 import { MktReengagement } from "@/components/marketing/mkt-reengagement";
 import { MktFunnel } from "@/components/marketing/mkt-funnel";
@@ -30,6 +29,14 @@ import { MktIntegrations } from "@/components/marketing/mkt-integrations";
 import { MktExport } from "@/components/marketing/mkt-export";
 import { MktAbm } from "@/components/marketing/mkt-abm";
 import { CalculatorTool } from "@/components/calculator/CalculatorTool";
+import { NotificationsHub } from "@/components/layout/NotificationsHub";
+import { MktActivityFeed } from "@/components/marketing/mkt-activity-feed";
+import { MktBusinessSettings, MktUsersSettings, MktPipelineSettings, MktPortalsSettings } from "@/components/marketing/mkt-admin-settings";
+import { CurrencySettings } from "@/components/settings/CurrencySettings";
+import { CloseReasonsSettings } from "@/components/settings/CloseReasonsSettings";
+import { DealAgingSettings } from "@/components/settings/DealAgingSettings";
+import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings";
+import { CustomFieldsSettings } from "@/components/settings/CustomFieldsSettings";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
 const SECTION_LABELS: Record<MktSection, string> = {
@@ -288,11 +295,13 @@ function MktContacts() {
 
 // ── Generic placeholder ──────────────────────────────────────────────────────
 // ── Inline settings for marketing module ─────────────────────────────────────
-function MktSettings() {
-  const { syncFromBrevo } = useMkt();
+type SettingsTab = "perfil" | "apariencia" | "negocio" | "usuarios" | "pipeline" | "objetivos" | "portales" | "campos" | "notificaciones";
+
+function MktSettings({ initialTab }: { initialTab?: SettingsTab } = {}) {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<"perfil" | "apariencia" | "integraciones" | "notificaciones" | "avanzado">("perfil");
-  const userRoleForAdvanced = (session?.user as { role?: string })?.role ?? "marketing";
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab ?? "perfil");
+  const actorRole = (session?.user as { role?: string })?.role ?? "marketing";
+  const currentUserId = (session?.user as { id?: string })?.id ?? "";
 
   // ── shared styles ──
   const card: React.CSSProperties = { background: "var(--mkt-card)", border: "1px solid var(--mkt-border)", borderRadius: 12, padding: 24 };
@@ -305,13 +314,12 @@ function MktSettings() {
     ...(v === "danger" ? { borderColor: "rgba(239,68,68,0.3)" } : {}),
   });
   const label: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, display: "block" };
-  const tabStyle = (id: string): React.CSSProperties => ({
-    padding: "7px 16px", borderRadius: "8px 8px 0 0", fontSize: 13, fontWeight: 500, cursor: "pointer",
-    border: "1px solid transparent", background: "transparent",
+  const navItem = (id: string): React.CSSProperties => ({
+    display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", borderRadius: 8, fontSize: 13,
+    fontWeight: activeTab === id ? 600 : 400, cursor: "pointer", border: "1px solid transparent",
+    width: "100%", textAlign: "left", transition: "all 0.12s",
+    background: activeTab === id ? "var(--mkt-nav-active-bg, rgba(255,255,255,0.06))" : "transparent",
     color: activeTab === id ? "var(--mkt-text)" : "var(--mkt-text-muted)",
-    borderColor: activeTab === id ? "var(--mkt-border)" : "transparent",
-    borderBottomColor: activeTab === id ? "var(--mkt-card)" : "transparent",
-    marginBottom: activeTab === id ? -1 : 0, transition: "all 0.12s",
   });
 
   // ── perfil state ──
@@ -376,36 +384,6 @@ function MktSettings() {
     </div>
   );
 
-  // ── integraciones state ──
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState("");
-  const [recalculating, setRecalculating] = useState(false);
-  const [recalcResult, setRecalcResult] = useState("");
-  const [apolloSyncing, setApolloSyncing] = useState(false);
-  const [apolloMsg, setApolloMsg] = useState("");
-  const handleSyncBrevo = async () => {
-    setSyncing(true); setSyncMsg("Sincronizando…");
-    try { const r = await syncFromBrevo(); setSyncMsg(`✓ ${r.synced} contactos sincronizados`); }
-    catch { setSyncMsg("Error al sincronizar"); }
-    finally { setSyncing(false); setTimeout(() => setSyncMsg(""), 5000); }
-  };
-  const handleRecalculate = async () => {
-    setRecalculating(true); setRecalcResult("Calculando…");
-    try {
-      const res = await fetch("/api/brevo/recalculate-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pushToBrevo: true }) });
-      const d = await res.json();
-      setRecalcResult(d.error ? `Error: ${d.error}` : `✓ ${d.processed} procesados`);
-    } catch { setRecalcResult("Error al recalcular"); }
-    finally { setRecalculating(false); setTimeout(() => setRecalcResult(""), 6000); }
-  };
-  const handleSyncApollo = async () => {
-    setApolloSyncing(true); setApolloMsg("Importando…");
-    try { const res = await fetch("/api/import-apollo", { method: "POST" }); const d = await res.json(); setApolloMsg(d.error ? "Error" : `✓ ${d.inserted} importados`); }
-    catch { setApolloMsg("Error"); }
-    finally { setApolloSyncing(false); setTimeout(() => setApolloMsg(""), 5000); }
-  };
-  const syncBtn = (loading: boolean): React.CSSProperties => ({ ...btn("outline"), width: "100%", justifyContent: "center", opacity: loading ? 0.6 : 1, cursor: loading ? "wait" : "pointer" });
-
   // ── notificaciones state ──
   const NDFLT = { browserEnabled: true, emailEnabled: true, emailDigestFrequency: "daily", digestHour: 6, digestEmail: "", alertLeadHot: true, alertHotThreshold: 70, alertFollowupOverdue: true, alertHandoffPending: true, alertDealMoved: true, alertCampaignPerf: true, campaignPerfThreshold: 50 };
   const [notifPrefs, setNotifPrefs] = useState(NDFLT);
@@ -431,22 +409,33 @@ function MktSettings() {
     </div>
   );
 
+  const TABS: { id: SettingsTab; label: string }[] = [
+    { id: "perfil", label: "Perfil" },
+    { id: "apariencia", label: "Apariencia" },
+    { id: "negocio", label: "Negocio" },
+    { id: "usuarios", label: "Usuarios" },
+    { id: "pipeline", label: "Pipeline" },
+    { id: "objetivos", label: "Objetivos" },
+    { id: "portales", label: "Portales" },
+    { id: "campos", label: "Campos" },
+    { id: "notificaciones", label: "Notificaciones" },
+  ];
+
   return (
-    <div style={{ maxWidth: 820 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px", color: "var(--mkt-text)" }}>Configuración</h2>
-        <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", margin: 0 }}>Perfil, apariencia, integraciones y notificaciones</p>
-      </div>
-
-      {/* Tab bar */}
-      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--mkt-border)", marginBottom: 24, flexWrap: "wrap" }}>
-        {(["perfil", "apariencia", "integraciones", "notificaciones", "avanzado"] as const).map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} style={tabStyle(t)}>
-            {{ perfil: "Perfil", apariencia: "Apariencia", integraciones: "Integraciones", notificaciones: "Notificaciones", avanzado: "Avanzado" }[t]}
-          </button>
+    <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+      {/* Left vertical nav — keeps every option visible without being cut off */}
+      <nav style={{ width: 190, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2, position: "sticky", top: 0 }}>
+        <div style={{ marginBottom: 12, padding: "0 4px" }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 2px", color: "var(--mkt-text)" }}>Configuración</h2>
+          <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", margin: 0 }}>Ajustes de tu cuenta</p>
+        </div>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={navItem(t.id)}>{t.label}</button>
         ))}
-      </div>
+      </nav>
 
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 860 }}>
       {/* ── PERFIL ── */}
       {activeTab === "perfil" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -610,33 +599,41 @@ function MktSettings() {
         </div>
       )}
 
-      {/* ── INTEGRACIONES ── */}
-      {activeTab === "integraciones" && (
+      {/* ── NEGOCIO ── */}
+      {activeTab === "negocio" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={card}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: "var(--mkt-text)" }}>Brevo — Sincronización</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--mkt-text)" }}>Sincronizar contactos</div>
-                <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginBottom: 10, lineHeight: 1.5 }}>Importa contactos de Brevo con SCORE, TIER e INDUSTRY.</p>
-                <button style={syncBtn(syncing)} onClick={handleSyncBrevo} disabled={syncing}>{syncing ? "Sincronizando…" : "Sincronizar desde Brevo"}</button>
-                {syncMsg && <p style={{ fontSize: 11, color: "var(--mkt-accent)", marginTop: 6 }}>{syncMsg}</p>}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--mkt-text)" }}>Recalcular ICP Scores</div>
-                <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginBottom: 10, lineHeight: 1.5 }}>Aplica algoritmo completo y actualiza TIER en Brevo.</p>
-                <button style={syncBtn(recalculating)} onClick={handleRecalculate} disabled={recalculating}>{recalculating ? "Calculando…" : "Recalcular Scores ICP"}</button>
-                {recalcResult && <p style={{ fontSize: 11, color: "var(--mkt-accent)", marginTop: 6 }}>{recalcResult}</p>}
-              </div>
-            </div>
-          </div>
-          <div style={card}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "var(--mkt-text)" }}>Apollo — CSV Sync</div>
-            <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", marginBottom: 12, lineHeight: 1.6 }}>Importa contactos del archivo Apollo CSV con score ICP automático.</p>
-            <button style={syncBtn(apolloSyncing)} onClick={handleSyncApollo} disabled={apolloSyncing}>{apolloSyncing ? "Importando…" : "Sincronizar Apollo CSV"}</button>
-            {apolloMsg && <p style={{ fontSize: 11, color: "var(--mkt-accent)", marginTop: 8 }}>{apolloMsg}</p>}
-          </div>
+          <MktBusinessSettings />
+          <CurrencySettings canEdit />
         </div>
+      )}
+
+      {/* ── USUARIOS ── */}
+      {activeTab === "usuarios" && (
+        <MktUsersSettings actorRole={actorRole} currentUserId={currentUserId} />
+      )}
+
+      {/* ── PIPELINE ── */}
+      {activeTab === "pipeline" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <MktPipelineSettings />
+          <CloseReasonsSettings role={actorRole} />
+          <DealAgingSettings />
+        </div>
+      )}
+
+      {/* ── OBJETIVOS ── */}
+      {activeTab === "objetivos" && (
+        <SalesTargetsSettings currentUserId={currentUserId} />
+      )}
+
+      {/* ── PORTALES ── */}
+      {activeTab === "portales" && (
+        <MktPortalsSettings />
+      )}
+
+      {/* ── CAMPOS ── */}
+      {activeTab === "campos" && (
+        <CustomFieldsSettings />
       )}
 
       {/* ── NOTIFICACIONES ── */}
@@ -669,10 +666,7 @@ function MktSettings() {
         </div>
       )}
 
-      {/* ── AVANZADO ── */}
-      {activeTab === "avanzado" && (
-        <MktAdvancedSettings role={userRoleForAdvanced} />
-      )}
+      </div>
     </div>
   );
 }
@@ -789,12 +783,16 @@ function MarketingContent() {
               </span>
             )}
           </div>
-          {lastNotification && (
-            <div style={{ fontSize: 12, color: "var(--mkt-accent)", display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: 3, background: "var(--mkt-accent)" }} />
-              {lastNotification.text}
-            </div>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {lastNotification && (
+              <div style={{ fontSize: 12, color: "var(--mkt-accent)", display: "flex", alignItems: "center", gap: 6, marginRight: 8 }}>
+                <div style={{ width: 6, height: 6, borderRadius: 3, background: "var(--mkt-accent)" }} />
+                <span style={{ maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lastNotification.text}</span>
+              </div>
+            )}
+            <MktActivityFeed />
+            <NotificationsHub />
+          </div>
         </header>
 
         {/* Empty state */}

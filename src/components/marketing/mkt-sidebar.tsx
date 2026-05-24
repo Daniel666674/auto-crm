@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useSession } from "next-auth/react";
+import React, { useState, useRef, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import type { MktSection } from "./mkt-types";
 import { useMkt } from "./mkt-provider";
 
@@ -37,6 +37,13 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
   const { contacts } = useMkt();
   const { data: session } = useSession();
   const readyCount = contacts.filter(c => c.readyForSales && !c.passedToSalesAt).length;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handle(e: MouseEvent) { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false); }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
 
   const NAV_GROUPS: NavGroup[] = [
     {
@@ -212,9 +219,60 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
         </button>
       </div>
 
-      {/* Profile */}
-      <div style={{ padding: "12px 20px 16px", borderTop: "1px solid var(--mkt-border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* Profile — clickable quick-settings menu */}
+      <div ref={menuRef} style={{ position: "relative", padding: "12px 12px 16px", borderTop: "1px solid var(--mkt-border)" }}>
+        {menuOpen && (
+          <div style={{
+            position: "absolute", bottom: "calc(100% - 6px)", left: 12, right: 12,
+            background: "var(--mkt-card)", border: "1px solid var(--mkt-border)", borderRadius: 10,
+            boxShadow: "0 12px 32px rgba(0,0,0,0.45)", overflow: "hidden", zIndex: 50,
+          }}>
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--mkt-border)" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--mkt-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userName}</div>
+              <div style={{ fontSize: 11, color: "var(--mkt-text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session?.user?.email}</div>
+            </div>
+            <div style={{ padding: 6 }}>
+              {[
+                { key: "settings", label: "Configuración", path: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+                { key: "perfil-quick", label: "Apariencia y perfil", path: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+              ].map(item => (
+                <button key={item.key} onClick={() => { setMenuOpen(false); onNavigate("settings"); }}
+                  style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", width: "100%", borderRadius: 7, border: "none", background: "transparent", color: "var(--mkt-text)", fontSize: 12.5, cursor: "pointer", textAlign: "left" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--mkt-surface)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                >
+                  <SvgIcon path={item.path} size={14} />
+                  {item.label}
+                </button>
+              ))}
+              <a href="/ms-command" onClick={() => setMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", width: "100%", borderRadius: 7, color: "var(--mkt-text)", fontSize: 12.5, textDecoration: "none", boxSizing: "border-box" }}
+                onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.background = "var(--mkt-surface)")}
+                onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")}
+              >
+                <SvgIcon path="M3 3v18h18M7 12l4-4 4 4 4-4" size={14} />
+                Command Center
+              </a>
+              <div style={{ height: 1, background: "var(--mkt-border)", margin: "6px 4px" }} />
+              <button onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/login" }); }}
+                style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", width: "100%", borderRadius: 7, border: "none", background: "transparent", color: "#ef4444", fontSize: 12.5, cursor: "pointer", textAlign: "left" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.1)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                <SvgIcon path="M17 16l4-4m0 0l-4-4m4 4H7 M13 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h6a2 2 0 002-2v-2" size={14} />
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        )}
+        <button onClick={() => setMenuOpen(o => !o)} style={{
+          display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "6px 8px",
+          borderRadius: 8, border: "1px solid transparent", background: menuOpen ? "var(--mkt-surface)" : "transparent",
+          cursor: "pointer", textAlign: "left", transition: "background 0.12s",
+        }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--mkt-surface)")}
+          onMouseLeave={e => (e.currentTarget.style.background = menuOpen ? "var(--mkt-surface)" : "transparent")}
+        >
           {session?.user?.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -236,7 +294,10 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
             </div>
             <div style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>{userRole}</div>
           </div>
-        </div>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--mkt-text-muted)", transform: menuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18 15l-6-6-6 6" />
+          </svg>
+        </button>
       </div>
     </aside>
   );
