@@ -364,6 +364,10 @@ function initTables(db: Database.Database): void {
     // Google Meet join URL + event URL on mirrored calendar events
     `ALTER TABLE calendar_events ADD COLUMN meet_link TEXT`,
     `ALTER TABLE calendar_events ADD COLUMN html_link TEXT`,
+    // Dapta AI meeting intelligence — transcript + meeting ID on activities
+    `ALTER TABLE activities ADD COLUMN transcript_text TEXT`,
+    `ALTER TABLE activities ADD COLUMN dapta_meeting_id TEXT`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_activities_dapta_meeting_id ON activities(dapta_meeting_id) WHERE dapta_meeting_id IS NOT NULL`,
   ];
 
   for (const sql of migrations) {

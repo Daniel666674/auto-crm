@@ -507,6 +507,21 @@ if (!hasColumn("calendar_events", "html_link")) {
 console.log("[migrate] calendar meet links: OK");
 
 // ---------------------------------------------------------------------------
+// Migration 20: Dapta AI meeting intelligence — transcript + meeting ID
+// ---------------------------------------------------------------------------
+console.log("[migrate] Checking activities dapta columns...");
+if (!hasColumn("activities", "transcript_text")) {
+  db.exec(`ALTER TABLE activities ADD COLUMN transcript_text TEXT`);
+  console.log("[migrate] Added activities.transcript_text");
+}
+if (!hasColumn("activities", "dapta_meeting_id")) {
+  db.exec(`ALTER TABLE activities ADD COLUMN dapta_meeting_id TEXT`);
+  console.log("[migrate] Added activities.dapta_meeting_id");
+}
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_activities_dapta_meeting_id ON activities(dapta_meeting_id) WHERE dapta_meeting_id IS NOT NULL`);
+console.log("[migrate] Dapta columns: OK");
+
+// ---------------------------------------------------------------------------
 // Done
 // ---------------------------------------------------------------------------
 db.close();

@@ -110,6 +110,8 @@ interface ContactDetailClientProps {
     scheduledAt: number | Date | null;
     completedAt: number | Date | null;
     createdAt: number | Date;
+    transcriptText?: string | null;
+    daptaMeetingId?: string | null;
   }>;
   relatedContacts?: Array<{
     id: string;
@@ -143,8 +145,29 @@ const EMAIL_EVENT_CONFIG: Record<string, { icon: string; label: string; color: s
 };
 
 type TimelineItem =
-  | { kind: "activity"; id: string; type: string; description: string; scheduledAt: number | Date | null; completedAt: number | Date | null; createdAt: number | Date }
+  | { kind: "activity"; id: string; type: string; description: string; scheduledAt: number | Date | null; completedAt: number | Date | null; createdAt: number | Date; transcriptText?: string | null; daptaMeetingId?: string | null }
   | { kind: "email_event"; id: string; type: string; url: string | null; createdAt: number | Date };
+
+function DaptaTranscript({ transcript }: { transcript: string }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const preview = transcript.slice(0, 200);
+  return (
+    <div style={{ marginBottom: 6, padding: "8px 10px", borderRadius: 6, background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa" }}>🎙 Transcripción Dapta</span>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{ fontSize: 10, padding: "1px 7px", borderRadius: 4, cursor: "pointer", border: "1px solid rgba(139,92,246,0.3)", background: "transparent", color: "#a78bfa" }}
+        >
+          {expanded ? "Contraer" : "Ver completa"}
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5, margin: 0, whiteSpace: "pre-wrap" }}>
+        {expanded ? transcript : `${preview}${transcript.length > 200 ? "…" : ""}`}
+      </p>
+    </div>
+  );
+}
 
 function toMs(val: Date | number | null | undefined): number {
   if (!val) return 0;
@@ -924,6 +947,14 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
                                 )}
                               </div>
                               <p style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4, margin: "0 0 4px" }}>{a.description}</p>
+                              {a.daptaMeetingId && a.transcriptText && (
+                                <DaptaTranscript transcript={a.transcriptText} />
+                              )}
+                              {a.daptaMeetingId && !a.transcriptText && (
+                                <div style={{ fontSize: 11, color: "#a78bfa", marginBottom: 4 }}>
+                                  🎙 Grabado por Dapta · sin transcripción
+                                </div>
+                              )}
                               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{formatRelativeDate(a.createdAt)}</span>
                             </div>
                           </div>

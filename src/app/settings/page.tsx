@@ -15,6 +15,7 @@ import { DealAgingSettings } from "@/components/settings/DealAgingSettings";
 import { ScoringWeightsSettings } from "@/components/settings/ScoringWeightsSettings";
 import { FitScoringSettings } from "@/components/settings/FitScoringSettings";
 import { SlackSettings } from "@/components/settings/SlackSettings";
+import { DaptaSettings } from "@/components/settings/DaptaSettings";
 import { EngagementSourceSettings } from "@/components/settings/EngagementSourceSettings";
 import { DuplicateDetector } from "@/components/settings/DuplicateDetector";
 import { WorkflowTriggers } from "@/components/settings/WorkflowTriggers";
@@ -1086,6 +1087,9 @@ function TabIntegraciones({ role }: { role: string }) {
       </IntSection>
 
       <SlackSettings role={role} />
+
+      {/* Dapta AI */}
+      <DaptaSettings role={role} />
 
       {role === "superadmin" && (
         <div style={S.card}>

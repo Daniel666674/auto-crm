@@ -128,6 +128,8 @@ export const activities = sqliteTable("activities", {
   scheduledAt: integer("scheduled_at", { mode: "timestamp" }),
   completedAt: integer("completed_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  transcriptText: text("transcript_text"),
+  daptaMeetingId: text("dapta_meeting_id"),
 });
 
 export const crmSettings = sqliteTable("crm_settings", {
