@@ -80,6 +80,9 @@ export function recomputeAllScores(): { updated: number } {
         sigGoogleAds: c.sigGoogleAds,
         sigMgrNoHead: c.sigMgrNoHead,
         sigVacancy: c.sigVacancy,
+        baseSize: c.fitSizeScore,
+        baseIndustry: c.fitIndustryScore,
+        baseRole: c.fitRoleScore,
       },
       weights,
       tiers
@@ -139,6 +142,9 @@ export function recomputeContact(contactId: string): void {
       sigGoogleAds: c.sigGoogleAds,
       sigMgrNoHead: c.sigMgrNoHead,
       sigVacancy: c.sigVacancy,
+      baseSize: c.fitSizeScore,
+      baseIndustry: c.fitIndustryScore,
+      baseRole: c.fitRoleScore,
     },
     weights,
     tiers

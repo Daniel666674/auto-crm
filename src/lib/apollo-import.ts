@@ -8,6 +8,9 @@ import { MQL_THRESHOLD } from "./lead-qualification";
 import { recomputeAllScores } from "./fit-recompute";
 
 const CSV_PATH = path.join(process.cwd(), "apollo-contacts-export (4).csv");
+// VA-verified signals + verbatim firmographic sub-scores from the scoring sheet,
+// keyed by email. When a contact matches here, these values are ground truth.
+const VA_CSV_PATH = path.join(process.cwd(), "apollo-va-signals.csv");
 
 // Funnel rank — used so re-importing never drags a contact backwards.
 const STAGE_RANK: Record<string, number> = {
@@ -45,6 +48,51 @@ export function deriveApolloSignals(technologies: string | null | undefined): De
     googleAds: RX_GOOGLE_ADS.test(t),
     emailMarketing: RX_EMAIL_MKT.test(t),
   };
+}
+
+export interface VaSignals {
+  sigLinkedinAds: boolean;
+  sigPostFreq: string | null;
+  sigDmActive: boolean;
+  sigMetaAds: boolean;
+  sigGoogleAds: boolean;
+  sigMgrNoHead: boolean;
+  sigVacancy: boolean;
+  baseSize: number | null;
+  baseIndustry: number | null;
+  baseRole: number | null;
+  notas: string;
+}
+
+/** Loads the VA-verified signal sheet (apollo-va-signals.csv), keyed by email. */
+export function loadVaSignals(): Map<string, VaSignals> {
+  const map = new Map<string, VaSignals>();
+  if (!fs.existsSync(VA_CSV_PATH)) return map;
+  const rows = parseCSV(fs.readFileSync(VA_CSV_PATH, "utf-8"));
+  const yes = (v: string | undefined) => (v || "").trim().toLowerCase() === "yes";
+  const numOrNull = (v: string | undefined) => {
+    const n = parseInt((v || "").trim(), 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  for (const r of rows) {
+    const email = (r["email"] || "").trim().toLowerCase();
+    if (!email) continue;
+    const freq = (r["post_freq"] || "").trim().toLowerCase();
+    map.set(email, {
+      sigLinkedinAds: yes(r["pauta_linkedin"]),
+      sigPostFreq: freq === "semanal" || freq === "mensual" ? freq : null,
+      sigDmActive: yes(r["dm_active"]),
+      sigMetaAds: yes(r["pauta_meta"]),
+      sigGoogleAds: yes(r["pauta_google"]),
+      sigMgrNoHead: yes(r["mgr_no_head"]),
+      sigVacancy: yes(r["vacancy"]),
+      baseSize: numOrNull(r["score_size"]),
+      baseIndustry: numOrNull(r["score_industry"]),
+      baseRole: numOrNull(r["score_role"]),
+      notas: (r["notas"] || "").trim(),
+    });
+  }
+  return map;
 }
 
 function parseCSV(raw: string): Record<string, string>[] {
@@ -148,6 +196,8 @@ export async function runApolloImport(): Promise<ImportResult> {
   // Load scoring weights once so all 2150 rows score against the same config.
   const fitWeights = getFitWeights();
   const tiers = getTierThresholds();
+  // VA-verified signals + verbatim sub-scores, keyed by email.
+  const vaByEmail = loadVaSignals();
 
   let inserted = 0, skipped = 0, updated = 0;
 
@@ -187,24 +237,49 @@ export async function runApolloImport(): Promise<ImportResult> {
     if (!existingId && email)  existingId = byEmail.get(email);
     if (!existingId)           existingId = byNameCo.get(nameCoKey);
 
-    // Marketing signals: derive ad-intent from Apollo "Technologies", then OR with
-    // whatever a VA has already toggled so re-imports only ever ADD detected signals.
+    // Marketing signals. If the contact is in the VA-verified sheet, those values
+    // are ground truth (incl. verbatim firmographic sub-scores so the CRM matches
+    // the sheet 1:1). Otherwise derive ad-intent from Apollo "Technologies" and OR
+    // with any VA-toggled signals so re-imports only ever ADD detected signals.
+    const va = email ? vaByEmail.get(email) : undefined;
     const derived = deriveApolloSignals(row["Technologies"]);
     const prev = existingId ? sigById.get(existingId) : undefined;
-    const sigLinkedinAds = Boolean(prev?.sigLinkedinAds) || derived.linkedinAds;
-    const sigMetaAds     = Boolean(prev?.sigMetaAds)     || derived.metaAds;
-    const sigGoogleAds   = Boolean(prev?.sigGoogleAds)   || derived.googleAds;
-    const sigDmActive    = Boolean(prev?.sigDmActive);    // VA-only signal, never derived
-    const sigMgrNoHead   = Boolean(prev?.sigMgrNoHead);   // VA-only signal
-    const sigVacancy     = Boolean(prev?.sigVacancy);     // VA-only signal
-    const sigPostFreq    = prev?.sigPostFreq || (derived.emailMarketing ? "mensual" : null);
 
-    // Fit score from firmographics + seniority + merged marketing signals.
+    let sigLinkedinAds: boolean, sigMetaAds: boolean, sigGoogleAds: boolean;
+    let sigDmActive: boolean, sigMgrNoHead: boolean, sigVacancy: boolean;
+    let sigPostFreq: string | null;
+    let baseSize: number | null = null, baseIndustry: number | null = null, baseRole: number | null = null;
+
+    if (va) {
+      sigLinkedinAds = va.sigLinkedinAds;
+      sigMetaAds     = va.sigMetaAds;
+      sigGoogleAds   = va.sigGoogleAds;
+      sigDmActive    = va.sigDmActive;
+      sigMgrNoHead   = va.sigMgrNoHead;
+      sigVacancy     = va.sigVacancy;
+      sigPostFreq    = va.sigPostFreq;
+      baseSize       = va.baseSize;
+      baseIndustry   = va.baseIndustry;
+      baseRole       = va.baseRole;
+    } else {
+      sigLinkedinAds = Boolean(prev?.sigLinkedinAds) || derived.linkedinAds;
+      sigMetaAds     = Boolean(prev?.sigMetaAds)     || derived.metaAds;
+      sigGoogleAds   = Boolean(prev?.sigGoogleAds)   || derived.googleAds;
+      sigDmActive    = Boolean(prev?.sigDmActive);    // VA-only signal, never derived
+      sigMgrNoHead   = Boolean(prev?.sigMgrNoHead);   // VA-only signal
+      sigVacancy     = Boolean(prev?.sigVacancy);     // VA-only signal
+      sigPostFreq    = prev?.sigPostFreq || (derived.emailMarketing ? "mensual" : null);
+    }
+
+    // Fit score: verbatim sub-scores (when from the sheet) + signal contribution.
     const { fitScore, fitTier } = computeFitScore(
-      { title, seniority, industry, employeeCount, sigLinkedinAds, sigPostFreq, sigDmActive, sigMetaAds, sigGoogleAds, sigMgrNoHead, sigVacancy },
+      { title, seniority, industry, employeeCount, sigLinkedinAds, sigPostFreq, sigDmActive, sigMetaAds, sigGoogleAds, sigMgrNoHead, sigVacancy, baseSize, baseIndustry, baseRole },
       fitWeights,
       tiers
     );
+
+    // Append VA notes (manual prospect context) to the Apollo-built notes.
+    const finalNotes = [notes, va?.notas].filter(Boolean).join(" | ");
     // Fresh prospects carry no engagement yet, so temperature starts cold and is
     // driven thereafter by opens/clicks/replies (see lib/lead-qualification.ts).
     const temperature = "cold" as const;
@@ -229,9 +304,11 @@ export async function runApolloImport(): Promise<ImportResult> {
         ...(employeeCount   ? { employeeCount }    : {}),
         ...(whatsapp        ? { whatsappNumber: whatsapp } : {}),
         ...(apolloId        ? { apolloId }         : {}),
-        ...(notes           ? { notes }            : {}),
-        // merged signals (VA-manual OR Apollo-derived) — never downgrades human input
-        sigLinkedinAds, sigMetaAds, sigGoogleAds, sigPostFreq,
+        ...(finalNotes      ? { notes: finalNotes } : {}),
+        // signals: VA-verified ground truth, else merged Apollo-derived + prior input
+        sigLinkedinAds, sigMetaAds, sigGoogleAds, sigDmActive, sigMgrNoHead, sigVacancy, sigPostFreq,
+        // verbatim firmographic sub-scores (null when contact not in the VA sheet)
+        fitSizeScore: baseSize, fitIndustryScore: baseIndustry, fitRoleScore: baseRole,
         score: fitScore, fitScore, fitTier, lifecycleStage,
         updatedAt: new Date(),
       }).where(eq(contacts.id, existingId)).run();
@@ -266,12 +343,18 @@ export async function runApolloImport(): Promise<ImportResult> {
       sigLinkedinAds,
       sigMetaAds,
       sigGoogleAds,
+      sigDmActive,
+      sigMgrNoHead,
+      sigVacancy,
       sigPostFreq,
+      fitSizeScore:     baseSize,
+      fitIndustryScore: baseIndustry,
+      fitRoleScore:     baseRole,
       score:           fitScore,
       fitScore,
       fitTier,
       lifecycleStage:  fitScore >= MQL_THRESHOLD ? "MQL" : "lead",
-      notes:           notes           || null,
+      notes:           finalNotes      || null,
       createdAt:       new Date(),
       updatedAt:       new Date(),
     }).run();

@@ -39,8 +39,11 @@ export interface TierThresholds {
   c: number;
 }
 
+// Weights mirror the BlackScale_Scoring_Prospectos sheet exactly. Max possible
+// score is 100 (signals 64 + size 12 + industry 12 + role 12). Do not raise these
+// without re-validating against the sheet's tier distribution.
 export const DEFAULT_FIT_WEIGHTS: FitWeights = {
-  // Marketing signals — VA-enriched. Strong weights so VA-worked contacts reliably reach Tier A.
+  // Marketing signals — VA-enriched (64 max).
   linkedinAds: 12,
   postsWeekly: 12,
   postsMonthly: 4,
@@ -49,18 +52,18 @@ export const DEFAULT_FIT_WEIGHTS: FitWeights = {
   googleAds: 8,
   mgrNoHead: 8,
   vacancy: 8,
-  // Company size — 1-50 both prime; 51-200 some value
-  size1to10: 20,
-  size11to50: 18,
-  size51to200: 6,
-  // Industry — tech best, but B2B services/finance/consulting are valid targets
-  industryTech: 15,
-  industryOther: 8,
-  // Role — CMO/CEO equal top; ops C-suite meaningful at small companies
-  roleCeo: 20,
-  roleCmo: 20,
-  roleMktMgr: 12,
-  roleCsuite: 10,
+  // Company size — startups/micro most likely to outsource marketing.
+  size1to10: 12,
+  size11to50: 4,
+  size51to200: 0,
+  // Industry — tech/digital-native highest marketing maturity.
+  industryTech: 12,
+  industryOther: 4,
+  // Decision-maker role — CEO/CMO top, marketing manager strong influencer.
+  roleCeo: 12,
+  roleCmo: 12,
+  roleMktMgr: 8,
+  roleCsuite: 4,
   roleOther: 0,
 };
 
@@ -81,6 +84,12 @@ export interface FitInput {
   sigGoogleAds?: boolean | null;
   sigMgrNoHead?: boolean | null;
   sigVacancy?: boolean | null;
+  // Verbatim firmographic sub-scores imported from the scoring sheet. When a
+  // value is provided it overrides the parser for that dimension, so a
+  // sheet-scored contact reproduces its exact sub-score.
+  baseSize?: number | null;
+  baseIndustry?: number | null;
+  baseRole?: number | null;
 }
 
 export interface FitResult {
@@ -171,9 +180,9 @@ export function computeFitScore(
   weights: FitWeights = DEFAULT_FIT_WEIGHTS,
   tiers: TierThresholds = DEFAULT_TIERS
 ): FitResult {
-  const role = roleScore(input.title, weights, input.seniority);
-  const size = sizeScore(input.employeeCount, weights);
-  const industry = industryScore(input.industry, weights);
+  const role = input.baseRole != null ? input.baseRole : roleScore(input.title, weights, input.seniority);
+  const size = input.baseSize != null ? input.baseSize : sizeScore(input.employeeCount, weights);
+  const industry = input.baseIndustry != null ? input.baseIndustry : industryScore(input.industry, weights);
   const signals = signalsScore(input, weights);
 
   const fitScore = Math.min(100, Math.max(0, role + size + industry + signals));

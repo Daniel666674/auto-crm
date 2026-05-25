@@ -357,6 +357,9 @@ function initTables(db: Database.Database): void {
     `ALTER TABLE contacts ADD COLUMN sig_google_ads INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE contacts ADD COLUMN sig_mgr_no_head INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE contacts ADD COLUMN sig_vacancy INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE contacts ADD COLUMN fit_size_score INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN fit_industry_score INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN fit_role_score INTEGER`,
     `CREATE INDEX IF NOT EXISTS idx_contacts_fit_score ON contacts(fit_score)`,
     `CREATE INDEX IF NOT EXISTS idx_contacts_fit_tier ON contacts(fit_tier)`,
     // Google Meet join URL + event URL on mirrored calendar events

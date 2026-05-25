@@ -45,6 +45,11 @@ export const contacts = sqliteTable("contacts", {
   // Firmographic ICP fit (0-100) + tier A/B/C/D — see lib/fit-scoring.ts
   fitScore: integer("fit_score").notNull().default(0),
   fitTier: text("fit_tier").default("D"),
+  // Verbatim firmographic sub-scores imported from the scoring sheet. When set,
+  // they override the parser so the CRM reproduces the sheet 1:1. Null → derive.
+  fitSizeScore: integer("fit_size_score"),
+  fitIndustryScore: integer("fit_industry_score"),
+  fitRoleScore: integer("fit_role_score"),
   // VA-enriched marketing signals that feed the fit score
   sigLinkedinAds: integer("sig_linkedin_ads", { mode: "boolean" }).notNull().default(false),
   sigPostFreq: text("sig_post_freq"), // "semanal" | "mensual" | null
