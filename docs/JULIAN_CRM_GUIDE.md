@@ -16,12 +16,12 @@
 6. [Contactos de marketing](#6-contactos)
 7. [Handoff Center — el corazón del trabajo M+S](#7-handoff-center)
 8. [Re-engagement Queue](#8-re-engagement-queue)
-9. [Audience Intelligence (Segment Health, ICP, Listas, Smart Segments, Funnel)](#9-audience-intelligence)
+9. [Audience Intelligence (Segment Health, ICP, Smart Segments, Funnel)](#9-audience-intelligence)
 10. [Pipeline Visibility (Vista Pipeline, Lead Velocity)](#10-pipeline-visibility)
 11. [Performance 360 (Analytics, Intelligence)](#11-performance-360)
 12. [Content & Planning (Calendario, ABM)](#12-content--planning)
 13. [Reportes (Forecast, Atribución Multi-Touch, Digest, ROI, Exportar)](#13-reportes)
-14. [Integraciones (Brevo)](#14-integraciones)
+14. [Integraciones](#14-integraciones)
 15. [Flujos de trabajo diarios de marketing](#15-flujos-diarios)
 16. [Tips para sacarle el máximo](#16-tips)
 17. [Glosario de marketing](#17-glosario)
@@ -53,7 +53,6 @@ Marketing
 ├── Audience Intelligence
 │   ├── Segment Health       ← Salud de cada segmento
 │   ├── ICP Insights         ← Qué tan cerca del cliente ideal
-│   ├── Listas Brevo         ← Listas sincronizadas con Brevo
 │   ├── Smart Segments       ← Constructor de segmentos
 │   └── Funnel               ← Embudo de marketing
 │
@@ -76,7 +75,7 @@ Marketing
 │   ├── ROI                  ← Retorno de inversión por campaña
 │   └── Exportar             ← Exportar datos
 │
-└── Integraciones           ← Conexión con Brevo y otros
+└── Integraciones           ← Conexión con Google Workspace, Apollo y otros
 ```
 
 ---
@@ -109,8 +108,8 @@ Nivel de prioridad del contacto (1 = máxima prioridad). Útil para segmentar es
 - **SQL** (Sales Qualified Lead): ventas confirma que vale la pena trabajarlo.
 - Tu trabajo en marketing es producir MQLs de calidad que ventas acepte como SQLs.
 
-### Brevo
-Es la plataforma de email marketing integrada. Los contactos, listas y campañas pueden sincronizarse con Brevo (campos `brevoId`, `brevoCampaignId`, `brevoCadence`).
+### Engagement local
+El engagement (aperturas, clics, status hot/warm/cold) se calcula de forma nativa en el CRM a partir del correo enviado por BlackScale — sin depender de plataformas externas.
 
 ---
 
@@ -147,9 +146,8 @@ Un esfuerzo de nutrición con: nombre, segmento objetivo, tipo de cadencia, cana
 | Conversions | Cuántos convirtieron (handoff/deal) |
 
 ### Cómo trabajar campañas
-1. Crear campaña → definir segmento objetivo y cadencia.
-2. Conectarla a Brevo si usas envío automático (`brevoCampaignId`).
-3. Monitorear open/click/reply rate. Si el open rate es bajo (<15%), revisa el asunto/copy.
+1. Crear campaña → definir segmento objetivo, canal y cadencia.
+2. Monitorear open/click/reply rate. Si el open rate es bajo (<15%), revisa el asunto/copy.
 4. Lo importante no es el open rate — es **cuántas conversiones (handoffs y deals)** genera. Una campaña con 20% open pero 5 handoffs vale más que una con 50% open y 0 handoffs.
 
 ---
@@ -244,9 +242,6 @@ Mide qué tan cerca está tu audiencia del **Perfil de Cliente Ideal**:
 - Por industry, tamaño de empresa, cargo, ubicación.
 - Te dice qué segmentos tienen mejor fit → enfoca presupuesto ahí.
 
-### Listas Brevo
-Las listas sincronizadas con Brevo. Aquí gestionas qué contactos están en qué lista de envío.
-
 ### Smart Segments
 Constructor de segmentos dinámicos. Crea un segmento con filtros (engagement, score, fuente, industry) y nómbralo. El segmento se actualiza solo conforme los contactos cambian.
 
@@ -316,11 +311,12 @@ Exporta contactos y datos de marketing a CSV para reportes externos o análisis 
 
 ---
 
-## 14. Integraciones (Brevo)
+## 14. Integraciones
 
-- Conecta el módulo de marketing con **Brevo** para envío de emails y sincronización de contactos/listas/campañas.
-- Una vez conectado, los `brevoId` de contactos y `brevoCampaignId` de campañas mantienen ambos sistemas sincronizados.
-- Desde aquí gestionas la conexión y el estado de sincronización.
+- Conecta el CRM con **Google Workspace** (Calendar + Gmail) para sincronizar el calendario y enviar secuencias de email desde tu bandeja.
+- **Apollo** para enriquecimiento e importación de leads.
+- **Google Analytics 4** y **Search Console** para métricas de tráfico.
+- Desde aquí gestionas cada conexión y su estado.
 
 ---
 
@@ -400,7 +396,6 @@ Para cuentas objetivo grandes, usa el **ABM Board** en lugar de tratarlas como l
 | Score | Puntuación 0-100 de calificación del lead |
 | SLA | Acuerdo de tiempos de respuesta entre M+S |
 | ABM | Account-Based Marketing — marketing por cuenta |
-| Brevo | Plataforma de email marketing integrada |
 | Health Score M+S | Puntuación de alineación marketing-ventas |
 
 ---

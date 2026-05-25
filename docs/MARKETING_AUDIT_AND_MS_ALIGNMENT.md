@@ -9,6 +9,13 @@
 **Owner:** Daniel Acosta.
 **Cadence:** review monthly against KPIs in Part 4.
 
+> **Update (2026-05-25): Brevo removed.** The Brevo email-marketing integration
+> (lib, API routes, hub, lists, webhook, and all `brevo*` fields) was fully
+> stripped from the codebase. Engagement (opens/clicks, hot/warm/cold) is now
+> computed natively from BlackScale-sent mail. Mentions of Brevo below are kept
+> for historical context only — the components and routes they reference no
+> longer exist. ICP recalculation now lives at `/api/marketing/recalculate-scores`.
+
 ---
 
 ## Part 1 — Marketing module audit
@@ -20,14 +27,14 @@
 | Component | Purpose | State |
 |---|---|---|
 | `mkt-engagement-board` | Hot/warm/cold contact triage | Working |
-| `mkt-campaign-wall` | Campaign list + Brevo live stats + platform filter | Working (Block A) |
+| `mkt-campaign-wall` | Campaign list + platform filter | Working (Block A) |
 | `mkt-contacts-view` | Mirror of sales ContactsTable via CSS bridge | Working (M1) |
 | `mkt-attribution` | First/last touch attribution view | Exists, thin |
 | `mkt-handoff-center` | Marketing → Sales handoff queue | Working |
 | `mkt-reengagement` | Returned-from-sales requeue | Working (M1) |
 | `mkt-segment-health` | List/segment quality scoring | Exists |
 | `mkt-icp-scorer` | ICP fit scoring | Exists |
-| `mkt-lists` | Brevo lists mirror | Exists |
+| `mkt-lists` | Lists mirror | Removed (2026-05-25) |
 | `mkt-segments-builder` | Rule-based smart segments + live preview | Working (M3) |
 | `mkt-funnel` | Lifecycle + deal stage funnel | Working (M3) |
 | `mkt-pipeline-view` | Marketing's view of sales pipeline | Exists, duplicates sales |
@@ -37,13 +44,14 @@
 | `mkt-calendar` | Content calendar | Exists, low usage |
 | `mkt-digest` | Weekly summary email | Exists |
 | `mkt-roi` | ROI calculation | Exists, thin |
-| `mkt-brevo-hub` | Brevo control panel | Exists |
+| `mkt-brevo-hub` | Brevo control panel | Removed (2026-05-25) |
 | `mkt-advanced-settings` | Settings page | Exists |
 | `mkt-provider` | React context | Working |
 | `mkt-sidebar` | Marketing navigation | Working |
 
-13 marketing-specific API routes + 8 Brevo routes + 4 cross-team routes
+13 marketing-specific API routes + 4 cross-team routes
 (`handoff`, `return-to-marketing`, `revenue`, `revenue-intelligence`).
+(The 8 Brevo routes were removed 2026-05-25.)
 
 ### Bidirectional sync — what's already wired
 
@@ -53,7 +61,7 @@
   with marketing" flag. Sales queries default to `WHERE returned_to_marketing_at
   IS NULL`; marketing opts in with `?includeReturned=true`.
 - `contacts.firstTouchCampaignId` / `lastTouchCampaignId` — attribution
-  captured by the Brevo `score-event` webhook (`/api/brevo/score-event`).
+  captured natively from BlackScale email events (`email_events` table).
 - `/api/handoff` clears the return flag on re-handoff (idempotent).
 - `/api/deals/[id]` auto-promotes lifecycle on stage change: won → customer,
   lost (no other active deals) → re-engagement queue, otherwise advances to SQL.
@@ -68,8 +76,9 @@ plan focuses.
 
 1. **Lifecycle stage as shared canonical state.** Both modules read/write the
    same field. No "marketing has their own stages, sales has theirs."
-2. **Real Brevo integration.** Campaigns, lists, score-events, sync are all
-   talking to the real API, not mocked.
+2. **Native engagement engine.** Campaigns, engagement scoring, and email
+   events are computed locally from BlackScale-sent mail — no external
+   email-marketing dependency. (Replaced the Brevo integration 2026-05-25.)
 3. **Return-to-marketing is enforced.** The bug we fixed in commit `75639e2`
    made this airtight — the contact actually disappears from sales when
    returned. This is rare and table-stakes for M+S trust.
@@ -139,8 +148,8 @@ Should be replaced with a marketing-specific view (funnel by source).
 **G13.** Lead Velocity is exposed but unclear what action it drives.
 
 **G14.** Smart Segments Builder doesn't yet trigger a campaign from a
-segment (you can build the segment, but you can't push it into Brevo as a
-new list).
+segment (you can build the segment, but you can't yet launch a campaign
+directly from it).
 
 ---
 
@@ -427,7 +436,8 @@ T2.3 Auto-handoff       ──→ feeds into Command Center widgets
   already have one shared lifecycle. Resist the urge.
 - Don't add more sidebar items in the marketing module before Command
   Center ships. We already have too many (G6).
-- Don't replace Brevo. The integration works. Build on top.
+- Don't re-introduce an external email-marketing dependency. Engagement is
+  now native — build on the local `email_events` engine.
 - Don't add an AI co-pilot to every screen — pick one (T3.2 NBA) and make
   it excellent.
 - Don't ship attribution dashboards (T3.1) before closed-loop scoring
@@ -447,8 +457,8 @@ When building Tier 1 items, don't recreate what already works:
   timestamp on first sales activity.
 - `src/app/api/return-to-marketing/route.ts` — already captures reason;
   surface in dashboards.
-- `src/app/api/brevo/score-event/route.ts` — capture point for first/last
-  touch; already wired.
+- `email_events` table + `/api/marketing/recalculate-scores` — native
+  capture point for engagement scoring and first/last touch.
 - `src/components/marketing/mkt-funnel.tsx` — reuse on Command Center.
 - `src/types/portal.ts` — `PORTAL_WIDGETS` already has `mkt-attribution`,
   `mkt-engagement`, `mkt-campaigns`; the same widget components can power
