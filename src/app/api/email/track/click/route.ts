@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       messageId: searchParams.get("m"),
       type: "click",
       url: dest,
+      userAgent: req.headers.get("user-agent"),
     });
   } catch {
     /* never block the redirect */

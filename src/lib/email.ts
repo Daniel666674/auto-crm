@@ -48,6 +48,7 @@ export function logEmailEvent(e: {
   messageId?: string | null;
   type: string;
   url?: string | null;
+  userAgent?: string | null;
 }): void {
   try {
     db.insert(emailEvents)
@@ -59,6 +60,7 @@ export function logEmailEvent(e: {
         messageId: e.messageId ?? null,
         type: e.type,
         url: e.url ?? null,
+        userAgent: e.userAgent ?? null,
         createdAt: new Date(),
       })
       .run();
@@ -158,6 +160,7 @@ export async function sendEmail(input: SendEmailInput, preferredSenderUserId?: s
         html: input.html,
         fromName: SENDER_NAME,
         replyTo: input.replyTo,
+        listUnsubscribe: `${getBaseUrl()}/api/email/unsubscribe?a=${encodeURIComponent(input.to)}`,
       });
       return { id: r.id };
     }

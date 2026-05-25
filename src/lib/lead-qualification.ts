@@ -53,20 +53,23 @@ export function qualifyLead(i: QualInput): QualResult {
   const isSQL = isMQL && positiveIntent;
 
   // Engagement points — what "raises the score" when a prospect responds.
+  // Clicks/replies/meetings dominate; opens contribute little (unreliable).
   const engagementScore = Math.min(
     100,
     i.replies * 25 +
       (i.meetingBooked ? 30 : 0) +
       (i.demoed ? 20 : 0) +
       i.clicks * 8 +
-      Math.min(i.opens, 5) * 4
+      Math.min(i.opens, 5) * 2
   );
 
+  // Clicks and replies are the trustworthy intent signals (Gmail/Apple inflate
+  // and fake opens), so they alone drive HOT. Opens are a secondary, warm-only
+  // signal. VA behavioral signals (active ads, DM-reachable, weekly posts) are
+  // also warm even before any email engagement.
   let temperature: QualResult["temperature"] = "cold";
-  if (positiveIntent || i.clicks > 0 || i.opens >= 2) temperature = "hot";
-  else if (i.opens > 0) temperature = "warm";
-  // VA signals: a contact actively running ads, DM-reachable, or posting regularly is behaviorally warm
-  else if (i.sigDmActive || i.sigLinkedinAds || i.sigPostFreq === "semanal" || i.sigPostFreq === "weekly") temperature = "warm";
+  if (positiveIntent || i.clicks > 0) temperature = "hot";
+  else if (i.opens > 0 || i.sigDmActive || i.sigLinkedinAds || i.sigPostFreq === "semanal" || i.sigPostFreq === "weekly") temperature = "warm";
 
   // Compute the funnel stage this contact's signals justify, then keep whichever
   // is further along between that and where the contact already sits.

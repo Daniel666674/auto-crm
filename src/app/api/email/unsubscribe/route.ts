@@ -14,13 +14,7 @@ function page(message: string): NextResponse {
   return new NextResponse(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const email = searchParams.get("a");
-  const contactId = searchParams.get("c");
-
-  if (!email) return page("Enlace de cancelación inválido.");
-
+function doUnsubscribe(email: string, contactId: string | null): void {
   suppress(email, "unsubscribe");
   logEmailEvent({ contactId, type: "unsubscribe" });
 
@@ -38,6 +32,21 @@ export async function GET(req: NextRequest) {
       /* non-fatal */
     }
   }
+}
 
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const email = searchParams.get("a");
+  if (!email) return page("Enlace de cancelación inválido.");
+  doUnsubscribe(email, searchParams.get("c"));
   return page("Has cancelado tu suscripción. No recibirás más correos automáticos de nuestra parte.");
+}
+
+// RFC 8058 one-click: mail clients POST List-Unsubscribe=One-Click to this URL.
+export async function POST(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const email = searchParams.get("a");
+  if (!email) return new NextResponse("Bad Request", { status: 400 });
+  doUnsubscribe(email, searchParams.get("c"));
+  return new NextResponse(null, { status: 204 });
 }

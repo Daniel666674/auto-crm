@@ -27,7 +27,7 @@ export function getGmailSenderUserId(preferredUserId?: string): string | null {
   );
 }
 
-function buildRawMessage(opts: { from: string; to: string; subject: string; html: string; replyTo?: string }): string {
+function buildRawMessage(opts: { from: string; to: string; subject: string; html: string; replyTo?: string; listUnsubscribe?: string }): string {
   // RFC 2047 encode the subject so non-ASCII survives.
   const encodedSubject = `=?UTF-8?B?${Buffer.from(opts.subject, "utf8").toString("base64")}?=`;
   const headers = [
@@ -35,6 +35,10 @@ function buildRawMessage(opts: { from: string; to: string; subject: string; html
     `To: ${opts.to}`,
     ...(opts.replyTo ? [`Reply-To: ${opts.replyTo}`] : []),
     `Subject: ${encodedSubject}`,
+    // RFC 8058 one-click unsubscribe — required by Google for bulk senders.
+    ...(opts.listUnsubscribe
+      ? [`List-Unsubscribe: <${opts.listUnsubscribe}>`, "List-Unsubscribe-Post: List-Unsubscribe=One-Click"]
+      : []),
     "MIME-Version: 1.0",
     'Content-Type: text/html; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
@@ -101,7 +105,7 @@ export interface GmailSendResult {
 /** Send an email through the connected Workspace account's Gmail. */
 export async function sendViaGmail(
   userId: string,
-  opts: { to: string; subject: string; html: string; fromName?: string; replyTo?: string }
+  opts: { to: string; subject: string; html: string; fromName?: string; replyTo?: string; listUnsubscribe?: string }
 ): Promise<GmailSendResult> {
   const record = db.select().from(googleTokens).where(eq(googleTokens.userId, userId)).get();
   if (!record) throw new Error("Cuenta de Google no conectada");
@@ -132,7 +136,7 @@ export async function sendViaGmail(
   if (!address) throw new Error("No se pudo resolver la dirección del remitente de Gmail");
   const from = opts.fromName ? `${opts.fromName} <${address}>` : address;
 
-  const raw = buildRawMessage({ from, to: opts.to, subject: opts.subject, html: opts.html, replyTo: opts.replyTo });
+  const raw = buildRawMessage({ from, to: opts.to, subject: opts.subject, html: opts.html, replyTo: opts.replyTo, listUnsubscribe: opts.listUnsubscribe });
   const res = await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
 
   return { id: res.data.id ?? undefined, from: address };

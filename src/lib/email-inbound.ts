@@ -11,6 +11,23 @@ function parseFromEmail(from: string): string {
   return (m ? m[1] : from).trim().toLowerCase();
 }
 
+const RX_BOUNCE_FROM = /mailer-daemon|postmaster|mail delivery (subsystem|system)/i;
+const RX_BOUNCE_SUBJECT = /delivery (status notification|failure)|undeliverable|returned mail|failure notice|mail delivery failed|no se pudo entregar/i;
+
+/** A bounce/complaint notice is a system message, not a real reply. Detect it so
+ * it's logged as a bounce against the failed recipient rather than counted as
+ * engagement. The failed address is recovered from the notice body/snippet. */
+function detectBounceRecipient(m: { from: string; subject: string; snippet: string }, byEmail: Map<string, string>): string | null {
+  const isBounce = RX_BOUNCE_FROM.test(m.from) || RX_BOUNCE_SUBJECT.test(m.subject || "");
+  if (!isBounce) return null;
+  const candidates = (m.snippet || "").toLowerCase().match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g) ?? [];
+  for (const addr of candidates) {
+    const id = byEmail.get(addr.trim());
+    if (id) return id;
+  }
+  return null;
+}
+
 /**
  * Polls the connected Workspace inbox for messages from known contacts and logs
  * each as an inbound "reply" on that contact's timeline. Deduped by Gmail
@@ -36,6 +53,20 @@ export async function pollInboundReplies(): Promise<{ logged: number }> {
 
   let logged = 0;
   for (const m of msgs) {
+    // Bounce / delivery-failure notices: log as a bounce + suppress, not a reply.
+    const bouncedId = detectBounceRecipient(m, byEmail);
+    if (bouncedId) {
+      const dup = db
+        .select({ id: emailEvents.id })
+        .from(emailEvents)
+        .where(and(eq(emailEvents.messageId, m.id), eq(emailEvents.type, "bounce")))
+        .get();
+      if (dup) continue;
+      logEmailEvent({ contactId: bouncedId, messageId: m.id, type: "bounce" });
+      logged++;
+      continue;
+    }
+
     const contactId = byEmail.get(parseFromEmail(m.from));
     if (!contactId) continue;
 

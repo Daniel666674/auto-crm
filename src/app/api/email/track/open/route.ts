@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
       campaignId: searchParams.get("cmp"),
       messageId: searchParams.get("m"),
       type: "open",
+      userAgent: req.headers.get("user-agent"),
     });
   } catch {
     /* never block the pixel */

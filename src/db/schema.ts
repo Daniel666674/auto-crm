@@ -412,8 +412,9 @@ export const emailEvents = sqliteTable("email_events", {
   enrollmentId: text("enrollment_id"),
   campaignId: text("campaign_id"),
   messageId: text("message_id"),
-  type: text("type").notNull(), // sent | open | click | bounce | unsubscribe | complaint
+  type: text("type").notNull(), // sent | open | click | reply | bounce | unsubscribe | complaint
   url: text("url"),
+  userAgent: text("user_agent"), // captured on open/click — used to filter bot/proxy/MPP opens
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

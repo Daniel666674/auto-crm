@@ -328,6 +328,8 @@ function initTables(db: Database.Database): void {
     // BlackScale bulk email blasts
     `ALTER TABLE email_events ADD COLUMN campaign_id TEXT`,
     `CREATE INDEX IF NOT EXISTS idx_email_events_campaign ON email_events(campaign_id)`,
+    `ALTER TABLE email_events ADD COLUMN user_agent TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_email_events_message ON email_events(message_id)`,
     `CREATE TABLE IF NOT EXISTS blast_campaigns (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
