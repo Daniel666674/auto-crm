@@ -582,7 +582,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
               <div style={CARD_STYLE}>
                 <div style={CARD_HEADER_STYLE}>Engagement de marketing</div>
                 <div style={{ padding: "20px", fontSize: 12, color: "#7a756e", lineHeight: 1.6 }}>
-                  Conecta Brevo en Integraciones para ver este módulo.
+                  Módulo de marketing — próximamente disponible.
                 </div>
               </div>
             )}
@@ -590,7 +590,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
               <div style={CARD_STYLE}>
                 <div style={CARD_HEADER_STYLE}>Campañas activas</div>
                 <div style={{ padding: "20px", fontSize: 12, color: "#7a756e", lineHeight: 1.6 }}>
-                  Conecta Brevo en Integraciones para ver este módulo.
+                  Módulo de marketing — próximamente disponible.
                 </div>
               </div>
             )}
@@ -598,7 +598,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
               <div style={CARD_STYLE}>
                 <div style={CARD_HEADER_STYLE}>Atribución de revenue</div>
                 <div style={{ padding: "20px", fontSize: 12, color: "#7a756e", lineHeight: 1.6 }}>
-                  Conecta Brevo en Integraciones para ver este módulo.
+                  Módulo de marketing — próximamente disponible.
                 </div>
               </div>
             )}

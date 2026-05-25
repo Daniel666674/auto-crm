@@ -143,7 +143,7 @@ export function MktCampaignRevenue() {
         <div style={{ ...card, textAlign: "center", padding: "40px 0", color: "#718096", fontSize: 13 }}>No se pudo cargar el revenue por campaña.</div>
       ) : data.length === 0 ? (
         <div style={{ ...card, textAlign: "center", padding: "40px 0", color: "#718096", fontSize: 13 }}>
-          Aún no hay contactos atribuidos a campañas. La atribución se captura cuando un contacto abre/clickea un email de campaña (webhook de Brevo).
+          Aún no hay contactos atribuidos a campañas. La atribución se captura cuando un contacto abre o hace clic en un email de campaña.
         </div>
       ) : (
         <div style={{ background: "#111111", border: "1px solid #1e1e1e", borderRadius: 10, overflow: "hidden" }}>

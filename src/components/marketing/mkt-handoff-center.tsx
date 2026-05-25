@@ -29,12 +29,12 @@ function TierBadge({ tier }: { tier: number }) {
 
 type NewLead = {
   name: string; company: string; email: string; phone: string;
-  source: string; tier: number; brevoCadence: string; marketingNotes: string; industry: string;
+  source: string; tier: number; marketingNotes: string; industry: string;
 };
 
 const defaultLead: NewLead = {
   name: "", company: "", email: "", phone: "",
-  source: "website", tier: 2, brevoCadence: "Cold Welcome", marketingNotes: "", industry: "",
+  source: "website", tier: 2, marketingNotes: "", industry: "",
 };
 
 export function MktHandoffCenter() {
@@ -47,8 +47,6 @@ export function MktHandoffCenter() {
   const passedContacts = contacts
     .filter(c => c.passedToSalesAt)
     .sort((a, b) => (b.passedToSalesAt ?? 0) - (a.passedToSalesAt ?? 0));
-
-  const cadences = [...new Set(contacts.map(c => c.brevoCadence))];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +88,7 @@ export function MktHandoffCenter() {
                 </div>
                 <div style={{ fontSize: 11, color: "var(--mkt-text-muted)" }}>{c.company}</div>
                 <div style={{ fontSize: 10, color: "var(--mkt-text-muted)", marginTop: 2 }}>
-                  {c.brevoCadence} · {mktFormatRelative(c.lastActivity)}
+                  {mktFormatRelative(c.lastActivity)}
                 </div>
               </div>
               <button onClick={() => passToSales(c.id)} style={{
@@ -163,7 +161,7 @@ export function MktHandoffCenter() {
                   onChange={e => setNewLead({ ...newLead, phone: e.target.value })} />
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelStyle}>Fuente</label>
                 <select style={{ ...fieldStyle, appearance: "none" }} value={newLead.source}
@@ -178,13 +176,6 @@ export function MktHandoffCenter() {
                   <option value={1}>Tier 1</option>
                   <option value={2}>Tier 2</option>
                   <option value={3}>Tier 3</option>
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Cadencia</label>
-                <select style={{ ...fieldStyle, appearance: "none" }} value={newLead.brevoCadence}
-                  onChange={e => setNewLead({ ...newLead, brevoCadence: e.target.value })}>
-                  {cadences.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             </div>

@@ -13,7 +13,6 @@ interface MktContact {
   company: string;
   tier: number;
   score: number;
-  brevo_id: string;
 }
 
 function normalize(s: string | null | undefined): string {
@@ -26,7 +25,7 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const all = mktDb.prepare(
-    "SELECT id, name, email, phone, company, tier, score, brevo_id FROM mkt_contacts"
+    "SELECT id, name, email, phone, company, tier, score FROM mkt_contacts"
   ).all() as MktContact[];
 
   const groups: { reason: "email" | "name_company"; contacts: MktContact[] }[] = [];

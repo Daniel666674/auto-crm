@@ -414,7 +414,7 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
             {contact.engagementStatus && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                 <span style={{ color: "var(--muted-foreground)" }}>📊</span>
-                <span style={{ color: "var(--muted-foreground)" }}>Brevo: <b>{contact.engagementStatus}</b></span>
+                <span style={{ color: "var(--muted-foreground)" }}>Engagement: <b>{contact.engagementStatus}</b></span>
               </div>
             )}
           </div>
@@ -732,7 +732,7 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
                 </div>
               </div>
 
-              {/* Engagement score (Brevo) — only shown if present */}
+              {/* Engagement score — only shown if present */}
               {contact.engagementScore != null && (
                 <div style={{ display: "flex", alignItems: "center", gap: 24, padding: 20, borderRadius: 10, border: "1px solid rgba(45,212,191,0.25)", background: "rgba(45,212,191,0.06)" }}>
                   <div style={{ position: "relative", width: 100, height: 100, flexShrink: 0 }}>
@@ -750,9 +750,9 @@ export function ContactDetailClient({ contact, deals, activities, relatedContact
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Engagement (Brevo)</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Engagement</div>
                     <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-                      Nivel de engagement en campañas de email. Solo disponible para contactos activos en Brevo.
+                      Nivel de engagement en campañas de email.
                     </div>
                   </div>
                 </div>

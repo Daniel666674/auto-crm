@@ -86,12 +86,11 @@ export function MktDigest() {
 
           {/* Email */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Email (Brevo acumulado)</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#718096", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Email (acumulado)</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 10 }}>
               <KpiCard label="Total enviados" value={totalSent.toLocaleString("es-CO")} />
               <KpiCard label="Open rate avg" value={`${avgOpenRate.toFixed(1)}%`} />
               <KpiCard label="Total conversiones" value={totalConversions} />
-              <KpiCard label="Replies" value="—" sub="No disponible en Brevo v3" />
             </div>
           </div>
 

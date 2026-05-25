@@ -28,7 +28,6 @@ function initMktTables(db: Database.Database): void {
       tier INTEGER NOT NULL DEFAULT 3,
       temperature TEXT NOT NULL DEFAULT 'cold',
       score INTEGER NOT NULL DEFAULT 0,
-      brevo_cadence TEXT NOT NULL DEFAULT 'Cold Welcome',
       engagement_status TEXT NOT NULL DEFAULT 'cold',
       email_opens INTEGER NOT NULL DEFAULT 0,
       email_clicks INTEGER NOT NULL DEFAULT 0,
@@ -39,7 +38,6 @@ function initMktTables(db: Database.Database): void {
       industry TEXT NOT NULL DEFAULT '',
       last_activity INTEGER NOT NULL,
       linkedin_url TEXT NOT NULL DEFAULT '',
-      brevo_id TEXT NOT NULL DEFAULT '',
       job_title TEXT NOT NULL DEFAULT '',
       company_size TEXT NOT NULL DEFAULT '',
       location TEXT NOT NULL DEFAULT '',
@@ -60,8 +58,7 @@ function initMktTables(db: Database.Database): void {
       total_contacts INTEGER NOT NULL DEFAULT 0,
       conversions INTEGER NOT NULL DEFAULT 0,
       last_sent INTEGER,
-      channel TEXT NOT NULL DEFAULT 'brevo_email',
-      brevo_campaign_id TEXT NOT NULL DEFAULT ''
+      channel TEXT NOT NULL DEFAULT 'email'
     )`,
   ];
   for (const sql of tables) {
@@ -71,22 +68,20 @@ function initMktTables(db: Database.Database): void {
   // Migrate: add columns introduced after initial deploy
   const migrations = [
     "ALTER TABLE mkt_contacts ADD COLUMN linkedin_url TEXT NOT NULL DEFAULT ''",
-    "ALTER TABLE mkt_contacts ADD COLUMN brevo_id TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE mkt_contacts ADD COLUMN job_title TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE mkt_contacts ADD COLUMN company_size TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE mkt_contacts ADD COLUMN location TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE mkt_contacts ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE mkt_contacts ADD COLUMN email_bounced INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE mkt_contacts ADD COLUMN email_unsubscribed INTEGER NOT NULL DEFAULT 0",
-    "ALTER TABLE mkt_campaigns ADD COLUMN channel TEXT NOT NULL DEFAULT 'brevo_email'",
-    "ALTER TABLE mkt_campaigns ADD COLUMN brevo_campaign_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE mkt_campaigns ADD COLUMN channel TEXT NOT NULL DEFAULT 'email'",
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch {} // silently skip if column already exists
   }
 }
 
-// No seed data — real contacts come from Brevo via POST /api/brevo/sync
+// No seed data — add real contacts via POST /api/marketing/contacts
 
 const _sqlite = openDb();
 initMktTables(_sqlite);

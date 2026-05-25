@@ -65,7 +65,6 @@ function initTables(db: Database.Database): void {
       notes TEXT,
       engagement_status TEXT DEFAULT 'COLD',
       needs_email_verification INTEGER DEFAULT 0,
-      last_brevo_sync INTEGER,
       consent_given INTEGER NOT NULL DEFAULT 0,
       consent_date INTEGER,
       consent_source TEXT DEFAULT 'unknown',
@@ -205,7 +204,6 @@ function initTables(db: Database.Database): void {
   const migrations = [
     `ALTER TABLE contacts ADD COLUMN engagement_status TEXT DEFAULT 'COLD'`,
     `ALTER TABLE contacts ADD COLUMN needs_email_verification INTEGER DEFAULT 0`,
-    `ALTER TABLE contacts ADD COLUMN last_brevo_sync INTEGER`,
     `ALTER TABLE contacts ADD COLUMN consent_given INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE contacts ADD COLUMN consent_date INTEGER`,
     `ALTER TABLE contacts ADD COLUMN consent_source TEXT DEFAULT 'unknown'`,

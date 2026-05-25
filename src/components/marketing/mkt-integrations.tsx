@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { BSLoading } from "../ui/BSLoading";
 
 interface IntegrationStatus {
-  brevo: boolean;
   apollo: boolean;
   ga4Property: string | null;
   gscSiteUrl: string | null;
@@ -62,20 +61,13 @@ export function MktIntegrations() {
     fetch("/api/settings/integrations-status")
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(setStatus)
-      .catch(() => setStatus({ brevo: false, apollo: false, ga4Property: null, gscSiteUrl: null }))
+      .catch(() => setStatus({ apollo: false, ga4Property: null, gscSiteUrl: null }))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <BSLoading label="Cargando integraciones…" />;
 
   const cards: IntegrationCard[] = [
-    {
-      id: "brevo", name: "Brevo", category: "Email Marketing", module: "marketing",
-      description: "Sincronización bidireccional de contactos, campañas, listas y eventos de engagement.",
-      state: status?.brevo ? "connected" : "disconnected",
-      detail: status?.brevo ? "API key configurada" : "Falta BREVO_API_KEY",
-      envVar: "BREVO_API_KEY",
-    },
     {
       id: "apollo", name: "Apollo.io", category: "Prospección", module: "marketing",
       description: "Enriquecimiento de leads e importación de prospectos vía CSV / API.",

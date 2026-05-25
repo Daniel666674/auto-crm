@@ -7,7 +7,6 @@ import type { MktContact } from "./mkt-types";
 const SOURCE_COLORS: Record<string, string> = {
   website: "#C39A4C",
   linkedin: "#4299e1",
-  brevo_email: "#48bb78",
   email: "#48bb78",
   evento: "#9f7aea",
   evento_presencial: "#9f7aea",

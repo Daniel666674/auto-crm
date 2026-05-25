@@ -25,7 +25,6 @@ export const contacts = sqliteTable("contacts", {
   notes: text("notes"),
   engagementStatus: text("engagement_status").default("COLD"),
   needsEmailVerification: integer("needs_email_verification", { mode: "boolean" }).default(false),
-  lastBrevoSync: integer("last_brevo_sync", { mode: "timestamp" }),
   consentGiven: integer("consent_given", { mode: "boolean" }).notNull().default(false),
   consentDate: integer("consent_date", { mode: "timestamp" }),
   consentSource: text("consent_source").default("unknown"),
@@ -400,7 +399,7 @@ export const sequenceEnrollments = sqliteTable("sequence_enrollments", {
   lastError: text("last_error"),
 });
 
-// Email events from BlackScale-sent mail (sequences, campaigns) — replaces Brevo's event stream
+// Email events from BlackScale-sent mail (sequences, campaigns)
 export const emailEvents = sqliteTable("email_events", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   contactId: text("contact_id").references(() => contacts.id),
@@ -413,7 +412,7 @@ export const emailEvents = sqliteTable("email_events", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-// One-off bulk email blasts sent through BlackScale email (not Brevo)
+// One-off bulk email blasts sent through BlackScale email
 export const blastCampaigns = sqliteTable("blast_campaigns", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),

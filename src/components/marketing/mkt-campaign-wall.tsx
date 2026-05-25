@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useMkt } from "./mkt-provider";
 import { mktFormatRelative } from "./mkt-utils";
 import type { MktCampaign } from "./mkt-types";
@@ -35,14 +35,14 @@ function StatusBadge({ status }: { status: MktCampaign["status"] }) {
 
 function ChannelBadge({ channel }: { channel: string }) {
   const labels: Record<string, { label: string; color: string }> = {
-    brevo_email: { label: "Brevo Email", color: "#3b82f6" },
-    linkedin: { label: "LinkedIn", color: "#0a66c2" },
-    facebook: { label: "Facebook", color: "#1877f2" },
-    instagram: { label: "Instagram", color: "#e1306c" },
-    meta: { label: "Meta", color: "#1877f2" },
+    email:      { label: "Email",     color: "#3b82f6" },
+    linkedin:   { label: "LinkedIn",  color: "#0a66c2" },
+    facebook:   { label: "Facebook",  color: "#1877f2" },
+    instagram:  { label: "Instagram", color: "#e1306c" },
+    meta:       { label: "Meta",      color: "#1877f2" },
     google_ads: { label: "Google Ads", color: "#ea4335" },
-    google: { label: "Google", color: "#ea4335" },
-    outbound: { label: "Outbound", color: "#8b5cf6" },
+    google:     { label: "Google",    color: "#ea4335" },
+    outbound:   { label: "Outbound",  color: "#8b5cf6" },
   };
   const c = labels[channel] ?? { label: channel, color: "#64748b" };
   return (
@@ -89,12 +89,6 @@ const fieldStyle: React.CSSProperties = {
   color: "var(--mkt-text)", fontSize: 13, outline: "none",
 };
 
-interface BrevoList {
-  id: number;
-  name: string;
-  uniqueSubscribers: number;
-}
-
 function CampaignFormModal({ onClose }: { onClose: () => void }) {
   const { addCampaign } = useMkt();
   const [form, setForm] = useState({
@@ -103,32 +97,12 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
     startDate: new Date().toISOString().split("T")[0],
     targetSegment: "",
     cadenceType: "outreach",
-    channel: "brevo_email",
+    channel: "email",
     totalContacts: 0,
-    // Brevo email specific
-    subject: "",
-    htmlContent: "",
-    listIds: [] as number[],
-    scheduledAt: "",
-    senderEmail: "daniel.acosta@blackscale.consulting",
   });
 
-  const [brevoLists, setBrevoLists] = useState<BrevoList[]>([]);
-  const [loadingLists, setLoadingLists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  // Load Brevo lists when channel is brevo_email
-  useEffect(() => {
-    if (form.channel === "brevo_email" || form.channel === "outbound") {
-      setLoadingLists(true);
-      fetch("/api/brevo/lists")
-        .then(r => r.json())
-        .then(d => setBrevoLists(d.lists || []))
-        .catch(() => {})
-        .finally(() => setLoadingLists(false));
-    }
-  }, [form.channel]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,26 +111,6 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
     setError("");
 
     try {
-      // If Brevo email: actually create the campaign in Brevo
-      let brevoCampaignId = "";
-      if (form.channel === "brevo_email" && form.subject && form.htmlContent && form.listIds.length > 0) {
-        const res = await fetch("/api/brevo/campaigns/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: form.name,
-            subject: form.subject,
-            htmlContent: form.htmlContent,
-            listIds: form.listIds,
-            scheduledAt: form.scheduledAt || null,
-            senderEmail: form.senderEmail,
-          }),
-        });
-        const data = await res.json();
-        if (data.error) { setError(data.error); setSubmitting(false); return; }
-        brevoCampaignId = String(data.id || data.campaigns?.[0]?.id || "");
-      }
-
       addCampaign({
         name: form.name,
         status: form.status,
@@ -164,8 +118,7 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
         targetSegment: form.targetSegment,
         cadenceType: form.cadenceType,
         channel: form.channel,
-        brevoCampaignId,
-        totalContacts: Number(form.totalContacts) || form.listIds.length,
+        totalContacts: Number(form.totalContacts) || 0,
         openRate: 0,
         clickRate: 0,
         replyRate: 0,
@@ -181,9 +134,6 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
   };
 
   const selectFieldStyle: React.CSSProperties = { ...fieldStyle, appearance: "none" };
-  const isBrevoEmail = form.channel === "brevo_email";
-  const isBrevoOutbound = form.channel === "outbound";
-  const needsBrevoLists = isBrevoEmail || isBrevoOutbound;
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -274,102 +224,21 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
               value={form.targetSegment} onChange={e => setForm({ ...form, targetSegment: e.target.value })} />
           </div>
 
-          {/* Brevo-specific fields */}
-          {needsBrevoLists && (
-            <>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                  Listas Brevo {loadingLists && <span style={{ color: "var(--mkt-accent)" }}>Cargando…</span>}
-                </label>
-                {brevoLists.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 120, overflowY: "auto" }}>
-                    {brevoLists.map(list => (
-                      <label key={list.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--mkt-text)", cursor: "pointer" }}>
-                        <input
-                          type="checkbox"
-                          checked={form.listIds.includes(list.id)}
-                          onChange={e => setForm({
-                            ...form,
-                            listIds: e.target.checked
-                              ? [...form.listIds, list.id]
-                              : form.listIds.filter(id => id !== list.id),
-                          })}
-                          style={{ accentColor: "var(--mkt-accent)" }}
-                        />
-                        {list.name} <span style={{ color: "var(--mkt-text-muted)" }}>({list.uniqueSubscribers} contactos)</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: 11, color: "var(--mkt-text-muted)" }}>
-                    {loadingLists ? "Cargando listas de Brevo…" : "No se encontraron listas en Brevo."}
-                  </p>
-                )}
-              </div>
-
-              {isBrevoEmail && (
-                <>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                      Asunto del email *
-                    </label>
-                    <input style={fieldStyle} placeholder="Ej: Automatiza tu proceso de ventas en 30 días"
-                      value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                      Contenido HTML
-                    </label>
-                    <textarea
-                      style={{ ...fieldStyle, height: 100, resize: "vertical", fontFamily: "monospace", fontSize: 11 }}
-                      placeholder="<p>Hola {{contact.FIRSTNAME}},</p>"
-                      value={form.htmlContent}
-                      onChange={e => setForm({ ...form, htmlContent: e.target.value })}
-                    />
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                        Remitente
-                      </label>
-                      <select style={selectFieldStyle} value={form.senderEmail}
-                        onChange={e => setForm({ ...form, senderEmail: e.target.value })}>
-                        <option value="daniel.acosta@blackscale.consulting">Daniel — BlackScale</option>
-                        <option value="julian.vallejo@blackscale.consulting">Julian — BlackScale</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                        Programar para (opcional)
-                      </label>
-                      <input type="datetime-local" style={fieldStyle} value={form.scheduledAt}
-                        onChange={e => setForm({ ...form, scheduledAt: e.target.value })} />
-                    </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          {/* Non-Brevo: just notes */}
-          {!needsBrevoLists && (
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
-                Total contactos (estimado)
-              </label>
-              <input type="number" style={fieldStyle} placeholder="0"
-                value={form.totalContacts} onChange={e => setForm({ ...form, totalContacts: Number(e.target.value) })} />
-              <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginTop: 6 }}>
-                {form.channel === "linkedin" && "Configura esta campaña en LinkedIn Campaign Manager."}
-                {form.channel === "meta" && "Configura esta campaña en Meta Business Manager (FB + IG)."}
-                {form.channel === "facebook" && "Configura esta campaña en Meta Business Manager (Facebook)."}
-                {form.channel === "instagram" && "Configura esta campaña en Meta Business Manager (Instagram)."}
-                {form.channel === "google_ads" && "Configura esta campaña en Google Ads."}
-              </p>
-            </div>
-          )}
+          {/* Total contacts */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--mkt-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>
+              Total contactos (estimado)
+            </label>
+            <input type="number" style={fieldStyle} placeholder="0"
+              value={form.totalContacts} onChange={e => setForm({ ...form, totalContacts: Number(e.target.value) })} />
+            <p style={{ fontSize: 11, color: "var(--mkt-text-muted)", marginTop: 6 }}>
+              {form.channel === "linkedin" && "Configura esta campaña en LinkedIn Campaign Manager."}
+              {form.channel === "meta" && "Configura esta campaña en Meta Business Manager (FB + IG)."}
+              {form.channel === "facebook" && "Configura esta campaña en Meta Business Manager (Facebook)."}
+              {form.channel === "instagram" && "Configura esta campaña en Meta Business Manager (Instagram)."}
+              {form.channel === "google_ads" && "Configura esta campaña en Google Ads."}
+            </p>
+          </div>
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 4 }}>
             <button type="button" onClick={onClose} style={{
@@ -390,170 +259,31 @@ function CampaignFormModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Brevo live stats overlay ──────────────────────────────────────────────
-function LiveStatsPanel({ brevoCampaignId }: { brevoCampaignId: string }) {
-  const [stats, setStats] = useState<null | Record<string, unknown>>(null);
-
-  useEffect(() => {
-    if (!brevoCampaignId) return;
-    fetch(`/api/brevo/campaigns?id=${brevoCampaignId}`)
-      .then(r => r.json())
-      .then(d => {
-        const campaign = d.campaigns?.find((c: Record<string, unknown>) => String(c.id) === brevoCampaignId);
-        if (campaign?.statistics?.globalStats) setStats(campaign.statistics.globalStats);
-      })
-      .catch(() => {});
-  }, [brevoCampaignId]);
-
-  if (!stats) return null;
-
-  return (
-    <div style={{
-      marginTop: 10, padding: "10px 12px", borderRadius: 8,
-      background: "rgba(209,156,21,0.06)", border: "1px solid rgba(209,156,21,0.15)",
-      fontSize: 11, color: "var(--mkt-text-muted)",
-    }}>
-      <div style={{ fontWeight: 600, color: "var(--mkt-accent)", marginBottom: 6 }}>Live stats desde Brevo</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-        {[
-          { label: "Enviados", key: "sent" },
-          { label: "Entregados", key: "delivered" },
-          { label: "Abiertos", key: "uniqueViews" },
-          { label: "Clicks", key: "uniqueClicks" },
-          { label: "Rebotados", key: "hardBounces" },
-          { label: "Desuscritos", key: "unsubscriptions" },
-        ].map(({ label, key }) => (
-          <div key={key}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>{String(stats[key] ?? 0)}</div>
-            <div>{label}</div>
-          </div>
-        ))}
-      </div>
-      <a
-        href="https://app.brevo.com/campaigns/listing"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-block", marginTop: 8,
-          fontSize: 11, color: "var(--mkt-accent)", textDecoration: "none",
-        }}
-        onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.textDecoration = "underline"}
-        onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.textDecoration = "none"}
-      >
-        Ver en Brevo →
-      </a>
-    </div>
-  );
-}
-
-interface BrevoCampaign {
-  id: number;
-  name: string;
-  status: string;
-  statistics?: {
-    globalStats?: {
-      sent?: number;
-      uniqueViews?: number;
-      uniqueClicks?: number;
-    };
-  };
-}
-
 // Platform filter options — maps user-facing labels to channel ids
 const PLATFORM_FILTERS: { id: string; label: string; matches: (channel: string) => boolean }[] = [
   { id: "all",       label: "Todas",     matches: () => true },
+  { id: "email",     label: "Email",     matches: c => c === "email" || c === "outbound" },
+  { id: "linkedin",  label: "LinkedIn",  matches: c => c === "linkedin" },
   { id: "facebook",  label: "Facebook",  matches: c => c === "meta" || c === "facebook" },
   { id: "instagram", label: "Instagram", matches: c => c === "meta" || c === "instagram" },
-  { id: "linkedin",  label: "LinkedIn",  matches: c => c === "linkedin" },
   { id: "google",    label: "Google",    matches: c => c === "google_ads" || c === "google" },
-  { id: "brevo",     label: "Email",     matches: c => c === "brevo_email" || c === "outbound" },
 ];
 
 export function MktCampaignWall() {
   const { campaigns } = useMkt();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [brevoLive, setBrevoLive] = useState<BrevoCampaign[]>([]);
-  const [brevoLoading, setBrevoLoading] = useState(true);
-  const [brevoError, setBrevoError] = useState("");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
 
-  const loadCampaigns = useCallback(async () => {
-    setBrevoLoading(true);
-    setBrevoError("");
-    const MAX = 3;
-    for (let attempt = 1; attempt <= MAX; attempt++) {
-      try {
-        const r = await fetch("/api/brevo/campaigns");
-        // Guard: if server returned HTML (502/504/etc) parse would throw a misleading SyntaxError
-        const ct = r.headers.get("content-type") ?? "";
-        if (!ct.includes("application/json")) {
-          const msg = `Brevo API no disponible (HTTP ${r.status} — respuesta no-JSON). Mostrando datos locales.`;
-          if (attempt === MAX) { setBrevoError(msg); break; }
-          await new Promise(res => setTimeout(res, attempt * 1500));
-          continue;
-        }
-        const d = await r.json();
-        if (d.error) {
-          if (attempt === MAX) { setBrevoError(`Brevo: ${d.error}`); break; }
-          await new Promise(res => setTimeout(res, attempt * 1500));
-          continue;
-        }
-        setBrevoLive(d.campaigns || []);
-        break;
-      } catch (e) {
-        if (attempt === MAX) setBrevoError(`Error de red al conectar con Brevo: ${String(e)}`);
-        else await new Promise(res => setTimeout(res, attempt * 1500));
-      }
-    }
-    setBrevoLoading(false);
-  }, []);
-
-  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
-
-  // Build display list: Brevo live campaigns take priority, fall back to local DB
-  const baseCampaigns: MktCampaign[] = brevoLive.length > 0
-    ? brevoLive.map(b => {
-        const stats = (b.statistics as any) ?? {};
-        const csList: any[] = Array.isArray(stats.campaignStats) ? stats.campaignStats : [];
-        const gs = stats.globalStats ?? {};
-        const sent   = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + Number(cs.sent ?? 0), 0) : Number(gs.sent ?? gs.delivered ?? 0);
-        const opens  = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + Number(cs.uniqueViews ?? 0), 0) : Number(gs.uniqueViews ?? 0);
-        const clicks = csList.length > 0 ? csList.reduce((sum: number, cs: any) => sum + Number(cs.uniqueClicks ?? 0), 0) : Number(gs.uniqueClicks ?? 0);
-        const statusMap: Record<string, MktCampaign["status"]> = {
-          sent: "completed", scheduled: "active", draft: "paused",
-        };
-        // Find matching local campaign for brevoCampaignId linkage
-        const local = campaigns.find(c => c.brevoCampaignId === String(b.id));
-        return {
-          id: local?.id ?? String(b.id),
-          name: b.name,
-          status: statusMap[b.status] ?? "completed",
-          startDate: local?.startDate ?? Date.now(),
-          targetSegment: local?.targetSegment ?? "",
-          cadenceType: local?.cadenceType ?? "outreach",
-          channel: local?.channel ?? "brevo_email",
-          brevoCampaignId: String(b.id),
-          openRate: sent > 0 ? Math.round((opens / sent) * 1000) / 10 : 0,
-          clickRate: sent > 0 ? Math.round((clicks / sent) * 1000) / 10 : 0,
-          replyRate: local?.replyRate ?? 0,
-          totalContacts: sent,
-          conversions: local?.conversions ?? 0,
-          lastSent: (b as any).sentDate ? new Date((b as any).sentDate).getTime() : (local?.lastSent ?? null),
-        };
-      })
-    : campaigns;
-
   const activeFilter = PLATFORM_FILTERS.find(f => f.id === platformFilter) ?? PLATFORM_FILTERS[0];
-  const displayCampaigns: MktCampaign[] = baseCampaigns.filter(c =>
-    activeFilter.matches((c.channel ?? "brevo_email").toLowerCase())
+  const displayCampaigns: MktCampaign[] = campaigns.filter(c =>
+    activeFilter.matches((c.channel ?? "email").toLowerCase())
   );
 
-  // Per-platform counts for the filter pills
   const platformCounts: Record<string, number> = {};
   for (const f of PLATFORM_FILTERS) {
-    platformCounts[f.id] = baseCampaigns.filter(c =>
-      f.matches((c.channel ?? "brevo_email").toLowerCase())
+    platformCounts[f.id] = campaigns.filter(c =>
+      f.matches((c.channel ?? "email").toLowerCase())
     ).length;
   }
 
@@ -561,33 +291,11 @@ export function MktCampaignWall() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)", display: "flex", alignItems: "center", gap: 8 }}>
-            {brevoLoading ? "Cargando campañas…" : `${displayCampaigns.length} campañas registradas`}
-            {!brevoLoading && (
-              <button onClick={loadCampaigns} title="Actualizar campañas" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--mkt-text-muted)", padding: 0, lineHeight: 1 }}>
-                <svg width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              </button>
-            )}
+          <p style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>
+            {displayCampaigns.length} campañas registradas
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <a
-            href="https://app.brevo.com/campaigns/listing"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: "8px 14px", borderRadius: 8,
-              border: "1px solid var(--mkt-border)",
-              background: "transparent", color: "var(--mkt-text-muted)",
-              fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "none",
-              display: "flex", alignItems: "center", gap: 6,
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
-            </svg>
-            Ver datos en Brevo
-          </a>
           <button onClick={() => setShowForm(true)} style={{
             padding: "8px 16px", borderRadius: 8, border: "none",
             background: "var(--mkt-accent)", color: "#0a0a0a", fontSize: 13, fontWeight: 600, cursor: "pointer",
@@ -628,20 +336,7 @@ export function MktCampaignWall() {
         })}
       </div>
 
-      {brevoError && (
-        <div style={{
-          padding: "10px 14px", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)",
-          fontSize: 12, color: "#ef4444",
-        }}>
-          <span>Error Brevo: {brevoError}</span>
-          <button onClick={loadCampaigns} style={{ marginLeft: 12, padding: "3px 10px", borderRadius: 5, border: "1px solid rgba(239,68,68,0.4)", background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }}>
-            Reintentar
-          </button>
-        </div>
-      )}
-
-      {!brevoLoading && displayCampaigns.length === 0 && (
+      {displayCampaigns.length === 0 && (
         <div style={{
           padding: 40, textAlign: "center",
           color: "var(--mkt-text-muted)", fontSize: 13,
@@ -654,7 +349,7 @@ export function MktCampaignWall() {
         </div>
       )}
 
-      <BSCardLoader loading={brevoLoading} label="Cargando campañas de Brevo…">
+      <BSCardLoader loading={false} label="Cargando campañas…">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
         {displayCampaigns.map(camp => {
           const openRate = safeRate(camp.openRate);
@@ -686,7 +381,7 @@ export function MktCampaignWall() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                   <StatusBadge status={camp.status} />
-                  <ChannelBadge channel={camp.channel || "brevo_email"} />
+                  <ChannelBadge channel={camp.channel || "email"} />
                 </div>
               </div>
 
@@ -719,28 +414,24 @@ export function MktCampaignWall() {
 
               {expandedId === camp.id && (
                 <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--mkt-border)" }}>
-                  {camp.brevoCampaignId ? (
-                    <LiveStatsPanel brevoCampaignId={camp.brevoCampaignId} />
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: "var(--mkt-text)" }}>
-                        Timeline
-                      </div>
-                      {[
-                        { date: mktFormatRelative(camp.startDate), text: "Campaña creada" },
-                        camp.lastSent ? { date: mktFormatRelative(camp.lastSent), text: "Último envío registrado" } : null,
-                        { date: "—", text: camp.totalContacts > 0 ? `${camp.totalContacts} contactos en segmento` : "Sin contactos registrados" },
-                      ].filter(Boolean).map((ev, j) => (
-                        <div key={j} style={{ display: "flex", gap: 10, fontSize: 12 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: 3, background: "var(--mkt-accent)", marginTop: 5, flexShrink: 0 }} />
-                          <div style={{ color: "var(--mkt-text)" }}>
-                            <span style={{ color: "var(--mkt-text-muted)" }}>{ev!.date}</span>
-                            <span style={{ marginLeft: 8 }}>{ev!.text}</span>
-                          </div>
-                        </div>
-                      ))}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: "var(--mkt-text)" }}>
+                      Timeline
                     </div>
-                  )}
+                    {[
+                      { date: mktFormatRelative(camp.startDate), text: "Campaña creada" },
+                      camp.lastSent ? { date: mktFormatRelative(camp.lastSent), text: "Último envío registrado" } : null,
+                      { date: "—", text: camp.totalContacts > 0 ? `${camp.totalContacts} contactos en segmento` : "Sin contactos registrados" },
+                    ].filter(Boolean).map((ev, j) => (
+                      <div key={j} style={{ display: "flex", gap: 10, fontSize: 12 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: 3, background: "var(--mkt-accent)", marginTop: 5, flexShrink: 0 }} />
+                        <div style={{ color: "var(--mkt-text)" }}>
+                          <span style={{ color: "var(--mkt-text-muted)" }}>{ev!.date}</span>
+                          <span style={{ marginLeft: 8 }}>{ev!.text}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

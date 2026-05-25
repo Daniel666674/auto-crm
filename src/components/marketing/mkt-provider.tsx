@@ -20,7 +20,6 @@ interface MktContextValue {
   addContact: (data: Partial<MktContact>) => void;
   addCampaign: (data: Partial<MktCampaign>) => void;
   recalculateScores: () => Promise<void>;
-  syncFromBrevo: () => Promise<{ synced: number; total: number }>;
   refresh: () => void;
 }
 
@@ -50,10 +49,10 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
           id: r.id, name: r.name, company: r.company ?? "", email: r.email ?? "",
           phone: r.phone ?? "", source: r.source ?? "", tier: 0,
           temperature: r.temperature ?? "cold", score,
-          brevoCadence: "", engagementStatus: scoreToEngagement(score, "cold"),
+          engagementStatus: scoreToEngagement(score, "cold"),
           emailOpens: 0, emailClicks: 0, leadSourceDetail: "", marketingNotes: "",
           readyForSales: false, passedToSalesAt: null, industry: "", lastActivity: 0,
-          linkedinUrl: "", brevoId: "", jobTitle: "", companySize: "", location: "",
+          linkedinUrl: "", jobTitle: "", companySize: "", location: "",
           emailVerified: false, emailBounced: false, emailUnsubscribed: false,
         };
       });
@@ -148,32 +147,12 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
   const recalculateScores = useCallback(async () => {
     setSyncing(true);
     try {
-      await fetch("/api/brevo/recalculate-scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pushToBrevo: true }),
-      });
+      await fetch("/api/marketing/recalculate-scores", { method: "POST" });
       const [updated, sales] = await Promise.all([
         fetch("/api/marketing/contacts").then(r => r.json()),
         fetch("/api/contacts").then(r => r.json()).catch(() => []),
       ]);
       setContacts(mergeContacts(Array.isArray(updated) ? updated : [], Array.isArray(sales) ? sales : []));
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
-  const syncFromBrevo = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const res = await fetch("/api/brevo/sync", { method: "POST" });
-      const data = await res.json();
-      const [updated, sales] = await Promise.all([
-        fetch("/api/marketing/contacts").then(r => r.json()),
-        fetch("/api/contacts").then(r => r.json()).catch(() => []),
-      ]);
-      setContacts(mergeContacts(Array.isArray(updated) ? updated : [], Array.isArray(sales) ? sales : []));
-      return { synced: data.synced || 0, total: data.total || 0 };
     } finally {
       setSyncing(false);
     }
@@ -183,7 +162,7 @@ export function MktProvider({ children }: { children: React.ReactNode }) {
     <MktContext.Provider value={{
       contacts, campaigns, notifications, loading, syncing,
       updateEngagement, passToSales, addContact, addCampaign,
-      recalculateScores, syncFromBrevo, refresh: loadData,
+      recalculateScores, refresh: loadData,
     }}>
       {children}
     </MktContext.Provider>

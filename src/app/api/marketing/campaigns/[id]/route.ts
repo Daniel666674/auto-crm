@@ -58,7 +58,7 @@ export async function PATCH(req: Request, { params }: Params) {
         notifySlackCampaignLaunched({
           id,
           name: (body.name ?? existing.name) as string,
-          channel: (body.channel ?? existing.channel ?? "brevo_email") as string,
+          channel: (body.channel ?? existing.channel ?? "email") as string,
           targetSegment: (body.targetSegment ?? existing.target_segment ?? "") as string,
           totalContacts: Number(body.totalContacts ?? existing.total_contacts ?? 0),
         }).catch(() => {});

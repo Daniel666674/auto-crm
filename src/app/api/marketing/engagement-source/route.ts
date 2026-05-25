@@ -12,7 +12,7 @@ export async function GET() {
   return NextResponse.json({ source: getEngagementSource() });
 }
 
-// PUT /api/marketing/engagement-source { source: "brevo" | "local" } — superadmin
+// PUT /api/marketing/engagement-source { source: "local" } — superadmin
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -26,8 +26,8 @@ export async function PUT(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
-  if (body.source !== "brevo" && body.source !== "local") {
-    return NextResponse.json({ error: "source debe ser 'brevo' o 'local'" }, { status: 400 });
+  if (body.source !== "local") {
+    return NextResponse.json({ error: "source debe ser 'local'" }, { status: 400 });
   }
   setEngagementSource(body.source);
   return NextResponse.json({ ok: true, source: body.source });

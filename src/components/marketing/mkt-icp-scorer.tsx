@@ -295,7 +295,7 @@ export function MktIcpScorer() {
             {syncing ? "Calculando…" : "Recalcular Scores"}
           </button>
           <p style={{ fontSize: 10, color: "var(--mkt-text-muted)" }}>
-            Actualiza SCORE y TIER según el algoritmo ICP. Sincroniza con Brevo.
+            Actualiza SCORE y TIER según el algoritmo ICP.
           </p>
         </div>
       </div>
@@ -351,7 +351,7 @@ export function MktIcpScorer() {
               No hay contactos con estos filtros.
               {contacts.length === 0 && (
                 <div style={{ marginTop: 8, fontSize: 12 }}>
-                  Sincroniza con Brevo para cargar contactos reales.
+                  Agrega contactos usando el módulo de contactos de marketing.
                 </div>
               )}
             </div>

@@ -67,9 +67,6 @@ function ContactCard({
         </div>
         <TierBadge tier={contact.tier} />
       </div>
-      <div style={{ fontSize: 11, color: "var(--mkt-accent)", marginBottom: 6, opacity: 0.8 }}>
-        {contact.brevoCadence}
-      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--mkt-bg)", overflow: "hidden" }}>
           <div style={{ width: `${contact.score}%`, height: "100%", borderRadius: 2, background: scoreColor, transition: "width 0.8s" }} />
@@ -107,14 +104,10 @@ export function MktEngagementBoard() {
   const [dragged, setDragged] = useState<MktContact | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [filterTier, setFilterTier] = useState("");
-  const [filterCadence, setFilterCadence] = useState("");
   const [filterSource, setFilterSource] = useState("");
-
-  const cadences = [...new Set(contacts.map(c => c.brevoCadence))];
 
   const filtered = contacts.filter(c => {
     if (filterTier && c.tier !== parseInt(filterTier)) return false;
-    if (filterCadence && c.brevoCadence !== filterCadence) return false;
     if (filterSource && c.source !== filterSource) return false;
     return true;
   });
@@ -140,10 +133,6 @@ export function MktEngagementBoard() {
           <option value="1">Tier 1</option>
           <option value="2">Tier 2</option>
           <option value="3">Tier 3</option>
-        </select>
-        <select style={selectStyle} value={filterCadence} onChange={e => setFilterCadence(e.target.value)}>
-          <option value="">Todas las cadencias</option>
-          {cadences.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <select style={selectStyle} value={filterSource} onChange={e => setFilterSource(e.target.value)}>
           <option value="">Todas las fuentes</option>

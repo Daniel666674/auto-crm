@@ -3,16 +3,11 @@ import { emailEvents, contacts, crmSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const FLAG_KEY = "mkt_engagement_source";
-export type EngagementSource = "brevo" | "local";
+export type EngagementSource = "local";
 
-/** Where the marketing engagement signals come from. Defaults to brevo (golden). */
+/** Marketing engagement signals come from the local email_events store. */
 export function getEngagementSource(): EngagementSource {
-  try {
-    const row = db.select({ value: crmSettings.value }).from(crmSettings).where(eq(crmSettings.key, FLAG_KEY)).get();
-    return row?.value === "local" ? "local" : "brevo";
-  } catch {
-    return "brevo";
-  }
+  return "local";
 }
 
 export function setEngagementSource(v: EngagementSource): void {
@@ -34,8 +29,7 @@ export interface LocalEngagement {
 
 /**
  * Derives engagement per contact email purely from the local email_events store
- * (BlackScale sends/opens/clicks/replies + suppression signals). This is the
- * Brevo-free source for Phase 3, gated by the mkt_engagement_source flag.
+ * (BlackScale sends/opens/clicks/replies + suppression signals).
  */
 export function computeLocalEngagementByEmail(): Map<string, LocalEngagement> {
   const rows = db

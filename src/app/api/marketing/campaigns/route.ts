@@ -12,7 +12,7 @@ type MktCampaignRow = {
   target_segment: string; cadence_type: string; open_rate: number;
   click_rate: number; reply_rate: number; total_contacts: number;
   conversions: number; last_sent: number | null;
-  channel: string; brevo_campaign_id: string;
+  channel: string;
   owner_id: string | null;
   outcome_reason_id: string | null;
   outcome_notes: string | null;
@@ -25,7 +25,7 @@ function mapRow(row: MktCampaignRow) {
     targetSegment: row.target_segment, cadenceType: row.cadence_type,
     openRate: row.open_rate ?? 0, clickRate: row.click_rate ?? 0, replyRate: row.reply_rate ?? 0,
     totalContacts: row.total_contacts, conversions: row.conversions, lastSent: row.last_sent,
-    channel: row.channel ?? "brevo_email", brevoCampaignId: row.brevo_campaign_id ?? "",
+    channel: row.channel ?? "email",
     ownerId: row.owner_id ?? null,
     outcomeReasonId: row.outcome_reason_id ?? null,
     outcomeNotes: row.outcome_notes ?? null,
@@ -51,15 +51,14 @@ export async function POST(req: Request) {
     mktDb.prepare(`
       INSERT INTO mkt_campaigns
         (id, name, status, start_date, target_segment, cadence_type, open_rate, click_rate,
-         reply_rate, total_contacts, conversions, last_sent, channel, brevo_campaign_id, owner_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         reply_rate, total_contacts, conversions, last_sent, channel, owner_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       id, body.name, body.status ?? "active",
       body.startDate ?? Date.now(), body.targetSegment ?? "",
       body.cadenceType ?? "outreach", 0, 0, 0,
       body.totalContacts ?? 0, 0, null,
-      body.channel ?? "brevo_email",
-      body.brevoCampaignId ?? "",
+      body.channel ?? "email",
       ownerId
     );
     const row = mktDb.prepare("SELECT * FROM mkt_campaigns WHERE id = ?").get(id) as MktCampaignRow;

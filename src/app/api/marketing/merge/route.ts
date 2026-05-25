@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 type MktContactFull = {
   id: string; name: string; email: string; phone: string; company: string;
-  industry: string; linkedin_url: string; brevo_id: string; job_title: string;
+  industry: string; linkedin_url: string; job_title: string;
   company_size: string; location: string; marketing_notes: string;
   score: number; tier: number;
 };
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   if (!winner || !loser) return NextResponse.json({ error: "Contacto no encontrado" }, { status: 404 });
 
   // Fill nulls/empties on winner from loser; keep higher score
-  const fillFields = ["email", "phone", "company", "industry", "linkedin_url", "brevo_id", "job_title", "company_size", "location", "marketing_notes"] as const;
+  const fillFields = ["email", "phone", "company", "industry", "linkedin_url", "job_title", "company_size", "location", "marketing_notes"] as const;
   const sets: string[] = [];
   const vals: unknown[] = [];
   for (const f of fillFields) {

@@ -8,7 +8,6 @@ export interface MktContact {
   tier: number;
   temperature: string;
   score: number;
-  brevoCadence: string;
   engagementStatus: "hot" | "warm" | "cold" | "dead";
   emailOpens: number;
   emailClicks: number;
@@ -19,7 +18,6 @@ export interface MktContact {
   industry: string;
   lastActivity: number;
   linkedinUrl: string;
-  brevoId: string;
   jobTitle: string;
   companySize: string;
   location: string;
@@ -36,7 +34,6 @@ export interface MktCampaign {
   targetSegment: string;
   cadenceType: string;
   channel: string;
-  brevoCampaignId: string;
   openRate: number;
   clickRate: number;
   replyRate: number;
@@ -47,7 +44,7 @@ export interface MktCampaign {
 
 export type MktSection =
   | "engagement" | "campaigns" | "contacts" | "attribution" | "handoff"
-  | "segment-health" | "icp-insights" | "lists"
+  | "segment-health" | "icp-insights"
   | "pipeline-view" | "lead-velocity"
   | "mkt-analytics" | "intelligence"
   | "calendar" | "abm"
@@ -76,13 +73,13 @@ export const MKT_INDUSTRIES = [
 ];
 
 export const MKT_CHANNELS = [
-  { id: "brevo_email", label: "Brevo Email" },
+  { id: "email", label: "Email" },
   { id: "linkedin", label: "LinkedIn Ads" },
   { id: "facebook", label: "Facebook Ads" },
   { id: "instagram", label: "Instagram Ads" },
   { id: "meta", label: "Meta (FB+IG combo)" },
   { id: "google_ads", label: "Google Ads" },
-  { id: "outbound", label: "Outbound Sequence (Brevo)" },
+  { id: "outbound", label: "Outbound Sequence" },
 ] as const;
 
 export type MktChannel = typeof MKT_CHANNELS[number]["id"];

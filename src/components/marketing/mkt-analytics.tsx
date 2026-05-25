@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { MktBrevoHub } from "@/components/marketing/mkt-brevo-hub";
 import { BSLoading } from "@/components/ui/BSLoading";
 import { GA4Detail } from "@/components/analytics/ga4-detail";
 import { GSCPanel } from "@/components/analytics/gsc-panel";
@@ -28,15 +27,6 @@ function KPI({ label, value, sub }: { label: string; value: string | number; sub
   );
 }
 
-interface BrevoCampaign {
-  id: number;
-  name: string;
-  status: string;
-  totalContacts: number;
-  openRate: number;
-  clickRate: number;
-}
-
 interface GA4Data {
   sessions: number;
   pageviews: number;
@@ -54,36 +44,12 @@ function safeN(v: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) => void }) {
-  const [campaigns, setCampaigns] = useState<BrevoCampaign[]>([]);
-  const [brevoLoading, setBrevoLoading] = useState(true);
+export function MktAnalytics({ onNavigate: _onNavigate }: { onNavigate?: (section: string) => void }) {
   const [ga4, setGa4] = useState<GA4Data | null>(null);
   const [ga4Loading, setGa4Loading] = useState(true);
-  const [showHub, setShowHub] = useState(false);
   const [showGA4, setShowGA4] = useState(false);
 
   useEffect(() => {
-    fetch("/api/brevo/campaigns")
-      .then(r => r.json())
-      .then(d => {
-        const raw = d.campaigns || [];
-        const mapped: BrevoCampaign[] = raw.map((c: any) => {
-          const gs = c.statistics?.globalStats ?? {};
-          const sent = safeN(gs.sent);
-          const opens = safeN(gs.uniqueViews ?? gs.uniqueOpens);
-          const clicks = safeN(gs.uniqueClicks);
-          return {
-            id: c.id, name: c.name, status: c.status,
-            totalContacts: sent,
-            openRate: sent > 0 ? (opens / sent) * 100 : 0,
-            clickRate: sent > 0 ? (clicks / sent) * 100 : 0,
-          };
-        });
-        setCampaigns(mapped);
-      })
-      .catch(() => {})
-      .finally(() => setBrevoLoading(false));
-
     fetch("/api/ga4")
       .then(r => r.json())
       .then(setGa4)
@@ -91,57 +57,14 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
       .finally(() => setGa4Loading(false));
   }, []);
 
-  const totalSent = campaigns.reduce((s, c) => s + c.totalContacts, 0);
-  const avgOpenRate = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + c.openRate, 0) / campaigns.length
-    : 0;
-  const avgClickRate = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + c.clickRate, 0) / campaigns.length
-    : 0;
-  const best = campaigns.length > 0
-    ? campaigns.reduce((a, b) => b.openRate > a.openRate ? b : a)
-    : null;
-
   const ga4Connected = ga4 && !ga4.error;
   const ga4NotConnected = ga4?.error === "ga4_not_connected";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Visión 360 de canales de marketing. Brevo y GA4 conectados.</div>
+      <div style={{ fontSize: 12, color: "var(--mkt-text-muted)" }}>Visión 360 de canales de marketing. GA4 y Search Console conectados.</div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
-
-        {/* Brevo */}
-        <div style={{ ...card, border: `1px solid rgba(195,154,76,0.3)` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--mkt-text)" }}>Brevo Overview</div>
-            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "rgba(72,187,120,0.15)", color: "#48bb78" }}>Conectado</span>
-          </div>
-          {brevoLoading ? (
-            <BSLoading size="sm" minHeight={80} label="Cargando…" />
-          ) : (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <KPI label="Campañas" value={campaigns.length} />
-                <KPI label="Total enviados" value={totalSent.toLocaleString("es-CO")} />
-                <KPI label="Open rate avg" value={`${avgOpenRate.toFixed(1)}%`} />
-                <KPI label="Click rate avg" value={`${avgClickRate.toFixed(1)}%`} />
-              </div>
-              {best && best.openRate > 0 && (
-                <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(195,154,76,0.06)", border: "1px solid rgba(195,154,76,0.15)", fontSize: 11 }}>
-                  <div style={{ color: "var(--mkt-text-muted)", marginBottom: 3 }}>Mejor campaña</div>
-                  <div style={{ fontWeight: 600, color: "var(--mkt-text)", marginBottom: 2 }}>{best.name}</div>
-                  <div style={{ color: "var(--mkt-text-muted)" }}>Open {(best.openRate || 0).toFixed(1)}% · Clicks {(best.clickRate || 0).toFixed(1)}%</div>
-                </div>
-              )}
-              <button
-                onClick={() => setShowHub(v => !v)}
-                style={{ alignSelf: "flex-start", padding: "7px 14px", borderRadius: 8, border: `1px solid rgba(195,154,76,0.3)`, background: showHub ? "rgba(195,154,76,0.12)" : "transparent", color: GOLD, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-                {showHub ? "Ocultar datos Brevo ↑" : "Ver todos los datos de Brevo ↓"}
-              </button>
-            </>
-          )}
-        </div>
 
         {/* Google Analytics 4 */}
         <div style={{ ...card, border: ga4Connected ? "1px solid rgba(195,154,76,0.3)" : "1px solid var(--mkt-border, #1e1e1e)", opacity: ga4Connected ? 1 : ga4NotConnected ? 0.75 : 0.55 }}>
@@ -224,17 +147,6 @@ export function MktAnalytics({ onNavigate }: { onNavigate?: (section: string) =>
         </div>
 
       </div>
-
-      {/* Inline full Brevo data panel — toggled by "Ver todos los datos de Brevo" button */}
-      {showHub && (
-        <div style={{
-          borderRadius: 12, border: "1px solid rgba(195,154,76,0.25)",
-          background: "rgba(195,154,76,0.03)",
-          padding: "20px 22px",
-        }}>
-          <MktBrevoHub />
-        </div>
-      )}
 
       {/* Inline GA4 detail panel — toggled by "Ver Analytics detallado" button */}
       {showGA4 && (

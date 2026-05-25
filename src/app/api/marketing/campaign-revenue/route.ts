@@ -8,18 +8,14 @@ import { isNotNull, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-// Resolve campaign IDs to human-readable names from the marketing DB.
-// firstTouchCampaignId may hold an mkt_campaigns.id OR a brevo_campaign_id,
-// so we index both.
 function buildCampaignNameMap(): Map<string, string> {
   const map = new Map<string, string>();
   try {
     const rows = mktDb
-      .prepare("SELECT id, name, brevo_campaign_id FROM mkt_campaigns")
-      .all() as Array<{ id: string; name: string; brevo_campaign_id: string | null }>;
+      .prepare("SELECT id, name FROM mkt_campaigns")
+      .all() as Array<{ id: string; name: string }>;
     for (const r of rows) {
       if (r.id) map.set(r.id, r.name);
-      if (r.brevo_campaign_id) map.set(r.brevo_campaign_id, r.name);
     }
   } catch { /* table may not exist yet */ }
   return map;

@@ -746,7 +746,7 @@ function TabIntegraciones({ role }: { role: string }) {
 
   const [ga4Connected, setGa4Connected] = useState<boolean | null>(null);
   const [ga4Checking, setGa4Checking] = useState(false);
-  const [envStatus, setEnvStatus] = useState<{ brevo: boolean; apollo: boolean; ga4Property: string | null; gscSiteUrl: string } | null>(null);
+  const [envStatus, setEnvStatus] = useState<{ apollo: boolean; ga4Property: string | null; gscSiteUrl: string } | null>(null);
   const [googleConn, setGoogleConn] = useState<{ connected: boolean; email: string | null } | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
 
@@ -788,15 +788,6 @@ function TabIntegraciones({ role }: { role: string }) {
     }
   };
 
-  const [brevoKey, setBrevoKey] = useState("");
-  const [savingBrevo, setSavingBrevo] = useState(false);
-  const [brevoStatus, setBrevoStatus] = useState<"idle" | "ok" | "error">("idle");
-  const [brevoVisible, setBrevoVisible] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<null | { synced: number; total: number }>(null);
-  const [recalculating, setRecalculating] = useState(false);
-  const [recalcResult, setRecalcResult] = useState<null | Record<string, unknown>>(null);
-
   const [apolloKey, setApolloKey] = useState("");
   const [savingApollo, setSavingApollo] = useState(false);
   const [apolloStatus, setApolloStatus] = useState<"idle" | "ok" | "error">("idle");
@@ -810,44 +801,6 @@ function TabIntegraciones({ role }: { role: string }) {
       if (d.lastSync) setApolloLastSync(d.lastSync);
     }).catch(() => {});
   }, []);
-
-  const handleSaveBrevo = async () => {
-    if (!brevoKey.trim()) return;
-    setSavingBrevo(true);
-    try {
-      const res = await fetch("https://api.brevo.com/v3/account", { headers: { "api-key": brevoKey } });
-      setBrevoStatus(res.ok ? "ok" : "error");
-      toast[res.ok ? "success" : "error"](res.ok ? "Brevo API key válida. Actualiza BREVO_API_KEY en .env.local." : "Brevo API key inválida.");
-    } catch { setBrevoStatus("error"); toast.error("No se pudo verificar la key de Brevo."); }
-    finally { setSavingBrevo(false); }
-  };
-
-  const handleSyncBrevo = async () => {
-    setSyncing(true); setSyncResult(null);
-    try {
-      const res = await fetch("/api/brevo/sync", { method: "POST" });
-      const data = await res.json();
-      if (data.error) { toast.error(data.error); return; }
-      setSyncResult({ synced: data.synced, total: data.total });
-      toast.success(`${data.synced} contactos sincronizados desde Brevo`);
-    } catch { toast.error("Error al sincronizar con Brevo"); }
-    finally { setSyncing(false); }
-  };
-
-  const handleRecalculate = async () => {
-    setRecalculating(true); setRecalcResult(null);
-    try {
-      const res = await fetch("/api/brevo/recalculate-scores", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pushToBrevo: true }),
-      });
-      const data = await res.json();
-      if (data.error) { toast.error(data.error); return; }
-      setRecalcResult(data);
-      toast.success(`Scores recalculados: ${data.processed} contactos`);
-    } catch { toast.error("Error al recalcular scores"); }
-    finally { setRecalculating(false); }
-  };
 
   const handleSaveApollo = async () => {
     if (!apolloKey.trim()) return;
@@ -886,65 +839,7 @@ function TabIntegraciones({ role }: { role: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Brevo */}
-      <IntSection title="Brevo — Email Marketing" icon={<span style={{ fontSize: 14, color: "#0070f3" }}>✉</span>}>
-        {envStatus !== null && (
-          <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>BREVO_API_KEY en servidor:</span>
-            <StatusBadge connected={envStatus.brevo} />
-          </div>
-        )}
-        {isSuperadmin ? (
-          <>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <input type={brevoVisible ? "text" : "password"} placeholder="xkeysib-… (verificar clave)" value={brevoKey} onChange={e => setBrevoKey(e.target.value)}
-                  style={{ ...S.input, paddingRight: 36 }} />
-                <button onClick={() => setBrevoVisible(v => !v)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", display: "flex" }}>
-                  {brevoVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <button style={S.btn()} onClick={handleSaveBrevo} disabled={savingBrevo || !brevoKey.trim()}>
-                {savingBrevo ? <RefreshCw size={13} className="animate-spin" /> : "Verificar"}
-              </button>
-              <StatusIcon status={brevoStatus} />
-            </div>
-            <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8 }}>
-              Para producción: actualiza <code>BREVO_API_KEY</code> en <code>.env.local</code> y reinicia PM2.
-            </p>
-            <div style={{ ...S.divider, margin: "14px 0" }} />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Sincronizar contactos</div>
-                <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>Importa contactos de Brevo con atributos SCORE, TIER e INDUSTRY.</p>
-                <button style={{ ...S.btn("outline"), width: "100%", justifyContent: "center" }} onClick={handleSyncBrevo} disabled={syncing}>
-                  {syncing ? <><RefreshCw size={12} className="animate-spin" />Sincronizando…</> : "Sincronizar desde Brevo"}
-                </button>
-                {syncResult && <p style={{ fontSize: 11, color: "#22c55e", marginTop: 6 }}>✓ {syncResult.synced} de {syncResult.total} sincronizados</p>}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Recalcular ICP Scores</div>
-                <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>Aplica algoritmo completo y actualiza TIER en Brevo.</p>
-                <button style={{ ...S.btn("outline"), width: "100%", justifyContent: "center" }} onClick={handleRecalculate} disabled={recalculating}>
-                  {recalculating ? <><RefreshCw size={12} className="animate-spin" />Calculando…</> : "Recalcular Scores ICP"}
-                </button>
-                {recalcResult && (
-                  <p style={{ fontSize: 11, color: "#22c55e", marginTop: 6 }}>
-                    ✓ {String(recalcResult.processed)} procesados — T1: {String((recalcResult.tierBreakdown as any)?.tier1 || 0)}, T2: {String((recalcResult.tierBreakdown as any)?.tier2 || 0)}
-                  </p>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Estado de conexión</span>
-            <StatusBadge connected={true} />
-          </div>
-        )}
-      </IntSection>
-
-      {/* Engagement source (Brevo → BlackScale local, Phase 3) */}
+      {/* Engagement source */}
       <EngagementSourceSettings role={role} />
 
       {/* Apollo */}

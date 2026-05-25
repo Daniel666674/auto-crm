@@ -11,7 +11,6 @@ import { MktSegmentHealth } from "@/components/marketing/mkt-segment-health";
 import { MktAttributionDashboard } from "@/components/marketing/mkt-attribution";
 import { MktHandoffCenter } from "@/components/marketing/mkt-handoff-center";
 import { MktPipelineView } from "@/components/marketing/mkt-pipeline-view";
-import { MktLists } from "@/components/marketing/mkt-lists";
 import { MktLeadVelocity } from "@/components/marketing/mkt-lead-velocity";
 import { MktAnalytics } from "@/components/marketing/mkt-analytics";
 import { MktCalendar } from "@/components/marketing/mkt-calendar";
@@ -52,7 +51,6 @@ const SECTION_LABELS: Record<MktSection, string> = {
   "segment-health": "Segment Health",
   attribution: "Atribución",
   handoff: "Handoff Center",
-  lists: "Listas Brevo",
   "pipeline-view": "Vista Pipeline",
   "lead-velocity": "Lead Velocity",
   "mkt-analytics": "Analytics",
@@ -69,7 +67,6 @@ const SECTION_LABELS: Record<MktSection, string> = {
 
 // ── Contacts tab ─────────────────────────────────────────────────────────────
 function MktContactDetailModal({ contact, onClose }: { contact: import("@/components/marketing/mkt-types").MktContact; onClose: () => void }) {
-  const isBrevo = !!contact.brevoId;
   const lastAct = contact.lastActivity ? new Date(contact.lastActivity).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "—";
   const row = (label: string, value: React.ReactNode) => (
     <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--mkt-border)", fontSize: 12 }}>
@@ -88,7 +85,7 @@ function MktContactDetailModal({ contact, onClose }: { contact: import("@/compon
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--mkt-text-muted)", fontSize: 22, cursor: "pointer", padding: 0, lineHeight: 1 }} aria-label="Cerrar">×</button>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: isBrevo ? "#3b82f620" : "#8b5cf620", color: isBrevo ? "#3b82f6" : "#8b5cf6" }}>{isBrevo ? "Brevo" : "Apollo"}</span>
+          <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: "#8b5cf620", color: "#8b5cf6" }}>{contact.source || "web"}</span>
           {contact.tier ? <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 700, background: "var(--mkt-accent)20", color: "var(--mkt-accent)" }}>T{contact.tier}</span> : null}
           {contact.engagementStatus ? <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.06)", color: "var(--mkt-text-muted)", textTransform: "uppercase" }}>{contact.engagementStatus}</span> : null}
           {contact.readyForSales ? <span style={{ padding: "3px 9px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>Ready for sales</span> : null}
@@ -111,7 +108,6 @@ function MktContactDetailModal({ contact, onClose }: { contact: import("@/compon
           {row("Aperturas", contact.emailOpens)}
           {row("Clics", contact.emailClicks)}
           {row("Última actividad", lastAct)}
-          {row("Brevo cadence", contact.brevoCadence || "—")}
           {row("Fuente detalle", contact.leadSourceDetail || "—")}
         </div>
         {contact.marketingNotes && (
@@ -128,7 +124,6 @@ function MktContactDetailModal({ contact, onClose }: { contact: import("@/compon
 function MktContacts() {
   const { contacts } = useMkt();
   const [search, setSearch] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<"all" | "brevo" | "apollo">("all");
   const [tierFilter, setTierFilter] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [sortBy, setSortBy] = useState<"score" | "tier" | "name" | "company" | "activity">("score");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
@@ -139,10 +134,8 @@ function MktContacts() {
     .filter(c => {
       const q = search.toLowerCase();
       const matchSearch = !search || c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q);
-      const isBrevo = !!c.brevoId;
-      const matchSource = sourceFilter === "all" || (sourceFilter === "brevo" ? isBrevo : !isBrevo);
       const matchTier = tierFilter === 0 || c.tier === tierFilter;
-      return matchSearch && matchSource && matchTier;
+      return matchSearch && matchTier;
     })
     .sort((a, b) => {
       let diff = 0;
@@ -154,8 +147,6 @@ function MktContacts() {
       return sortDir === "desc" ? -diff : diff;
     });
 
-  const brevoCount = contacts.filter(c => !!c.brevoId).length;
-  const apolloCount = contacts.length - brevoCount;
   const tierCounts = [1, 2, 3, 4].map(t => contacts.filter(c => c.tier === t).length);
 
   const cell: React.CSSProperties = { padding: "10px 12px", fontSize: 12, borderBottom: "1px solid var(--mkt-border)", verticalAlign: "middle" };
@@ -177,8 +168,6 @@ function MktContacts() {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {[
           { label: "Total", value: contacts.length },
-          { label: "Brevo", value: brevoCount },
-          { label: "Solo Apollo", value: apolloCount },
           ...tierCounts.map((n, i) => ({ label: `T${i + 1}`, value: n })),
         ].map(({ label, value }) => (
           <div key={label} style={{ padding: "8px 14px", borderRadius: 8, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)", fontSize: 12 }}>
@@ -194,12 +183,6 @@ function MktContacts() {
           <svg style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "var(--mkt-text-muted)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" /></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre, email, empresa…" style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 6, paddingBottom: 6, borderRadius: 7, border: "1px solid var(--mkt-border)", background: "var(--mkt-surface)", color: "var(--mkt-text)", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
         </div>
-        {(["all", "brevo", "apollo"] as const).map(s => (
-          <button key={s} style={btn(sourceFilter === s)} onClick={() => setSourceFilter(s)}>
-            {s === "all" ? "Todos" : s === "brevo" ? "Brevo" : "Solo Apollo"}
-          </button>
-        ))}
-        <div style={{ width: 1, height: 20, background: "var(--mkt-border)" }} />
         {([0, 1, 2, 3, 4] as const).map(t => (
           <button key={t} style={btn(tierFilter === t)} onClick={() => setTierFilter(t)}>
             {t === 0 ? "Todos Tiers" : `T${t}`}
@@ -234,7 +217,6 @@ function MktContacts() {
             {filtered.length === 0 ? (
               <tr><td colSpan={10} style={{ ...cell, textAlign: "center", color: "var(--mkt-text-muted)", padding: "32px 0" }}>Sin resultados</td></tr>
             ) : filtered.map((c, i) => {
-              const isBrevo = !!c.brevoId;
               const liUrl = c.linkedinUrl || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(c.name + (c.company ? " " + c.company : ""))}`;
               return (
                 <tr
@@ -272,8 +254,8 @@ function MktContacts() {
                     >in</a>
                   </td>
                   <td style={cell}>
-                    <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: isBrevo ? "#3b82f620" : "#8b5cf620", color: isBrevo ? "#3b82f6" : "#8b5cf6" }}>
-                      {isBrevo ? "Brevo" : "Apollo"}
+                    <span style={{ padding: "2px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600, background: "#8b5cf620", color: "#8b5cf6" }}>
+                      {c.source || "web"}
                     </span>
                   </td>
                   <td style={cell}>
@@ -735,7 +717,6 @@ function MarketingContent() {
       case "forecast": return <MktForecast />;
       case "attribution-model": return <MktAttributionModel />;
       case "handoff": return <MktHandoffCenter />;
-      case "lists": return <MktLists onNavigate={setSection as any} />;
       case "mkt-analytics": return <MktAnalytics onNavigate={setSection as any} />;
       case "intelligence": return <MktIntelligence />;
       case "pipeline-view": return <MktPipelineView />;
@@ -802,7 +783,7 @@ function MarketingContent() {
             borderBottom: "1px solid rgba(209,156,21,0.15)",
             fontSize: 12, color: "var(--mkt-text-muted)",
           }}>
-            No hay contactos. Usa el botón <strong style={{ color: "var(--mkt-accent)" }}>Sincronizar Brevo</strong> en el panel izquierdo para importar los contactos reales.
+            No hay contactos. Agrega contactos usando el módulo de importación o regístralos manualmente.
           </div>
         )}
 

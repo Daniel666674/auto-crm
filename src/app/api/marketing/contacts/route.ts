@@ -3,18 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { mktDb } from "@/db/mkt-db";
 import { fireTriggers } from "@/lib/triggers";
-import { getEngagementSource, computeLocalEngagementByEmail } from "@/lib/mkt-engagement";
+import { computeLocalEngagementByEmail } from "@/lib/mkt-engagement";
 
 export const dynamic = "force-dynamic";
 
 type MktContactRow = {
   id: string; name: string; company: string; email: string; phone: string;
   source: string; tier: number; temperature: string; score: number;
-  brevo_cadence: string; engagement_status: string; email_opens: number;
+  engagement_status: string; email_opens: number;
   email_clicks: number; lead_source_detail: string; marketing_notes: string;
   ready_for_sales: number; passed_to_sales_at: number | null;
   industry: string; last_activity: number;
-  linkedin_url: string; brevo_id: string; job_title: string;
+  linkedin_url: string; job_title: string;
   company_size: string; location: string;
   email_verified: number; email_bounced: number; email_unsubscribed: number;
   owner_id: string | null;
@@ -24,12 +24,12 @@ function mapRow(row: MktContactRow) {
   return {
     id: row.id, name: row.name, company: row.company, email: row.email,
     phone: row.phone, source: row.source, tier: row.tier, temperature: row.temperature,
-    score: row.score, brevoCadence: row.brevo_cadence, engagementStatus: row.engagement_status,
+    score: row.score, engagementStatus: row.engagement_status,
     emailOpens: row.email_opens, emailClicks: row.email_clicks,
     leadSourceDetail: row.lead_source_detail, marketingNotes: row.marketing_notes,
     readyForSales: Boolean(row.ready_for_sales), passedToSalesAt: row.passed_to_sales_at,
     industry: row.industry, lastActivity: row.last_activity,
-    linkedinUrl: row.linkedin_url ?? "", brevoId: row.brevo_id ?? "",
+    linkedinUrl: row.linkedin_url ?? "",
     jobTitle: row.job_title ?? "", companySize: row.company_size ?? "",
     location: row.location ?? "", emailVerified: Boolean(row.email_verified),
     emailBounced: Boolean(row.email_bounced), emailUnsubscribed: Boolean(row.email_unsubscribed),
@@ -42,17 +42,13 @@ export async function GET() {
     const rows = mktDb.prepare("SELECT * FROM mkt_contacts ORDER BY score DESC, last_activity DESC").all() as MktContactRow[];
     const mapped = rows.map(mapRow);
 
-    // Phase 3: when the engagement source is "local", override the Brevo-synced
-    // engagement signals with values derived from the local email_events store.
-    if (getEngagementSource() === "local") {
-      const local = computeLocalEngagementByEmail();
-      for (const m of mapped) {
-        const e = m.email ? local.get(m.email.trim().toLowerCase()) : undefined;
-        m.engagementStatus = e ? e.status : "cold";
-        m.emailOpens = e ? e.opens : 0;
-        m.emailClicks = e ? e.clicks : 0;
-        if (e?.lastActivity) m.lastActivity = e.lastActivity;
-      }
+    const local = computeLocalEngagementByEmail();
+    for (const m of mapped) {
+      const e = m.email ? local.get(m.email.trim().toLowerCase()) : undefined;
+      m.engagementStatus = e ? e.status : "cold";
+      m.emailOpens = e ? e.opens : 0;
+      m.emailClicks = e ? e.clicks : 0;
+      if (e?.lastActivity) m.lastActivity = e.lastActivity;
     }
 
     return NextResponse.json(mapped);
@@ -84,18 +80,18 @@ export async function POST(req: Request) {
 
     mktDb.prepare(`
       INSERT INTO mkt_contacts
-        (id, name, company, email, phone, source, tier, temperature, score, brevo_cadence,
+        (id, name, company, email, phone, source, tier, temperature, score,
          engagement_status, email_opens, email_clicks, lead_source_detail, marketing_notes,
          ready_for_sales, passed_to_sales_at, industry, last_activity,
-         linkedin_url, brevo_id, job_title, company_size, location, email_verified, email_bounced, email_unsubscribed, owner_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         linkedin_url, job_title, company_size, location, email_verified, email_bounced, email_unsubscribed, owner_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       id, body.name, body.company ?? "", body.email ?? "", body.phone ?? "",
       body.source ?? "website", body.tier ?? 2, "cold", score,
-      body.brevoCadence ?? "Cold Welcome", "cold", 0, 0,
+      "cold", 0, 0,
       body.leadSourceDetail ?? "", body.marketingNotes ?? "",
       0, null, body.industry ?? "", now,
-      body.linkedinUrl ?? "", "", body.jobTitle ?? "",
+      body.linkedinUrl ?? "", body.jobTitle ?? "",
       body.companySize ?? "", body.location ?? "", 1, 0, 0,
       ownerId
     );

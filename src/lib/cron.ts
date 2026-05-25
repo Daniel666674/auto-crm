@@ -1,5 +1,4 @@
 import cron from "node-cron";
-import { pollBrevoCampaigns } from "./brevo";
 import { db } from "@/db";
 import { contacts } from "@/db/schema";
 import { lt, eq, and } from "drizzle-orm";
@@ -9,17 +8,6 @@ let initialized = false;
 export function initCronJobs() {
   if (initialized) return;
   initialized = true;
-
-  // Brevo polling every 30 minutes (only in polling mode)
-  if (process.env.BREVO_WEBHOOK_MODE !== "webhook") {
-    cron.schedule("*/30 * * * *", async () => {
-      try {
-        await pollBrevoCampaigns();
-      } catch (err) {
-        console.error("[cron:brevo]", err);
-      }
-    });
-  }
 
   // Sequence execution engine: every 15 minutes
   cron.schedule("*/15 * * * *", async () => {

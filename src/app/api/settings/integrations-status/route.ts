@@ -7,7 +7,6 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   return NextResponse.json({
-    brevo: !!process.env.BREVO_API_KEY,
     apollo: !!process.env.APOLLO_API_KEY,
     ga4Property: process.env.GA4_PROPERTY_ID ?? null,
     gscSiteUrl: process.env.GSC_SITE_URL ?? "sc-domain:blackscale.consulting",

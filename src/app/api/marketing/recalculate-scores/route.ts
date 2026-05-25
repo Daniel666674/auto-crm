@@ -4,9 +4,6 @@ import { db } from "@/db";
 import { contacts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-const BREVO_KEY = process.env.BREVO_API_KEY || "";
-const H = { "api-key": BREVO_KEY, "Content-Type": "application/json" };
-
 const ICP_INDUSTRIES: Record<string, number> = {
   "Seguros": 25, "seguros": 25, "Insurance": 25,
   "SaaS / IT": 22, "SaaS": 22, "IT": 22, "Technology": 22, "Tecnología": 22, "Software": 22,
@@ -38,38 +35,32 @@ function scoreContact(c: {
   phone: string;
   email_opens: number;
   email_clicks: number;
-  brevo_cadence: string;
   email: string;
 }): { score: number; tier: number } {
   let total = 0;
 
-  // Seniority (max 20)
   const title = (c.job_title || "").toLowerCase();
-  let seniorityScore = 3; // default
+  let seniorityScore = 3;
   for (const [kw, pts] of Object.entries(SENIORITY_KEYWORDS)) {
     if (title.includes(kw)) { seniorityScore = pts; break; }
   }
   total += seniorityScore;
 
-  // Email verified (max 10)
   if (c.email_verified) total += 10;
 
-  // Department (max 10)
-  let deptScore = 2; // default
+  let deptScore = 2;
   for (const [kw, pts] of Object.entries(DEPT_KEYWORDS)) {
     if (title.includes(kw)) { deptScore = pts; break; }
   }
   total += deptScore;
 
-  // ICP Industry (max 25)
   const ind = c.industry || "";
-  let indScore = 5; // default / other
+  let indScore = 5;
   for (const [kw, pts] of Object.entries(ICP_INDUSTRIES)) {
     if (ind.toLowerCase().includes(kw.toLowerCase())) { indScore = pts; break; }
   }
   total += indScore;
 
-  // Company size (max 15)
   const sizeStr = (c.company_size || "").replace(/[^0-9-+]/g, "");
   const sizeNum = parseInt(sizeStr) || 0;
   if (sizeNum >= 11 && sizeNum <= 200) total += 15;
@@ -79,56 +70,31 @@ function scoreContact(c: {
   else if (sizeNum >= 1 && sizeNum <= 4) total += 6;
   else if (sizeNum > 1000) total += 4;
 
-  // Data completeness (max 10)
   if (c.linkedin_url) total += 3;
   if (c.phone) total += 4;
   const emailDomain = c.email.split("@")[1] || "";
   if (emailDomain && !emailDomain.includes("gmail") && !emailDomain.includes("hotmail") && !emailDomain.includes("yahoo")) {
-    total += 3; // business email = has website
+    total += 3;
   }
 
-  // Engagement (max 10)
-  if (c.email_clicks > 0) total += 10;     // replied/clicked = highest signal
-  else if (c.email_opens > 0) total += 5;  // opened = medium signal
-  else if (c.brevo_cadence && c.brevo_cadence !== "Cold Welcome") total += 2; // in sequence
+  if (c.email_clicks > 0) total += 10;
+  else if (c.email_opens > 0) total += 5;
 
   const score = Math.min(100, total);
   const tier = score >= 70 ? 1 : score >= 45 ? 2 : score >= 20 ? 3 : 4;
   return { score, tier };
 }
 
-async function updateBrevoContactScore(brevoId: string, score: number, tier: number): Promise<void> {
-  if (!brevoId || !BREVO_KEY) return;
-  try {
-    await fetch(`https://api.brevo.com/v3/contacts/${brevoId}`, {
-      method: "PUT",
-      headers: H,
-      body: JSON.stringify({
-        attributes: {
-          SCORE: score,
-          TIER: tier,
-        },
-      }),
-    });
-  } catch {
-    // non-fatal — local score already updated
-  }
-}
-
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const pushToBrevo: boolean = body.pushToBrevo !== false; // default true
-
+export async function POST() {
   try {
     type Row = {
       id: string; job_title: string; email_verified: number; industry: string;
       company_size: string; linkedin_url: string; phone: string;
-      email_opens: number; email_clicks: number; brevo_cadence: string;
-      email: string; brevo_id: string;
+      email_opens: number; email_clicks: number; email: string;
     };
 
     const rows = mktDb
-      .prepare("SELECT id, job_title, email_verified, industry, company_size, linkedin_url, phone, email_opens, email_clicks, brevo_cadence, email, brevo_id FROM mkt_contacts")
+      .prepare("SELECT id, job_title, email_verified, industry, company_size, linkedin_url, phone, email_opens, email_clicks, email FROM mkt_contacts")
       .all() as Row[];
 
     const update = mktDb.prepare(
@@ -136,24 +102,18 @@ export async function POST(req: Request) {
     );
 
     const tempMap: Record<string, string> = { 1: "hot", 2: "warm", 3: "cold", 4: "cold" };
-    const brevoUpdates: Array<{ brevoId: string; score: number; tier: number }> = [];
-
-    const scoredRows: Array<{ email: string; score: number; tier: number }> = [];
+    const scoredRows: Array<{ email: string; score: number }> = [];
 
     const run = mktDb.transaction(() => {
       for (const row of rows) {
         const { score, tier } = scoreContact(row);
         const temperature = tempMap[tier] || "cold";
         update.run(score, tier, temperature, row.id);
-        if (row.email) scoredRows.push({ email: row.email, score, tier });
-        if (pushToBrevo && row.brevo_id) {
-          brevoUpdates.push({ brevoId: row.brevo_id, score, tier });
-        }
+        if (row.email) scoredRows.push({ email: row.email, score });
       }
     });
     run();
 
-    // Write engagementScore back to main CRM contacts table (matched by email)
     for (const { email, score } of scoredRows) {
       try {
         db.update(contacts)
@@ -161,15 +121,6 @@ export async function POST(req: Request) {
           .where(eq(contacts.email, email))
           .run();
       } catch { /* non-fatal — contact may not exist in CRM yet */ }
-    }
-
-    // Push to Brevo in background (non-blocking for the response)
-    if (pushToBrevo && brevoUpdates.length > 0) {
-      Promise.allSettled(
-        brevoUpdates.map(({ brevoId, score, tier }) =>
-          updateBrevoContactScore(brevoId, score, tier)
-        )
-      ).catch(() => {});
     }
 
     const tierCounts = mktDb
@@ -180,7 +131,6 @@ export async function POST(req: Request) {
       success: true,
       processed: rows.length,
       tierBreakdown: Object.fromEntries(tierCounts.map(r => [`tier${r.tier}`, r.c])),
-      brevoorUpdateQueued: brevoUpdates.length,
     });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
