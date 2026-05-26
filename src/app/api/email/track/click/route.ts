@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logEmailEvent } from "@/lib/email";
+import { recomputeContact } from "@/lib/fit-recompute";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const target = searchParams.get("u");
+  const contactId = searchParams.get("c");
 
   let dest = "https://blackscale.consulting";
   if (target) {
@@ -20,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   try {
     logEmailEvent({
-      contactId: searchParams.get("c"),
+      contactId,
       sequenceId: searchParams.get("s"),
       enrollmentId: searchParams.get("e"),
       campaignId: searchParams.get("cmp"),
@@ -29,6 +31,9 @@ export async function GET(req: NextRequest) {
       url: dest,
       userAgent: req.headers.get("user-agent"),
     });
+    // A click is a strong intent signal — immediately re-score so the lead
+    // flips to "hot" in real time rather than waiting for the next cron run.
+    if (contactId) recomputeContact(contactId);
   } catch {
     /* never block the redirect */
   }
