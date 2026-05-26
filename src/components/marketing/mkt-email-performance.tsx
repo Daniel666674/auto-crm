@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BSLoading } from "@/components/ui/BSLoading";
 
 const GOLD = "#C39A4C";
@@ -49,15 +49,19 @@ const WINDOWS = [7, 30, 90];
 export function MktEmailPerformance() {
   const [days, setDays] = useState(30);
   const [m, setM] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  // loadedDays tracks which window is reflected in `m` — loading is derived,
+  // so no synchronous setState is needed inside the effect body.
+  const [loadedDays, setLoadedDays] = useState<number | null>(null);
+  const cancelRef = useRef<boolean>(false);
+  const loading = loadedDays !== days;
 
   useEffect(() => {
-    setLoading(true);
+    cancelRef.current = false;
     fetch(`/api/email/metrics?days=${days}`)
       .then(r => r.json())
-      .then(setM)
-      .catch(() => setM(null))
-      .finally(() => setLoading(false));
+      .then(data => { if (!cancelRef.current) { setM(data); setLoadedDays(days); } })
+      .catch(() => { if (!cancelRef.current) { setM(null); setLoadedDays(days); } });
+    return () => { cancelRef.current = true; };
   }, [days]);
 
   const maxDaily = m?.daily.reduce((mx, d) => Math.max(mx, d.sent, d.opens, d.clicks), 0) ?? 0;

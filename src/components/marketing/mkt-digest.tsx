@@ -3,6 +3,9 @@
 import React from "react";
 import { useMkt } from "./mkt-provider";
 
+// Stable threshold for the current session — digest shows "last 7 days" from page load.
+const WEEK_AGO = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
 function todayLabel() {
   const d = new Date();
   const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -24,9 +27,8 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string |
 export function MktDigest() {
   const { contacts, campaigns, loading } = useMkt();
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const newContacts = contacts.filter(c => (c.lastActivity || 0) >= weekAgo).length;
-  const handoffsWeek = contacts.filter(c => c.readyForSales && c.passedToSalesAt && c.passedToSalesAt >= weekAgo).length;
+  const newContacts = contacts.filter(c => (c.lastActivity || 0) >= WEEK_AGO).length;
+  const handoffsWeek = contacts.filter(c => c.readyForSales && c.passedToSalesAt && c.passedToSalesAt >= WEEK_AGO).length;
 
   const totalSent = campaigns.reduce((s, c) => s + (c.totalContacts || 0), 0);
   const avgOpenRate = campaigns.length > 0
