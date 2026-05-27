@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { logEmailEvent } from "@/lib/email";
+import { logEmailEvent, getMessageSentAt } from "@/lib/email";
 import { recomputeContact } from "@/lib/fit-recompute";
+import { classifyOpen, getClientIp, isFilteredOpen } from "@/lib/email-open-classify";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const target = searchParams.get("u");
   const contactId = searchParams.get("c");
+  const messageId = searchParams.get("m");
 
   let dest = "https://blackscale.consulting";
   if (target) {
@@ -21,19 +23,36 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const userAgent = req.headers.get("user-agent");
+    const ip = getClientIp(
+      req.headers.get("x-forwarded-for"),
+      req.headers.get("x-real-ip")
+    );
+    // Classify the click source. Security scanners (Proofpoint/Barracuda/etc.)
+    // click every link before delivery — those must NOT flip a lead to hot.
+    const sourceType = classifyOpen({
+      ip,
+      userAgent,
+      sentAtMs: getMessageSentAt(messageId),
+      openAtMs: Date.now(),
+    });
+
     logEmailEvent({
       contactId,
       sequenceId: searchParams.get("s"),
       enrollmentId: searchParams.get("e"),
       campaignId: searchParams.get("cmp"),
-      messageId: searchParams.get("m"),
+      messageId,
       type: "click",
       url: dest,
-      userAgent: req.headers.get("user-agent"),
+      userAgent,
+      openType: sourceType,
     });
-    // A click is a strong intent signal — immediately re-score so the lead
-    // flips to "hot" in real time rather than waiting for the next cron run.
-    if (contactId) recomputeContact(contactId);
+
+    // A genuine click is a strong intent signal — re-score immediately so the
+    // lead flips to "hot" in real time. Bot/prefetch clicks are recorded for
+    // auditing but never trigger a promotion.
+    if (contactId && !isFilteredOpen(sourceType)) recomputeContact(contactId);
   } catch {
     /* never block the redirect */
   }

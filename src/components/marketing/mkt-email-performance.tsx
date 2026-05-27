@@ -11,6 +11,8 @@ interface Metrics {
   delivered: number;
   uniqueOpens: number;
   totalOpens: number;
+  confirmedOpens: number;
+  mppOpens: number;
   filteredOpens: number;
   uniqueClicks: number;
   totalClicks: number;
@@ -100,13 +102,19 @@ export function MktEmailPerformance() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
             <Kpi primary label="Click Rate" value={`${m.rates.clickRate}%`} sub={`${m.uniqueClicks} de ${m.delivered} entregados`} accent="#48bb78" />
             <Kpi primary label="Reply Rate" value={`${m.rates.replyRate}%`} sub={`${m.replies} respuestas`} accent="#48bb78" />
-            <Kpi label="CTOR" value={`${m.rates.ctor}%`} sub="clicks / aperturas" />
+            <Kpi label="CTOR" value={`${m.rates.ctor}%`} sub="clicks / aperturas confirmadas" />
             <Kpi label="Enviados" value={m.sent.toLocaleString("es-CO")} sub={`${m.delivered} entregados`} />
           </div>
 
-          {/* Secondary / health */}
+          {/* Opens — confirmed (real reads) vs Apple MPP (prefetch, excluded) */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
-            <Kpi label="Open Rate (indicativo)" value={`${m.rates.openRate}%`} sub={`${m.uniqueOpens} aperturas · ${m.filteredOpens} filtradas (bot/prefetch)`} accent="#9ca3af" />
+            <Kpi label="Aperturas confirmadas" value={`${m.rates.openRate}%`} sub={`${m.uniqueOpens} lecturas reales (humano + Gmail)`} accent="#48bb78" />
+            <Kpi label="Apple MPP" value={String(m.mppOpens)} sub="prefetch de Apple · no contadas" accent="#9ca3af" />
+            <Kpi label="Filtradas" value={String(m.filteredOpens)} sub="bots / scanners / prefetch" accent="#9ca3af" />
+          </div>
+
+          {/* Deliverability health */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
             <Kpi label="Bounce Rate" value={`${m.rates.bounceRate}%`} sub={`${m.bounces} rebotes`} accent={m.rates.bounceRate > 2 ? "#f87171" : "#9ca3af"} />
             <Kpi label="Unsub Rate" value={`${m.rates.unsubRate}%`} sub={`${m.unsubscribes} bajas`} accent={m.rates.unsubRate > 0.5 ? "#f87171" : "#9ca3af"} />
             <Kpi label="Quejas (spam)" value={String(m.complaints)} accent={m.complaints > 0 ? "#f87171" : "#9ca3af"} />

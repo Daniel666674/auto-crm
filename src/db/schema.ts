@@ -415,6 +415,7 @@ export const emailEvents = sqliteTable("email_events", {
   type: text("type").notNull(), // sent | open | click | reply | bounce | unsubscribe | complaint
   url: text("url"),
   userAgent: text("user_agent"), // captured on open/click — used to filter bot/proxy/MPP opens
+  openType: text("open_type"), // source classification for open/click: human | gmail | mpp | bot | prefetch
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

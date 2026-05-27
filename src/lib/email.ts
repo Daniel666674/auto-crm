@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { emailSuppressions, emailEvents } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const EMAIL_FROM = process.env.DIGEST_FROM || "nexus@blackscale.consulting";
 export const SENDER_NAME = process.env.SENDER_NAME || "BlackScale";
@@ -49,6 +49,7 @@ export function logEmailEvent(e: {
   type: string;
   url?: string | null;
   userAgent?: string | null;
+  openType?: string | null;
 }): void {
   try {
     db.insert(emailEvents)
@@ -61,11 +62,28 @@ export function logEmailEvent(e: {
         type: e.type,
         url: e.url ?? null,
         userAgent: e.userAgent ?? null,
+        openType: e.openType ?? null,
         createdAt: new Date(),
       })
       .run();
   } catch {
     /* non-fatal */
+  }
+}
+
+/** Earliest "sent" timestamp (ms) for a message — used to flag prefetch opens. */
+export function getMessageSentAt(messageId: string | null): number | null {
+  if (!messageId) return null;
+  try {
+    const row = db
+      .select({ createdAt: emailEvents.createdAt })
+      .from(emailEvents)
+      .where(and(eq(emailEvents.messageId, messageId), eq(emailEvents.type, "sent")))
+      .orderBy(emailEvents.createdAt)
+      .get();
+    return row?.createdAt ? row.createdAt.getTime() : null;
+  } catch {
+    return null;
   }
 }
 

@@ -1,24 +1,17 @@
 import { db } from "@/db";
 import { emailEvents } from "@/db/schema";
 import { and, eq, gte } from "drizzle-orm";
+import { classifyOpen, isConfirmedOpen, type OpenType } from "./email-open-classify";
 
 /**
  * Email performance metrics computed from the local email_events store.
  *
- * Opens from Gmail/Apple are unreliable: Gmail proxies images and Apple Mail
- * Privacy Protection auto-opens every message. So clicks and replies are the
- * primary intent signals here; opens are reported separately and machine/
- * prefetch opens are filtered out (and surfaced as `filteredOpens`).
+ * Opens from Gmail/Apple are unreliable: Apple Mail Privacy Protection prefetches
+ * every message from Apple's servers. Opens are classified (at capture time, by
+ * source IP + UA) into confirmed human reads vs Apple MPP vs bots. Confirmed
+ * opens drive the open rate; MPP is surfaced separately; bots/prefetch are
+ * discarded. Clicks and replies remain the primary intent signals.
  */
-
-// Non-human openers: security scanners, link-preview bots, mail gateways.
-// NB: "GoogleImageProxy" is a *real* Gmail open (fired when the user opens the
-// message), so it is intentionally NOT treated as a bot.
-const RX_BOT_UA = /bot|crawler|spider|monitor|preview|scanner|proofpoint|barracuda|mimecast|fortinet|microsoftpreview|googleweblight/i;
-
-// Opens within this window of the send are almost certainly machine prefetch
-// (Apple MPP / gateway scan), not a human opening the mail.
-const PREFETCH_MS = 5000;
 
 export interface EmailMetricsFilter {
   windowDays?: number;
@@ -30,9 +23,11 @@ export interface EmailMetrics {
   windowDays: number;
   sent: number;
   delivered: number;
-  uniqueOpens: number;
-  totalOpens: number;
-  filteredOpens: number;
+  uniqueOpens: number;     // unique messages with a *confirmed* (human/gmail) open
+  totalOpens: number;      // every open event, all types
+  confirmedOpens: number;  // total human + gmail opens
+  mppOpens: number;        // Apple Mail Privacy Protection prefetch opens (excluded)
+  filteredOpens: number;   // bot / scanner / prefetch opens (excluded)
   uniqueClicks: number;
   totalClicks: number;
   replies: number;
@@ -40,9 +35,9 @@ export interface EmailMetrics {
   bounces: number;
   complaints: number;
   rates: {
-    openRate: number;   // unique opens / delivered — indicative only
+    openRate: number;   // confirmed unique opens / delivered
     clickRate: number;  // unique clicks / delivered — primary signal
-    ctor: number;       // unique clicks / unique opens
+    ctor: number;       // unique clicks / confirmed unique opens
     replyRate: number;  // replies / delivered — primary signal
     bounceRate: number;
     unsubRate: number;
@@ -61,6 +56,7 @@ interface Ev {
   contactId: string | null;
   url: string | null;
   userAgent: string | null;
+  openType: string | null;
   createdAt: Date | null;
 }
 
@@ -79,6 +75,7 @@ export function computeEmailMetrics(filter: EmailMetricsFilter = {}): EmailMetri
       contactId: emailEvents.contactId,
       url: emailEvents.url,
       userAgent: emailEvents.userAgent,
+      openType: emailEvents.openType,
       createdAt: emailEvents.createdAt,
     })
     .from(emailEvents)
@@ -99,7 +96,7 @@ export function computeEmailMetrics(filter: EmailMetricsFilter = {}): EmailMetri
   const bounceMsgs = new Set<string>();
   const openMsgs = new Set<string>();
   const clickMsgs = new Set<string>();
-  let totalOpens = 0, filteredOpens = 0, totalClicks = 0;
+  let totalOpens = 0, confirmedOpens = 0, mppOpens = 0, filteredOpens = 0, totalClicks = 0;
   let replies = 0, unsubscribes = 0, bounces = 0, complaints = 0;
   const linkClicks = new Map<string, number>();
 
@@ -119,20 +116,31 @@ export function computeEmailMetrics(filter: EmailMetricsFilter = {}): EmailMetri
         break;
       case "open": {
         totalOpens++;
-        const isBot = e.userAgent ? RX_BOT_UA.test(e.userAgent) : false;
+        // Prefer the classification stored at capture time (has source IP).
+        // Legacy rows (no open_type) are re-classified from UA + send timing.
         const st = e.messageId ? sentAt.get(e.messageId) : undefined;
-        const isPrefetch = st != null && e.createdAt != null && e.createdAt.getTime() - st < PREFETCH_MS;
-        if (isBot || isPrefetch) { filteredOpens++; break; }
+        const ot: OpenType = (e.openType as OpenType) ?? classifyOpen({
+          userAgent: e.userAgent,
+          sentAtMs: st ?? null,
+          openAtMs: e.createdAt ? e.createdAt.getTime() : null,
+        });
+        if (ot === "mpp") { mppOpens++; break; }
+        if (!isConfirmedOpen(ot)) { filteredOpens++; break; } // bot | prefetch
+        confirmedOpens++;
         if (e.messageId) openMsgs.add(e.messageId);
         bump(e.createdAt, "opens");
         break;
       }
-      case "click":
+      case "click": {
+        // Exclude bot/scanner/prefetch clicks (open_type set at capture time).
+        const ct = e.openType as OpenType | null;
+        if (ct === "bot" || ct === "prefetch") break;
         totalClicks++;
         if (e.messageId) clickMsgs.add(e.messageId);
         if (e.url) linkClicks.set(e.url, (linkClicks.get(e.url) ?? 0) + 1);
         bump(e.createdAt, "clicks");
         break;
+      }
       case "reply": replies++; bump(e.createdAt, "replies"); break;
       case "unsubscribe": unsubscribes++; break;
       case "bounce": bounces++; if (e.messageId) bounceMsgs.add(e.messageId); break;
@@ -162,6 +170,8 @@ export function computeEmailMetrics(filter: EmailMetricsFilter = {}): EmailMetri
     delivered,
     uniqueOpens,
     totalOpens,
+    confirmedOpens,
+    mppOpens,
     filteredOpens,
     uniqueClicks,
     totalClicks,

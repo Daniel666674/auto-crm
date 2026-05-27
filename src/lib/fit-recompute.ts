@@ -3,6 +3,7 @@ import { contacts, emailEvents, activities, deals, pipelineStages } from "@/db/s
 import { eq } from "drizzle-orm";
 import { computeFitScore, getFitWeights, getTierThresholds } from "./fit-scoring";
 import { qualifyLead } from "./lead-qualification";
+import { isFilteredOpen } from "./email-open-classify";
 
 interface Engagement {
   opens: number;
@@ -20,17 +21,18 @@ export function recomputeAllScores(): { updated: number } {
   const weights = getFitWeights();
   const tiers = getTierThresholds();
 
-  // Engagement per contact from email events.
+  // Engagement per contact from email events. MPP/bot/prefetch opens are
+  // excluded so Apple's prefetch can never inflate a contact's temperature.
   const events = db
-    .select({ contactId: emailEvents.contactId, type: emailEvents.type })
+    .select({ contactId: emailEvents.contactId, type: emailEvents.type, openType: emailEvents.openType })
     .from(emailEvents)
     .all();
   const engByContact = new Map<string, Engagement>();
   for (const e of events) {
     if (!e.contactId) continue;
     const cur = engByContact.get(e.contactId) ?? { opens: 0, clicks: 0, replies: 0 };
-    if (e.type === "open") cur.opens++;
-    else if (e.type === "click") cur.clicks++;
+    if (e.type === "open") { if (!isFilteredOpen(e.openType)) cur.opens++; }
+    else if (e.type === "click") { if (!isFilteredOpen(e.openType)) cur.clicks++; }
     else if (e.type === "reply") cur.replies++;
     engByContact.set(e.contactId, cur);
   }
@@ -151,14 +153,14 @@ export function recomputeContact(contactId: string): void {
   );
 
   const events = db
-    .select({ type: emailEvents.type })
+    .select({ type: emailEvents.type, openType: emailEvents.openType })
     .from(emailEvents)
     .where(eq(emailEvents.contactId, contactId))
     .all();
   let opens = 0, clicks = 0, replies = 0;
   for (const e of events) {
-    if (e.type === "open") opens++;
-    else if (e.type === "click") clicks++;
+    if (e.type === "open") { if (!isFilteredOpen(e.openType)) opens++; }
+    else if (e.type === "click") { if (!isFilteredOpen(e.openType)) clicks++; }
     else if (e.type === "reply") replies++;
   }
 

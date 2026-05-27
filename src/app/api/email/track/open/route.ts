@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { logEmailEvent } from "@/lib/email";
+import { logEmailEvent, getMessageSentAt } from "@/lib/email";
+import { classifyOpen, getClientIp } from "@/lib/email-open-classify";
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +13,31 @@ const PIXEL = Buffer.from(
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   try {
+    const messageId = searchParams.get("m");
+    const userAgent = req.headers.get("user-agent");
+    const ip = getClientIp(
+      req.headers.get("x-forwarded-for"),
+      req.headers.get("x-real-ip")
+    );
+
+    // Classify the open now, while we have the IP and request timing — this is
+    // the only point Apple's 17/8 source IP is observable.
+    const openType = classifyOpen({
+      ip,
+      userAgent,
+      sentAtMs: getMessageSentAt(messageId),
+      openAtMs: Date.now(),
+    });
+
     logEmailEvent({
       contactId: searchParams.get("c"),
       sequenceId: searchParams.get("s"),
       enrollmentId: searchParams.get("e"),
       campaignId: searchParams.get("cmp"),
-      messageId: searchParams.get("m"),
+      messageId,
       type: "open",
-      userAgent: req.headers.get("user-agent"),
+      userAgent,
+      openType,
     });
   } catch {
     /* never block the pixel */
