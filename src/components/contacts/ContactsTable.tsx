@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Users, Download, Trash2, Thermometer, Globe } from "lucide-react";
@@ -64,14 +64,13 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [savedViews, setSavedViews] = useState<Array<{ name: string; search: string; temp: string; tag: string }>>([]);
-
-  useEffect(() => {
+  const [savedViews, setSavedViews] = useState<Array<{ name: string; search: string; temp: string; tag: string }>>(() => {
+    if (typeof window === "undefined") return [];
     try {
       const raw = localStorage.getItem("bs_contact_views");
-      if (raw) setSavedViews(JSON.parse(raw));
-    } catch {}
-  }, []);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
 
   const saveView = () => {
     if (!search && !filterTemp && !filterTag) return;
@@ -362,6 +361,20 @@ export function ContactsTable({ contacts, onRefresh, renderBulkActions }: Contac
                   <td style={cell}>
                     <div style={{ fontWeight: 600 }}>{c.name}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{c.email || "—"}</div>
+                    {parseTags(c.tags).length > 0 && (
+                      <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 3 }}>
+                        {parseTags(c.tags).map(tag => (
+                          <span key={tag} style={{
+                            padding: "1px 6px", borderRadius: 10, fontSize: 9, fontWeight: 700,
+                            background: tag === "brevo" ? "rgba(245,158,11,0.18)" : "rgba(99,102,241,0.15)",
+                            color: tag === "brevo" ? "#f59e0b" : "#818cf8",
+                            textTransform: "uppercase", letterSpacing: "0.04em",
+                          }}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td style={cell}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

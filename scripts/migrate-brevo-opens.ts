@@ -108,6 +108,21 @@ function recomputeContact(contactId: string) {
   `).run(engagementScore, temperature, new Date().toISOString(), contactId);
 }
 
+// ── helpers (tier) ────────────────────────────────────────────────────────────
+
+/**
+ * Force fit_tier = 'A' regardless of firmographic score.
+ * 4+ email opens is strong engagement intent — enough to override the model.
+ */
+function forceToTierA(contactId: string) {
+  db.prepare(`
+    UPDATE contacts SET
+      fit_tier   = 'A',
+      updated_at = ?
+    WHERE id = ?
+  `).run(new Date().toISOString(), contactId);
+}
+
 // ── main ──────────────────────────────────────────────────────────────────────
 
 console.log(`\n🔄  Migrating historical Brevo opens (${OPENS_TO_CREDIT} opens per contact)\n`);
@@ -123,8 +138,21 @@ for (const prospect of BREVO_OPENERS) {
     continue;
   }
 
+  found++;
+
+  // ── ALWAYS force Tier A — engagement overrides firmographic score ───────
+  forceToTierA(contact.id);
+
   if (alreadyMigrated(contact.id)) {
-    console.log(`  ⏭  SKIPPED   ${prospect.email}  — already migrated`);
+    // Open events already in DB — just ensure tag + tier are set
+    const tagRow = db.prepare("SELECT tags FROM contacts WHERE id = ?").get(contact.id) as { tags: string | null };
+    let tags: string[] = [];
+    try { tags = JSON.parse(tagRow.tags || "[]"); } catch {}
+    if (!tags.includes("brevo")) {
+      tags.push("brevo");
+      db.prepare("UPDATE contacts SET tags = ? WHERE id = ?").run(JSON.stringify(tags), contact.id);
+    }
+    console.log(`  ♻  TIER→A   ${prospect.email}  — events existed, tier forced A`);
     skipped++;
     continue;
   }
@@ -133,23 +161,23 @@ for (const prospect of BREVO_OPENERS) {
   insertHistoricalOpens(contact.id);
   recomputeContact(contact.id);
 
-  // Tag the contact so they're filterable in the CRM
+  // Tag the contact so they're filterable and visible in the CRM
   const tagRow = db.prepare("SELECT tags FROM contacts WHERE id = ?").get(contact.id) as { tags: string | null };
   let tags: string[] = [];
   try { tags = JSON.parse(tagRow.tags || "[]"); } catch {}
   if (!tags.includes("brevo")) tags.push("brevo");
   db.prepare("UPDATE contacts SET tags = ? WHERE id = ?").run(JSON.stringify(tags), contact.id);
 
-  const after = (db.prepare("SELECT temperature, engagement_score FROM contacts WHERE id=?").get(contact.id) as { temperature: string; engagement_score: number });
-  console.log(`  ✓ UPDATED   ${prospect.email.padEnd(42)} ${before.padEnd(6)} → ${after.temperature}  (eng: ${after.engagement_score})`);
-  found++;
+  const after = (db.prepare("SELECT temperature, engagement_score, fit_tier FROM contacts WHERE id=?").get(contact.id) as { temperature: string; engagement_score: number; fit_tier: string });
+  console.log(`  ✓ UPDATED   ${prospect.email.padEnd(42)} ${before.padEnd(6)} → ${after.temperature}  tier→${after.fit_tier}  (eng: ${after.engagement_score})`);
   updated++;
 }
 
 console.log(`
 ─────────────────────────────────────────────
-  Contacts found & updated : ${updated}
-  Already migrated (skip)  : ${skipped}
+  Contacts processed       : ${found}
+  Full migration (new)     : ${updated}
+  Re-run / tier forced A   : ${skipped}
   Not found in CRM         : ${notFound}
 ─────────────────────────────────────────────
 `);
