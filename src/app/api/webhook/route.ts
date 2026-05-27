@@ -3,6 +3,20 @@ import { db } from "@/db";
 import { contacts, activities, crmSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+// ─── CORS ────────────────────────────────────────────────────────────────────
+// The webhook is intentionally public so external websites can POST leads.
+// We allow all origins here; auth is handled by the optional webhook secret.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-webhook-secret",
+};
+
+// Preflight handler (browsers send this before cross-origin POSTs)
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 // Field name mapping: common variations → standard field
 const FIELD_MAP: Record<string, string> = {
   // Name
@@ -31,7 +45,7 @@ const FIELD_MAP: Record<string, string> = {
   company_name: "company",
   negocio: "company",
   organizacion: "company",
-  // Notes
+  // Notes / message
   notes: "notes",
   notas: "notes",
   message: "notes",
@@ -39,6 +53,12 @@ const FIELD_MAP: Record<string, string> = {
   comments: "notes",
   comentarios: "notes",
   descripcion: "notes",
+  // Source override (widget passes this)
+  source: "source",
+  fuente: "source",
+  utm_source: "utm_source",
+  utm_medium: "utm_medium",
+  utm_campaign: "utm_campaign",
 };
 
 function extractFields(
@@ -76,7 +96,7 @@ function extractFields(
 }
 
 export async function POST(request: NextRequest) {
-  // Auth check: if a webhook secret is stored, require it in the header
+  // Auth check: if a webhook secret is stored in settings, require it in the header
   const stored = db
     .select()
     .from(crmSettings)
@@ -88,7 +108,7 @@ export async function POST(request: NextRequest) {
     if (!secretHeader || secretHeader !== stored.value) {
       return NextResponse.json(
         { error: "Secret invalido o faltante" },
-        { status: 401 }
+        { status: 401, headers: CORS_HEADERS }
       );
     }
   }
@@ -97,7 +117,16 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "JSON invalido" },
+      { status: 400, headers: CORS_HEADERS }
+    );
+  }
+
+  // Honeypot: bots fill hidden fields — humans never see them
+  if (payload._honey || payload.website_url) {
+    // Silently accept so bots think they succeeded
+    return NextResponse.json({ success: true }, { headers: CORS_HEADERS });
   }
 
   const fields = extractFields(payload);
@@ -107,11 +136,25 @@ export async function POST(request: NextRequest) {
       {
         error: "Campo 'name' o 'nombre' es requerido",
         received: Object.keys(payload),
-        hint: "Campos soportados: name, nombre, full_name, email, correo, phone, telefono, company, empresa, notes, notas, message",
+        hint: "Campos soportados: name, nombre, email, phone, company, message",
       },
-      { status: 400 }
+      { status: 400, headers: CORS_HEADERS }
     );
   }
+
+  // Build notes — append UTM info if present
+  let notes = fields.notes || null;
+  const utmParts = [
+    fields.utm_source && `utm_source=${fields.utm_source}`,
+    fields.utm_medium && `utm_medium=${fields.utm_medium}`,
+    fields.utm_campaign && `utm_campaign=${fields.utm_campaign}`,
+  ].filter(Boolean);
+  if (utmParts.length) {
+    notes = [notes, utmParts.join(" | ")].filter(Boolean).join("\n");
+  }
+
+  // Resolve source — widget can pass its own, fallback to "website"
+  const source = fields.source || "website";
 
   try {
     const now = new Date();
@@ -122,21 +165,22 @@ export async function POST(request: NextRequest) {
         email: fields.email || null,
         phone: fields.phone || null,
         company: fields.company || null,
-        source: "webhook",
+        source,
         temperature: "cold",
         score: 0,
-        notes: fields.notes || null,
+        notes,
         createdAt: now,
         updatedAt: now,
       })
       .returning()
       .get();
 
-    // Log activity for the new lead
+    // Log activity
+    const origin = request.headers.get("origin") || "web";
     db.insert(activities)
       .values({
         type: "note",
-        description: `Lead recibido via webhook${fields.company ? ` (${fields.company})` : ""}`,
+        description: `Lead recibido via formulario web${fields.company ? ` (${fields.company})` : ""} — origen: ${origin}`,
         contactId: contact.id,
         createdAt: now,
       })
@@ -152,14 +196,14 @@ export async function POST(request: NextRequest) {
           source: contact.source,
         },
       },
-      { status: 201 }
+      { status: 201, headers: CORS_HEADERS }
     );
   } catch (error) {
     return NextResponse.json(
       {
         error: `Error al crear contacto: ${error instanceof Error ? error.message : "Unknown"}`,
       },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }

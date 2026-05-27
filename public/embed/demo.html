@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlackScale Lead Form — Demo</title>
+  <style>
+    body { margin: 0; padding: 40px 20px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+    h2 { color: #C39A4C; font-family: sans-serif; margin: 0; }
+    p  { color: #718096; font-family: sans-serif; margin: 0; font-size: 13px; }
+    .col { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; }
+  </style>
+</head>
+<body>
+  <h2>BlackScale Lead Form — Embed Demo</h2>
+  <p>Dark theme (left) · Light theme (right)</p>
+
+  <div class="col">
+    <!-- Dark form -->
+    <div id="form-dark"></div>
+
+    <!-- Light form -->
+    <div id="form-light"></div>
+  </div>
+
+  <!-- Dark widget -->
+  <script
+    src="./bs-lead-form.js"
+    data-target="form-dark"
+    data-source="demo-dark"
+    data-theme="dark"
+    data-lang="es"
+  ></script>
+
+  <!-- Light widget (re-use same script, second call mounts to a different target) -->
+  <script>
+    // Inline second mount for the demo (normally you'd only include one form per page)
+    window.addEventListener('DOMContentLoaded', function() {
+      var s = document.createElement('script');
+      s.setAttribute('data-target',  'form-light');
+      s.setAttribute('data-source',  'demo-light');
+      s.setAttribute('data-theme',   'light');
+      s.setAttribute('data-lang',    'es');
+      s.src = './bs-lead-form.js';
+      document.body.appendChild(s);
+    });
+  </script>
+</body>
+</html>
