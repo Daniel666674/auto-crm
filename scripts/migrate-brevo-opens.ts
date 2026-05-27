@@ -133,6 +133,13 @@ for (const prospect of BREVO_OPENERS) {
   insertHistoricalOpens(contact.id);
   recomputeContact(contact.id);
 
+  // Tag the contact so they're filterable in the CRM
+  const tagRow = db.prepare("SELECT tags FROM contacts WHERE id = ?").get(contact.id) as { tags: string | null };
+  let tags: string[] = [];
+  try { tags = JSON.parse(tagRow.tags || "[]"); } catch {}
+  if (!tags.includes("brevo")) tags.push("brevo");
+  db.prepare("UPDATE contacts SET tags = ? WHERE id = ?").run(JSON.stringify(tags), contact.id);
+
   const after = (db.prepare("SELECT temperature, engagement_score FROM contacts WHERE id=?").get(contact.id) as { temperature: string; engagement_score: number });
   console.log(`  ✓ UPDATED   ${prospect.email.padEnd(42)} ${before.padEnd(6)} → ${after.temperature}  (eng: ${after.engagement_score})`);
   found++;
