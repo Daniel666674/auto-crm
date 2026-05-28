@@ -44,7 +44,7 @@ export interface MktCampaign {
 
 export type MktSection =
   | "engagement" | "campaigns" | "contacts" | "attribution" | "handoff"
-  | "segment-health" | "icp-insights"
+  | "segment-health"
   | "pipeline-view" | "lead-velocity"
   | "mkt-analytics" | "intelligence" | "email-performance"
   | "calendar" | "abm"
@@ -55,7 +55,7 @@ export type MktSection =
   | "segments-builder"
   | "forecast" | "attribution-model"
   | "calculator"
-  | "icp" | "segments" // legacy aliases kept for backward compat
+  | "icp" | "icp-insights" | "segments" // legacy aliases kept for backward compat
   | "settings";
 
 export const MKT_SOURCES = ["website", "referido", "redes_sociales", "formulario", "evento", "llamada_fria", "whatsapp"] as const;

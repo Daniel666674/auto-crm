@@ -61,7 +61,6 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
       label: "Audience Intelligence",
       items: [
         { id: "segment-health", label: "Segment Health", path: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" },
-        { id: "icp-insights", label: "ICP Insights", path: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
         { id: "segments-builder" as MktSection, label: "Smart Segments", path: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H7a2 2 0 00-2 2v2m6 4v3" },
         { id: "funnel" as MktSection, label: "Funnel", path: "M3 4h18l-7 8v6l-4-2v-4L3 4z" },
       ],

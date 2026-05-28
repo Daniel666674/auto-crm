@@ -42,7 +42,6 @@ import type { MktSection } from "@/components/marketing/mkt-types";
 const SECTION_LABELS: Record<MktSection, string> = {
   engagement: "Engagement Board",
   icp: "ICP Scorer",
-  "icp-insights": "ICP Insights",
   campaigns: "Campañas",
   contacts: "Contactos",
   reengagement: "Re-engagement Queue",
