@@ -34,6 +34,7 @@ export function MktContactsView() {
   const [loading, setLoading] = useState(true);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [lifecycleStats, setLifecycleStats] = useState<Record<string, number>>({});
+  const [activeLifecycle, setActiveLifecycle] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,21 +111,44 @@ export function MktContactsView() {
   });
 
   const totalActive = Object.values(lifecycleStats).reduce((s, v) => s + v, 0);
+  const displayContacts = activeLifecycle
+    ? contacts.filter(c => (c.lifecycleStage ?? "lead") === activeLifecycle)
+    : contacts;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Lifecycle funnel strip */}
+      {/* Lifecycle funnel strip — each tab is a clickable filter */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {LIFECYCLE_STAGES.map(s => (
-          <div key={s.id} style={{ padding: "6px 12px", borderRadius: 8, background: "var(--mkt-surface)", border: `1px solid ${s.color}30`, fontSize: 11 }}>
-            <span style={{ color: s.color, fontWeight: 700 }}>{s.label} </span>
-            <span style={{ color: "var(--mkt-text-muted)" }}>{lifecycleStats[s.id] ?? 0}</span>
-          </div>
-        ))}
-        <div style={{ padding: "6px 12px", borderRadius: 8, background: "var(--mkt-surface)", border: "1px solid var(--mkt-border)", fontSize: 11 }}>
+        {LIFECYCLE_STAGES.map(s => {
+          const active = activeLifecycle === s.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => setActiveLifecycle(prev => prev === s.id ? "" : s.id)}
+              style={{
+                padding: "6px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer", outline: "none",
+                background: active ? `${s.color}22` : "var(--mkt-surface)",
+                border: `1px solid ${active ? s.color : s.color + "30"}`,
+                transition: "all 0.12s",
+              }}
+            >
+              <span style={{ color: s.color, fontWeight: 700 }}>{s.label} </span>
+              <span style={{ color: "var(--mkt-text-muted)" }}>{lifecycleStats[s.id] ?? 0}</span>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setActiveLifecycle("")}
+          style={{
+            padding: "6px 12px", borderRadius: 8, fontSize: 11, cursor: "pointer", outline: "none",
+            background: !activeLifecycle ? "rgba(255,255,255,0.08)" : "var(--mkt-surface)",
+            border: `1px solid ${!activeLifecycle ? "var(--mkt-text-muted)" : "var(--mkt-border)"}`,
+            transition: "all 0.12s",
+          }}
+        >
           <span style={{ color: "var(--mkt-text-muted)" }}>Total activos </span>
           <span style={{ fontWeight: 700, color: "var(--mkt-text)" }}>{totalActive}</span>
-        </div>
+        </button>
       </div>
 
       {/* View mode toggle */}
@@ -145,7 +169,7 @@ export function MktContactsView() {
           </div>
         ) : (
           <ContactsTable
-            contacts={contacts}
+            contacts={displayContacts}
             onRefresh={load}
             renderBulkActions={(ids, clearSelection) => (
               <>
