@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { MarketingTargetsSettings } from "./MarketingTargetsSettings";
 
 const ACCENT = "var(--mkt-accent)";
 
@@ -302,116 +303,6 @@ function OutcomesCard({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-// ─── Marketing targets ───────────────────────────────────────────────────────
-function TargetsCard({ canEdit }: { canEdit: boolean }) {
-  const [targets, setTargets] = useState<Array<{ id: string; userId: string; userName: string | null; userEmail: string | null; metric: string; period: string; year: number; month: number | null; quarter: number | null; targetValue: number }>>([]);
-  const [users, setUsers] = useState<Array<{ id: string; name?: string; email: string }>>([]);
-  const [form, setForm] = useState({ userId: "", metric: "leads", period: "monthly", year: new Date().getFullYear(), month: new Date().getMonth() + 1, targetValue: 0 });
-
-  const load = useCallback(async () => {
-    try {
-      const [tRes, uRes] = await Promise.all([
-        fetch("/api/settings/marketing-targets").then((r) => r.json()).catch(() => []),
-        fetch("/api/settings/users").then((r) => r.json()).catch(() => []),
-      ]);
-      const tList = Array.isArray(tRes) ? tRes : [];
-      const uList = Array.isArray(uRes) ? uRes : [];
-      setTargets(tList);
-      setUsers(uList);
-      if (uList[0]?.id && !form.userId) setForm((f) => ({ ...f, userId: uList[0].id }));
-    } catch { setTargets([]); setUsers([]); }
-  }, [form.userId]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const create = async () => {
-    if (!form.userId || !form.targetValue) return;
-    await fetch("/api/settings/marketing-targets", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setForm((f) => ({ ...f, targetValue: 0 }));
-    await load();
-  };
-  const remove = async (id: string) => {
-    if (!confirm("¿Eliminar este target?")) return;
-    await fetch(`/api/settings/marketing-targets/${id}`, { method: "DELETE" });
-    await load();
-  };
-
-  const metricLabels: Record<string, string> = {
-    leads: "Leads", handoffs: "Handoffs", qualified: "Calificados", engagement_rate: "Engagement %",
-  };
-  const periodLabels: Record<string, string> = {
-    monthly: "Mensual", quarterly: "Trimestral", annual: "Anual",
-  };
-
-  return (
-    <div style={card}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--mkt-text)", marginBottom: 4 }}>
-        Metas de marketing por usuario
-      </div>
-      <p style={{ fontSize: 12, color: "var(--mkt-text-muted)", marginBottom: 14, lineHeight: 1.5 }}>
-        Objetivos cuantitativos (leads, handoffs, etc.) por periodo.
-      </p>
-
-      {targets.length > 0 && (
-        <div style={{ marginBottom: 14, border: "1px solid var(--mkt-border)", borderRadius: 8, overflow: "hidden" }}>
-          {targets.map((t) => (
-            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid var(--mkt-border)", fontSize: 12 }}>
-              <div>
-                <span style={{ color: "var(--mkt-text)", fontWeight: 500 }}>{t.userName || t.userEmail}</span>
-                <span style={{ color: "var(--mkt-text-muted)", marginLeft: 8 }}>
-                  {metricLabels[t.metric] ?? t.metric} · {periodLabels[t.period] ?? t.period} {t.year}
-                  {t.month ? `/${String(t.month).padStart(2, "0")}` : t.quarter ? ` Q${t.quarter}` : ""}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ color: ACCENT, fontWeight: 600 }}>{t.targetValue}</span>
-                {canEdit && (
-                  <button onClick={() => remove(t.id)} style={{ background: "transparent", border: "none", color: "var(--mkt-text-muted)", cursor: "pointer" }}>✕</button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {canEdit && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 0.7fr 0.7fr auto", gap: 8, alignItems: "end" }}>
-          <div>
-            <span style={label}>Usuario</span>
-            <select style={input} value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })}>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
-            </select>
-          </div>
-          <div>
-            <span style={label}>Métrica</span>
-            <select style={input} value={form.metric} onChange={(e) => setForm({ ...form, metric: e.target.value })}>
-              {Object.entries(metricLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          <div>
-            <span style={label}>Periodo</span>
-            <select style={input} value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })}>
-              {Object.entries(periodLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          <div>
-            <span style={label}>Año</span>
-            <input type="number" style={input} value={form.year} onChange={(e) => setForm({ ...form, year: Number(e.target.value) })} />
-          </div>
-          <div>
-            <span style={label}>Valor</span>
-            <input type="number" style={input} value={form.targetValue} onChange={(e) => setForm({ ...form, targetValue: Number(e.target.value) })} />
-          </div>
-          <button style={btn("primary")} onClick={create}>Agregar</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main exported component ─────────────────────────────────────────────────
 export function MktAdvancedSettings({ role }: { role: string }) {
   const canEdit = role === "superadmin" || role === "marketing";
@@ -421,7 +312,7 @@ export function MktAdvancedSettings({ role }: { role: string }) {
       <DuplicatesCard />
       <ScoringCard canEdit={canEdit} />
       <OutcomesCard canEdit={canEdit} />
-      <TargetsCard canEdit={canEdit} />
+      <MarketingTargetsSettings role={role} />
     </div>
   );
 }

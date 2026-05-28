@@ -35,7 +35,7 @@ import { MktBusinessSettings, MktUsersSettings, MktPipelineSettings, MktPortalsS
 import { CurrencySettings } from "@/components/settings/CurrencySettings";
 import { CloseReasonsSettings } from "@/components/settings/CloseReasonsSettings";
 import { DealAgingSettings } from "@/components/settings/DealAgingSettings";
-import { SalesTargetsSettings } from "@/components/settings/SalesTargetsSettings";
+import { MarketingTargetsSettings } from "@/components/marketing/MarketingTargetsSettings";
 import { CustomFieldsSettings } from "@/components/settings/CustomFieldsSettings";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
@@ -606,7 +606,7 @@ function MktSettings({ initialTab }: { initialTab?: SettingsTab } = {}) {
 
       {/* ── OBJETIVOS ── */}
       {activeTab === "objetivos" && (
-        <SalesTargetsSettings currentUserId={currentUserId} />
+        <MarketingTargetsSettings role={actorRole} />
       )}
 
       {/* ── PORTALES ── */}
