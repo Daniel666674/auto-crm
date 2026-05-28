@@ -2,6 +2,21 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Paths a marketing user is allowed to visit.
+// Everything not in this list → redirect to /marketing.
+const MARKETING_ALLOWED = [
+  "/marketing",
+  "/analytics",
+  "/settings",
+  "/contacts",
+  "/activities",
+  "/calendar",
+  "/ms-command",
+  "/revenue-intelligence",
+  "/api/",
+  "/embed/",
+];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -44,14 +59,24 @@ export async function middleware(req: NextRequest) {
   // superadmin bypasses all role restrictions
   if (role === "superadmin") return NextResponse.next();
 
-  if (pathname.startsWith("/marketing") && role !== "marketing") {
+  // Marketing role: whitelist-based — only allowed paths above, everything else
+  // (sales dashboard, pipeline, deals, forecast, clients, etc.) → /marketing.
+  if (role === "marketing") {
+    const allowed =
+      pathname === "/" // page.tsx handles the redirect to /marketing
+        ? false        // force it through the page-level redirect for a clean UX
+        : MARKETING_ALLOWED.some(p => pathname.startsWith(p));
+    if (!allowed) return NextResponse.redirect(new URL("/marketing", req.url));
+    return NextResponse.next();
+  }
+
+  // Non-marketing users cannot visit the marketing module
+  if (pathname.startsWith("/marketing")) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (
-    (pathname.startsWith("/pipeline") || pathname.startsWith("/sales")) &&
-    role !== "sales"
-  ) {
+  // Non-sales users cannot visit pipeline or sales routes
+  if (pathname.startsWith("/pipeline") || pathname.startsWith("/sales")) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
@@ -61,3 +86,4 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
 };
+
