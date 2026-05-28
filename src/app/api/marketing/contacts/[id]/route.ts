@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mktDb } from "@/db/mkt-db";
 import { fireTriggers } from "@/lib/triggers";
+import { notifyUsers } from "@/lib/notify";
 import { notifySlackMktHandoff } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,16 @@ export async function PATCH(req: Request, { params }: Params) {
           contactId: before.id, name: before.name, company: before.company,
           email: before.email, tier: String(before.tier), score: String(body.score ?? before.score),
         },
+      }).catch(() => {});
+
+      const companyPart = before.company ? ` · ${before.company}` : "";
+      notifyUsers({
+        type: "mkt_handoff",
+        title: "Handoff a ventas",
+        body: `${before.name}${companyPart} · Tier ${before.tier} · Score ${body.score ?? before.score}`,
+        priority: "high",
+        resourceType: "contact", resourceId: before.id,
+        link: `/contacts/${before.id}`,
       }).catch(() => {});
     }
 

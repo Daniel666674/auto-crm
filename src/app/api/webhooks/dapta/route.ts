@@ -4,6 +4,7 @@ import { contacts, activities, calendarEvents, crmSettings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { recomputeContact } from "@/lib/fit-recompute";
 import { fireTriggers } from "@/lib/triggers";
+import { notifyUsers } from "@/lib/notify";
 
 interface DaptaPayload {
   meetingId: string;
@@ -211,6 +212,26 @@ export async function POST(request: NextRequest) {
   fireTriggers({ event: "meeting_booked", data: triggerData }).catch(() => {});
   if (body.sentiment === "positive") {
     fireTriggers({ event: "became_sql", data: triggerData }).catch(() => {});
+  }
+
+  notifyUsers({
+    type: "meeting_booked",
+    title: "Reunión agendada",
+    body: `${contact?.name ?? "Contacto"}${body.durationMin ? ` · ${body.durationMin} min` : ""}`,
+    priority: "high",
+    resourceType: "contact", resourceId: contactId,
+    link: `/contacts/${contactId}`,
+  }).catch(() => {});
+
+  if (body.sentiment === "positive") {
+    notifyUsers({
+      type: "lifecycle_sql",
+      title: "Lead calificado a SQL",
+      body: `${contact?.name ?? "Contacto"} pasó a SQL tras reunión positiva`,
+      priority: "high",
+      resourceType: "contact", resourceId: contactId,
+      link: `/contacts/${contactId}`,
+    }).catch(() => {});
   }
 
   return NextResponse.json({

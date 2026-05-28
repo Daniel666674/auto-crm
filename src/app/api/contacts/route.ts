@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { contacts } from "@/db/schema";
 import { eq, like, or, desc, isNull, and } from "drizzle-orm";
 import { fireTriggers } from "@/lib/triggers";
+import { notifyUsers } from "@/lib/notify";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -97,6 +98,18 @@ export async function POST(request: NextRequest) {
         temperature: result.temperature,
       },
     }).catch(() => {});
+
+    if ((result.score ?? 0) >= 70 || result.temperature === "hot") {
+      const companyPart = result.company ? ` · ${result.company}` : "";
+      notifyUsers({
+        type: "lead_hot",
+        title: "Lead caliente nuevo",
+        body: `${result.name}${companyPart} · Score ${result.score ?? 0}`,
+        priority: "high",
+        resourceType: "contact", resourceId: result.id,
+        link: `/contacts/${result.id}`,
+      }).catch(() => {});
+    }
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

@@ -1,16 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, AlertCircle, Clock, RefreshCw, TrendingUp, Zap } from "lucide-react";
+import { Bell, AlertCircle, Clock, RefreshCw, TrendingUp, Zap, CheckCheck, Trophy, MailOpen, Calendar, ArrowRightLeft, Send } from "lucide-react";
 import Link from "next/link";
 import type { HubItem } from "@/app/api/notifications-hub/route";
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  overdue_followup: <Clock size={13} />,
-  stalled_deal:     <AlertCircle size={13} />,
-  renewal_soon:     <RefreshCw size={13} />,
-  proposal_waiting: <TrendingUp size={13} />,
-  hot_lead:         <Zap size={13} />,
+  overdue_followup:   <Clock size={13} />,
+  stalled_deal:       <AlertCircle size={13} />,
+  renewal_soon:       <RefreshCw size={13} />,
+  proposal_waiting:   <TrendingUp size={13} />,
+  hot_lead:           <Zap size={13} />,
+  lead_hot:           <Zap size={13} />,
+  deal_won:           <Trophy size={13} />,
+  deal_lost:          <AlertCircle size={13} />,
+  deal_stage_changed: <ArrowRightLeft size={13} />,
+  email_reply:        <MailOpen size={13} />,
+  meeting_booked:     <Calendar size={13} />,
+  lifecycle_mql:      <TrendingUp size={13} />,
+  lifecycle_sql:      <TrendingUp size={13} />,
+  mkt_handoff:        <ArrowRightLeft size={13} />,
+  campaign_sent:      <Send size={13} />,
+  campaign_completed: <Send size={13} />,
+  automation:         <Zap size={13} />,
+  system:             <AlertCircle size={13} />,
 };
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -63,6 +76,30 @@ export function NotificationsHub() {
     }
   };
 
+  const persistentIds = items.filter(i => i.persistent).map(i => i.id);
+
+  async function markAllRead() {
+    if (persistentIds.length === 0) return;
+    try {
+      await fetch("/api/notifications-hub/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: persistentIds }),
+      });
+      await fetchHub();
+    } catch { /* ignore */ }
+  }
+
+  async function markOneRead(id: string) {
+    try {
+      await fetch("/api/notifications-hub/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [id] }),
+      });
+    } catch { /* ignore */ }
+  }
+
   const highCount = items.filter(i => i.priority === "high").length;
   const badgeCount = count > 0 ? count : 0;
 
@@ -102,14 +139,25 @@ export function NotificationsHub() {
           {/* Header */}
           <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>Alertas del sistema</div>
-            <button
-              onClick={() => fetchHub()}
-              disabled={loading}
-              style={{ padding: 4, borderRadius: 6, border: "none", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer", opacity: loading ? 0.5 : 1 }}
-              title="Actualizar"
-            >
-              <RefreshCw size={13} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
-            </button>
+            <div style={{ display: "flex", gap: 4 }}>
+              {persistentIds.length > 0 && (
+                <button
+                  onClick={markAllRead}
+                  style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer", fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}
+                  title="Marcar todas como leídas"
+                >
+                  <CheckCheck size={13} /> Marcar leídas
+                </button>
+              )}
+              <button
+                onClick={() => fetchHub()}
+                disabled={loading}
+                style={{ padding: 4, borderRadius: 6, border: "none", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer", opacity: loading ? 0.5 : 1 }}
+                title="Actualizar"
+              >
+                <RefreshCw size={13} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
+              </button>
+            </div>
           </div>
 
           {/* Items */}
@@ -129,7 +177,10 @@ export function NotificationsHub() {
               <Link
                 key={item.id}
                 href={item.link}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  if (item.persistent) markOneRead(item.id);
+                }}
                 style={{ textDecoration: "none", display: "block" }}
               >
                 <div style={{

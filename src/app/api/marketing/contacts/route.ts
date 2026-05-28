@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { mktDb } from "@/db/mkt-db";
 import { fireTriggers } from "@/lib/triggers";
+import { notifyUsers } from "@/lib/notify";
 import { computeLocalEngagementByEmail } from "@/lib/mkt-engagement";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,18 @@ export async function POST(req: Request) {
         module: "marketing",
       },
     }).catch(() => {});
+
+    if (mapped.score >= 70 || mapped.tier === 1) {
+      const companyPart = mapped.company ? ` · ${mapped.company}` : "";
+      notifyUsers({
+        type: "lead_hot",
+        title: "Lead caliente nuevo (Marketing)",
+        body: `${mapped.name}${companyPart} · Tier ${mapped.tier} · Score ${mapped.score}`,
+        priority: "high",
+        resourceType: "contact", resourceId: id,
+        link: `/marketing`,
+      }).catch(() => {});
+    }
 
     return NextResponse.json(mapped, { status: 201 });
   } catch (e) {

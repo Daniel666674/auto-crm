@@ -28,6 +28,8 @@ async function sendToUser(userId: string, payload: object) {
   }
 }
 
+export { sendToUser as sendPushToUser };
+
 async function sendToAll(payload: object) {
   if (!configureWebPush()) return;
   const subs = db.select().from(pushSubscriptions).all();

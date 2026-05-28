@@ -6,6 +6,7 @@ import { deals, pipelineStages, contacts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notifySlackDealClosed } from "@/lib/slack";
 import { fireTriggers } from "@/lib/triggers";
+import { notifyUsers } from "@/lib/notify";
 
 export async function GET(
   _request: NextRequest,
@@ -97,6 +98,37 @@ export async function PUT(
       fireTriggers({ event: "deal_stage_changed", data: triggerData }).catch(() => {});
       if (newStage.isWon) fireTriggers({ event: "deal_won", data: triggerData }).catch(() => {});
       if (newStage.isLost) fireTriggers({ event: "deal_lost", data: triggerData }).catch(() => {});
+
+      const dealLabel = triggerData.dealTitle || "Deal";
+      const contactPart = triggerData.contactName ? ` · ${triggerData.contactName}` : "";
+      if (newStage.isWon) {
+        notifyUsers({
+          type: "deal_won",
+          title: "Deal ganado",
+          body: `${dealLabel}${contactPart}`,
+          priority: "high",
+          resourceType: "deal", resourceId: existing.id,
+          link: `/pipeline`,
+        }).catch(() => {});
+      } else if (newStage.isLost) {
+        notifyUsers({
+          type: "deal_lost",
+          title: "Deal perdido",
+          body: `${dealLabel}${contactPart}`,
+          priority: "medium",
+          resourceType: "deal", resourceId: existing.id,
+          link: `/pipeline`,
+        }).catch(() => {});
+      } else {
+        notifyUsers({
+          type: "deal_stage_changed",
+          title: "Deal movido",
+          body: `${dealLabel} → ${newStage.name}${contactPart}`,
+          priority: "medium",
+          resourceType: "deal", resourceId: existing.id,
+          link: `/pipeline`,
+        }).catch(() => {});
+      }
     } else if (newStage && !newStage.isWon && !newStage.isLost) {
       // Moving back to an active stage — clear closure
       updateData.closedAt = null;

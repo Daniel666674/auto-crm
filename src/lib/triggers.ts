@@ -1,6 +1,7 @@
 import { db } from "@/db";
-import { workflowTriggers, crmSettings, contacts, activities, notifications, users } from "@/db/schema";
+import { workflowTriggers, crmSettings, contacts, activities } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { notifyUsers } from "./notify";
 
 export type TriggerEvent =
   | "deal_stage_changed"
@@ -120,21 +121,17 @@ async function executeAction(action: Action, data: Record<string, unknown>): Pro
       return;
     }
     case "notify_inapp": {
-      // In-app notification to every active user (sales/marketing team).
-      const team = db.select({ id: users.id }).from(users).all();
       const title = "Automatización";
       const bodyText = action.message ? renderTemplate(action.message, data) : `Evento: ${data.event}`;
-      for (const u of team) {
-        db.insert(notifications).values({
-          userId: u.id,
-          type: "automation",
-          title,
-          body: bodyText,
-          resourceType: contactId ? "contact" : null,
-          resourceId: contactId ?? null,
-          read: false,
-        }).run();
-      }
+      await notifyUsers({
+        type: "automation",
+        title,
+        body: bodyText,
+        priority: "medium",
+        resourceType: contactId ? "contact" : null,
+        resourceId: contactId ?? null,
+        link: contactId ? `/contacts/${contactId}` : "/",
+      });
       return;
     }
     case "create_followup": {

@@ -5,6 +5,7 @@ import { getGmailSenderUserId, listInboundMessages } from "./google-gmail";
 import { logEmailEvent } from "./email";
 import { recomputeContact } from "./fit-recompute";
 import { fireTriggers } from "./triggers";
+import { notifyUsers } from "./notify";
 
 function parseFromEmail(from: string): string {
   const m = from.match(/<([^>]+)>/);
@@ -106,6 +107,16 @@ export async function pollInboundReplies(): Promise<{ logged: number }> {
       event: "contact_replied",
       data: { contactId, subject: m.subject || "", from: parseFromEmail(m.from) },
     });
+
+    notifyUsers({
+      type: "email_reply",
+      title: "Respuesta recibida",
+      body: `${parseFromEmail(m.from)}: ${m.subject || "(sin asunto)"}`,
+      priority: "high",
+      resourceType: "contact", resourceId: contactId,
+      link: `/contacts/${contactId}`,
+    }).catch(() => {});
+
     logged++;
   }
 

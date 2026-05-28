@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mktDb } from "@/db/mkt-db";
 import { fireTriggers } from "@/lib/triggers";
+import { notifyUsers } from "@/lib/notify";
 import { notifySlackCampaignLaunched } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,15 @@ export async function PATCH(req: Request, { params }: Params) {
             campaignName: (body.name ?? existing.name) as string,
             outcomeReasonId: (body.outcomeReasonId ?? existing.outcome_reason_id ?? "") as string,
           },
+        }).catch(() => {});
+
+        notifyUsers({
+          type: "campaign_completed",
+          title: "Campaña completada",
+          body: String(body.name ?? existing.name ?? "Campaña"),
+          priority: "medium",
+          resourceType: "campaign", resourceId: id,
+          link: `/marketing`,
         }).catch(() => {});
       }
     }

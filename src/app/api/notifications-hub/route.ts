@@ -2,20 +2,41 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/db";
-import { activities, deals, pipelineStages, clients, proposals, contacts } from "@/db/schema";
-import { isNull, lt, gt, eq, and, isNotNull } from "drizzle-orm";
+import { activities, deals, pipelineStages, clients, proposals, contacts, notifications } from "@/db/schema";
+import { isNull, lt, gt, eq, and, isNotNull, desc } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 export type HubItem = {
   id: string;
-  type: "overdue_followup" | "stalled_deal" | "renewal_soon" | "proposal_waiting" | "hot_lead";
+  type:
+    | "overdue_followup" | "stalled_deal" | "renewal_soon" | "proposal_waiting" | "hot_lead"
+    | "lead_hot" | "deal_won" | "deal_lost" | "deal_stage_changed"
+    | "email_reply" | "meeting_booked" | "lifecycle_mql" | "lifecycle_sql"
+    | "mkt_handoff" | "campaign_sent" | "campaign_completed" | "automation" | "system";
   title: string;
   body: string;
   priority: "high" | "medium" | "low";
   link: string;
   createdAt: string;
+  read?: boolean;
+  persistent?: boolean;
 };
+
+const HIGH_PRIORITY_TYPES = new Set([
+  "lead_hot", "deal_won", "email_reply", "meeting_booked", "lifecycle_sql", "mkt_handoff",
+]);
+
+function linkForNotification(resourceType: string | null, resourceId: string | null): string {
+  if (!resourceType || !resourceId) return "/";
+  switch (resourceType) {
+    case "contact": return `/contacts/${resourceId}`;
+    case "deal":    return `/pipeline`;
+    case "activity": return `/calendar`;
+    case "campaign": return `/marketing`;
+    default: return "/";
+  }
+}
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -153,6 +174,40 @@ export async function GET() {
         link: `/contacts/${c.id}`,
         createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
       });
+    }
+  } catch { /* skip */ }
+
+  // 6. Persisted notifications (last 7d, unread, scoped to the calling user)
+  try {
+    const userId = (session.user as { id?: string })?.id;
+    if (userId) {
+      const since = new Date(now - 7 * 86400000);
+      const userNotifs = db.select().from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.read, false),
+          gt(notifications.createdAt, since),
+        ))
+        .orderBy(desc(notifications.createdAt))
+        .limit(20)
+        .all();
+
+      for (const n of userNotifs) {
+        const priority: HubItem["priority"] = HIGH_PRIORITY_TYPES.has(n.type)
+          ? "high"
+          : n.type === "automation" || n.type === "system" ? "low" : "medium";
+        items.push({
+          id: `notif-${n.id}`,
+          type: n.type as HubItem["type"],
+          title: n.title,
+          body: n.body,
+          priority,
+          link: linkForNotification(n.resourceType, n.resourceId),
+          createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+          read: n.read,
+          persistent: true,
+        });
+      }
     }
   } catch { /* skip */ }
 
