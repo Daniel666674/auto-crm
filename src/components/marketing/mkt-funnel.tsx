@@ -3,7 +3,41 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { BSLoading } from "../ui/BSLoading";
 
+const PLATFORMS = ["all", "meta", "google", "linkedin", "brevo", "organic", "otro"] as const;
+type Platform = typeof PLATFORMS[number];
+
+const PLATFORM_LABELS: Record<Platform, string> = {
+  all: "Total",
+  meta: "Meta",
+  google: "Google",
+  linkedin: "LinkedIn",
+  brevo: "Email (Brevo)",
+  organic: "Organic",
+  otro: "Otro",
+};
+
+const PLATFORM_COLORS: Record<Platform, string> = {
+  all: "#C39A4C",
+  meta: "#1877f2",
+  google: "#ea4335",
+  linkedin: "#0a66c2",
+  brevo: "#00BFA5",
+  organic: "#22c55e",
+  otro: "#94a3b8",
+};
+
+const PLATFORM_HINTS: Record<Exclude<Platform, "all">, string> = {
+  meta: "Etiqueta los contactos con source=meta/facebook/instagram o usa utm_source=facebook en el link de tus anuncios.",
+  google: "Etiqueta los contactos con source=google/google_ads o usa utm_source=google en tus anuncios.",
+  linkedin: "Etiqueta los contactos con source=linkedin o usa utm_source=linkedin en tus campañas.",
+  brevo: "Los contactos sincronizados desde Brevo se etiquetan automáticamente con el tag 'brevo'.",
+  organic: "Contactos con source=website/organic/seo sin parámetros utm_source.",
+  otro: "Contactos sin atribución clara a ninguna de las plataformas anteriores.",
+};
+
 interface FunnelData {
+  platform: Platform;
+  platformCounts: Record<Exclude<Platform, "all">, number>;
   lifecycleCounts: Record<string, number>;
   conversionRates: { from: string; to: string; rate: number; dropoff: number }[];
   dealStageBreakdown: {
@@ -77,20 +111,25 @@ function RateBar({ label, rate, color, note }: { label: string; rate: number; co
 export function MktFunnel() {
   const [data, setData] = useState<FunnelData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [platform, setPlatform] = useState<Platform>("all");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p: Platform) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/marketing/funnel");
+      const res = await fetch(`/api/marketing/funnel?platform=${p}`);
       const d = await res.json();
       if (!d.error) setData(d);
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(platform); }, [load, platform]);
 
-  if (loading || !data) {
+  if (loading && !data) {
     return <BSLoading label="Cargando funnel…" />;
+  }
+
+  if (!data) {
+    return <div style={{ fontSize: 13, color: "var(--mkt-text-muted)" }}>Sin datos.</div>;
   }
 
   const maxLifecycle = Math.max(...Object.values(data.lifecycleCounts), 1);
@@ -107,6 +146,9 @@ export function MktFunnel() {
   const sortedSources = Object.entries(data.sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const maxSource = Math.max(...sortedSources.map(([, v]) => v), 1);
 
+  const accent = PLATFORM_COLORS[platform];
+  const platformIsEmpty = platform !== "all" && data.totalContacts === 0;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
@@ -117,6 +159,57 @@ export function MktFunnel() {
           Vista completa: calidad del pipeline, engagement, email y conversión hasta cierre.
         </p>
       </div>
+
+      {/* Platform chip strip */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {PLATFORMS.map(p => {
+          const isActive = p === platform;
+          const count = p === "all"
+            ? Object.values(data.platformCounts).reduce((a, b) => a + b, 0)
+            : data.platformCounts[p];
+          const color = PLATFORM_COLORS[p];
+          return (
+            <button
+              key={p}
+              onClick={() => setPlatform(p)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 12px", borderRadius: 999, cursor: "pointer",
+                fontSize: 12, fontWeight: 600,
+                background: isActive ? `${color}22` : "var(--mkt-surface)",
+                border: `1px solid ${isActive ? color : "var(--mkt-border)"}`,
+                color: isActive ? color : "var(--mkt-text-muted)",
+                transition: "all 0.12s",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: 3, background: color }} />
+              {PLATFORM_LABELS[p]}
+              <span style={{
+                padding: "1px 6px", borderRadius: 8, fontSize: 10, fontWeight: 700,
+                background: isActive ? color : "var(--mkt-bg)",
+                color: isActive ? "#0a0a0a" : "var(--mkt-text-muted)",
+                marginLeft: 2,
+              }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {platformIsEmpty && (
+        <div style={{
+          padding: 16, borderRadius: 10,
+          background: `${accent}11`,
+          border: `1px solid ${accent}33`,
+          fontSize: 13, color: "var(--mkt-text)",
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: accent }}>
+            Sin contactos atribuidos a {PLATFORM_LABELS[platform]}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--mkt-text-muted)", lineHeight: 1.5 }}>
+            {PLATFORM_HINTS[platform as Exclude<Platform, "all">]}
+          </div>
+        </div>
+      )}
 
       {/* Top-level KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
