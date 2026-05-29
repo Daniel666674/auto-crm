@@ -9,7 +9,9 @@ import { MktCampaignWall } from "@/components/marketing/mkt-campaign-wall";
 import { MktSegmentHealth } from "@/components/marketing/mkt-segment-health";
 import { MktAttributionDashboard } from "@/components/marketing/mkt-attribution";
 import { MktHandoffCenter } from "@/components/marketing/mkt-handoff-center";
-import { MKT_THEME_VARS } from "@/components/marketing/mkt-utils";
+import { MKT_THEME_VARS, getMktThemeVars } from "@/components/marketing/mkt-utils";
+import { BrandPresetPicker } from "@/components/shared/BrandPresetPicker";
+import { MARKETING_DEFAULT_PRESET, getBrandPreset } from "@/lib/brand-presets";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
 const SECTION_LABELS: Record<MktSection, string> = {
@@ -31,6 +33,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   roi: "ROI",
   export: "Exportar",
   integrations: "Integraciones",
+  appearance: "Apariencia",
 } as Record<MktSection, string>;
 
 // ── Listas Brevo ─────────────────────────────────────────────────────────────
@@ -208,11 +211,64 @@ function MktPlaceholder({ label }: { label: string }) {
   );
 }
 
+// ── Appearance (marketing brand theme) ──────────────────────────────────────
+function MktAppearance({ value, onChange, saving }: { value: string; onChange: (id: string) => void; saving: boolean }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+      <div>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--mkt-text)", margin: 0 }}>Tema de marketing</h2>
+        <p style={{ fontSize: 12, color: "var(--mkt-text-muted)", marginTop: 6, lineHeight: 1.5 }}>
+          Los tres presets están dentro del brandbook de Blackscale (noir + cream + dorado + burdeos).
+          El cambio solo afecta al módulo de marketing — ventas mantiene su propio tema.
+        </p>
+      </div>
+      <BrandPresetPicker value={value} onChange={onChange} />
+      {saving && (
+        <p style={{ fontSize: 11, color: "var(--mkt-text-muted)" }}>Guardando preferencia…</p>
+      )}
+    </div>
+  );
+}
+
 // ── Main content ─────────────────────────────────────────────────────────────
 function MarketingContent() {
   const [section, setSection] = useState<MktSection>("engagement");
+  const [themeVars, setThemeVars] = useState<Record<string, string>>(MKT_THEME_VARS);
+  const [themeId, setThemeId] = useState<string>(MARKETING_DEFAULT_PRESET);
+  const [savingTheme, setSavingTheme] = useState(false);
   const { notifications, loading, contacts } = useMkt();
   const lastNotification = notifications[notifications.length - 1];
+
+  useEffect(() => {
+    fetch("/app/api/settings/mkt-preferences")
+      .then(r => r.ok ? r.json() : null)
+      .then(p => {
+        if (!p || p.error) return;
+        const id = typeof p.theme === "string" ? p.theme : MARKETING_DEFAULT_PRESET;
+        setThemeId(id);
+        setThemeVars(getMktThemeVars(id, typeof p.accentPrimary === "string" ? p.accentPrimary : undefined));
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectTheme = async (id: string) => {
+    setThemeId(id);
+    setThemeVars(getMktThemeVars(id));
+    setSavingTheme(true);
+    try {
+      const p = getBrandPreset(id);
+      const res = await fetch("/app/api/settings/mkt-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: id, accentPrimary: p.accent, accentSecondary: p.accentSecondary, textColor: p.text, sidebarBg: p.sidebar }),
+      });
+      if (!res.ok) throw new Error("save failed");
+    } catch {
+      // soft-fail — UI already updated
+    } finally {
+      setSavingTheme(false);
+    }
+  };
 
   const renderSection = () => {
     if (loading) {
@@ -241,13 +297,14 @@ function MarketingContent() {
       case "roi": return <MktPlaceholder label="ROI" />;
       case "export": return <MktPlaceholder label="Exportar" />;
       case "integrations": return <MktPlaceholder label="Integraciones" />;
+      case "appearance": return <MktAppearance value={themeId} onChange={handleSelectTheme} saving={savingTheme} />;
     }
   };
 
   return (
     <div
       style={{
-        ...MKT_THEME_VARS,
+        ...themeVars,
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", background: "var(--mkt-bg)",
         fontFamily: "'Inter', -apple-system, sans-serif",

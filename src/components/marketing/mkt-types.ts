@@ -53,6 +53,7 @@ export type MktSection =
   | "calendar" | "abm"
   | "digest" | "roi" | "export"
   | "integrations"
+  | "appearance"
   | "icp" | "segments"; // legacy aliases kept for backward compat
 
 export const MKT_SOURCES = ["website", "referido", "redes_sociales", "formulario", "evento", "llamada_fria", "whatsapp"] as const;

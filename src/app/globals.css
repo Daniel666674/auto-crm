@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
+  --font-display: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,81 +49,83 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ─── Brandbook light baseline (cream-gold) ──────────────────────────────── */
 :root {
-  --background: #fafafa;
-  --foreground: #0f172a;
+  --background: #F8F5F0;
+  --foreground: #1a1410;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #1a1410;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #2563eb;
+  --popover-foreground: #1a1410;
+  --primary: #D19C15;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1e293b;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #1e293b;
+  --secondary: #ffffff;
+  --secondary-foreground: #1a1410;
+  --muted: #ffffff;
+  --muted-foreground: #6b5e54;
+  --accent: rgba(209,156,21,0.08);
+  --accent-foreground: #D19C15;
   --destructive: #dc2626;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #2563eb;
-  --chart-1: #2563eb;
-  --chart-2: #16a34a;
+  --border: rgba(26,20,16,0.08);
+  --input: rgba(26,20,16,0.08);
+  --ring: #D19C15;
+  --chart-1: #D19C15;
+  --chart-2: #551C25;
   --chart-3: #ea580c;
   --chart-4: #8b5cf6;
-  --chart-5: #64748b;
+  --chart-5: #6b5e54;
   --radius: 0.5rem;
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #2563eb;
+  --sidebar: #F1ECE3;
+  --sidebar-foreground: #1a1410;
+  --sidebar-primary: #D19C15;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #334155;
-  --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #334155;
-  --sidebar-ring: #2563eb;
+  --sidebar-accent: rgba(209,156,21,0.08);
+  --sidebar-accent-foreground: #D19C15;
+  --sidebar-border: rgba(26,20,16,0.08);
+  --sidebar-ring: #D19C15;
   --success: #16a34a;
   --success-foreground: #ffffff;
   --warning: #ea580c;
   --warning-foreground: #ffffff;
 }
 
+/* ─── Brandbook dark baseline (noir-gold) ────────────────────────────────── */
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --popover: #1e293b;
-  --popover-foreground: #f8fafc;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #334155;
-  --secondary-foreground: #f8fafc;
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
-  --accent: #334155;
-  --accent-foreground: #f8fafc;
+  --background: #0a0a09;
+  --foreground: #D7D2CB;
+  --card: #11110F;
+  --card-foreground: #D7D2CB;
+  --popover: #11110F;
+  --popover-foreground: #D7D2CB;
+  --primary: #D19C15;
+  --primary-foreground: #0a0a09;
+  --secondary: #1a1a17;
+  --secondary-foreground: #D7D2CB;
+  --muted: #1a1a17;
+  --muted-foreground: #7a756e;
+  --accent: rgba(209,156,21,0.08);
+  --accent-foreground: #D19C15;
   --destructive: #ef4444;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
-  --chart-2: #22c55e;
+  --border: rgba(215,210,203,0.07);
+  --input: rgba(215,210,203,0.10);
+  --ring: #D19C15;
+  --chart-1: #D19C15;
+  --chart-2: #6D1F2E;
   --chart-3: #f97316;
   --chart-4: #a78bfa;
-  --chart-5: #94a3b8;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #3b82f6;
+  --chart-5: #7a756e;
+  --sidebar: #0c0c0b;
+  --sidebar-foreground: #D7D2CB;
+  --sidebar-primary: #D19C15;
+  --sidebar-primary-foreground: #0a0a09;
+  --sidebar-accent: rgba(209,156,21,0.08);
+  --sidebar-accent-foreground: #D19C15;
+  --sidebar-border: rgba(215,210,203,0.07);
+  --sidebar-ring: #D19C15;
   --success: #22c55e;
-  --success-foreground: #ffffff;
+  --success-foreground: #0a0a09;
   --warning: #f97316;
-  --warning-foreground: #ffffff;
+  --warning-foreground: #0a0a09;
 }
 
 @layer base {
@@ -135,4 +138,100 @@
   html {
     @apply font-sans;
   }
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display), 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ─── Blackscale brandbook scrollbars ──────────────────────────────────────
+   Applied globally. Uses the active scope's --primary so the scrollbar
+   adapts to whichever theme owns the surrounding container (sales :root
+   tokens, or marketing's inline-scoped overrides).
+*/
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.15s ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 65%, transparent);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 45%, transparent) transparent;
+}
+.bs-scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* ─── Blackscale BSSpinner ────────────────────────────────────────────────── */
+@keyframes bs-arc {
+  0%   { stroke-dashoffset: var(--bs-full); transform: rotate(-90deg); }
+  45%  { stroke-dashoffset: var(--bs-short); transform: rotate(120deg); }
+  100% { stroke-dashoffset: var(--bs-full); transform: rotate(270deg); }
+}
+@keyframes bs-pulse-opacity { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .bs-arc-path { animation: bs-pulse-opacity 1.6s ease-in-out infinite !important; }
+}
+.bs-arc-path {
+  fill: none; stroke: #C89B3C; stroke-linecap: round;
+  animation: bs-arc 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(200,155,60,0.6));
+}
+.bs-track { fill: none; stroke: rgba(200,155,60,0.08); }
+.bs-b {
+  font-family: var(--font-display), 'Playfair Display', Georgia, serif;
+  font-weight: 700; fill: #C89B3C;
+  dominant-baseline: central; text-anchor: middle;
+  user-select: none;
+}
+.bs-spinner { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; }
+.bs-spinner-label { font-size: 12px; color: var(--muted-foreground, #888); font-family: inherit; }
+@keyframes bs-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.bs-skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 75%);
+  background-size: 400px 100%;
+  animation: bs-shimmer 1.4s ease-in-out infinite;
+}
+.bs-section-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px; z-index: 10;
+  background: rgba(13,13,13,0.7); border-radius: inherit;
+  transition: opacity 300ms ease;
+}
+.bs-section-overlay.fade-out { opacity: 0; pointer-events: none; }
+.bs-section-grid {
+  position: absolute; inset: 0; border-radius: inherit; overflow: hidden;
+  background-image:
+    linear-gradient(rgba(200,155,60,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,155,60,.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.bs-section-glow {
+  position: absolute; width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,155,60,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.bs-btn-loading {
+  opacity: 0.7 !important; pointer-events: none !important; cursor: not-allowed !important;
+  display: inline-flex !important; align-items: center !important; gap: 8px !important;
 }

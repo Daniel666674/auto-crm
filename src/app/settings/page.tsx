@@ -7,12 +7,15 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   Briefcase, Kanban, Webhook, Bell, Copy, User, Key, LogOut,
-  RefreshCw, CheckCircle, AlertCircle, Database,
+  RefreshCw, CheckCircle, AlertCircle, Database, Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificationToggle } from "@/components/shared/NotificationToggle";
 import { useSession, signOut } from "next-auth/react";
 import type { CrmConfig } from "@/types";
+import { BrandPresetPicker } from "@/components/shared/BrandPresetPicker";
+import { applyCrmTheme } from "@/lib/apply-theme";
+import { SALES_DEFAULT_PRESET, getBrandPreset } from "@/lib/brand-presets";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -37,6 +40,10 @@ export default function SettingsPage() {
   const [recalculating, setRecalculating] = useState(false);
   const [recalcResult, setRecalcResult] = useState<null | Record<string, unknown>>(null);
 
+  // Brand theme (sales-scope) state
+  const [salesThemeId, setSalesThemeId] = useState<string>(SALES_DEFAULT_PRESET);
+  const [savingTheme, setSavingTheme] = useState(false);
+
   const userName = session?.user?.name || "Usuario";
   const userEmail = session?.user?.email || "";
   const userImage = session?.user?.image;
@@ -46,7 +53,41 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/app/crm-config.json").then(r => r.json()).then(setConfig).catch(() => {});
     fetch("/app/api/pipeline").then(r => r.json()).then(setStages).catch(() => {});
+    fetch("/app/api/settings/preferences")
+      .then(r => r.ok ? r.json() : null)
+      .then(p => { if (p && typeof p.theme === "string") setSalesThemeId(p.theme); })
+      .catch(() => {});
   }, []);
+
+  const handleSelectSalesTheme = async (id: string) => {
+    setSalesThemeId(id);
+    const p = getBrandPreset(id);
+    applyCrmTheme({
+      theme: id,
+      accentPrimary: p.accent,
+      accentSecondary: p.accentSecondary,
+      textColor: p.text,
+      fontFamily: "inter",
+      sidebarBg: p.sidebar,
+      sidebarBgType: "solid",
+      uiDensity: "comfortable",
+      borderRadius: "rounded",
+    });
+    setSavingTheme(true);
+    try {
+      const res = await fetch("/app/api/settings/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: id, accentPrimary: p.accent, accentSecondary: p.accentSecondary, textColor: p.text, sidebarBg: p.sidebar }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      toast.success(`Tema "${p.label}" aplicado a Ventas`);
+    } catch {
+      toast.error("No se pudo guardar el tema");
+    } finally {
+      setSavingTheme(false);
+    }
+  };
 
   const handleSaveApollo = async () => {
     if (!apolloKey.trim()) return;
@@ -175,6 +216,29 @@ export default function SettingsPage() {
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar sesión
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Apariencia (Sales theme) */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Apariencia · Ventas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Selecciona el tema del módulo de ventas. Los tres presets están dentro del brandbook
+              (noir + cream + dorado + burdeos). El módulo de marketing tiene su propio selector y
+              no se ve afectado por este cambio.
+            </p>
+            <BrandPresetPicker value={salesThemeId} onChange={handleSelectSalesTheme} />
+            {savingTheme && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <RefreshCw className="h-3 w-3 animate-spin" /> Guardando preferencia…
+              </p>
+            )}
           </CardContent>
         </Card>
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -8,10 +8,17 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import { AppShell } from "@/components/shared/AppShell";
 import { PrivacyPolicyModal } from "@/components/shared/PrivacyPolicyModal";
 import { PushManager } from "@/components/shared/PushManager";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -27,18 +34,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} h-full antialiased dark`} suppressHydrationWarning>
+    <html lang="es" className={`${inter.variable} ${playfair.variable} h-full antialiased dark`} suppressHydrationWarning>
       <body className="min-h-full flex" suppressHydrationWarning>
         <SessionProvider>
-          <TooltipProvider>
-            <AppShell>
-              {children}
-            </AppShell>
-            <Toaster />
-            <NotificationChecker />
-            <PrivacyPolicyModal />
-            <PushManager />
-          </TooltipProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+              <Toaster />
+              <NotificationChecker />
+              <PrivacyPolicyModal />
+              <PushManager />
+            </TooltipProvider>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>
