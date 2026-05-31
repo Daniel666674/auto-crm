@@ -326,7 +326,23 @@ export function MktFunnelPlatforms() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{
+      // Scoped exact palette + font from Julian's HTML — overrides NEXUS tokens only inside this view.
+      "--mkt-bg": "#0a0a0b",
+      "--mkt-surface": "#111114",
+      "--mkt-border": "#2a2a33",
+      "--mkt-text": "#f5f5f7",
+      "--mkt-text-muted": "#a8a8b3",
+      "--mkt-accent": "#d4a85a",
+      fontFamily: "'Inter','-apple-system',BlinkMacSystemFont,system-ui,sans-serif",
+      WebkitFontSmoothing: "antialiased",
+      background: "#0a0a0b",
+      color: "#f5f5f7",
+      // Cancel the marketing <main>'s padding:24 so this view goes edge-to-edge like the mockup.
+      margin: -24,
+      minHeight: "calc(100vh - 64px)",
+    } as React.CSSProperties}>
+      <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
         <div>
@@ -349,7 +365,7 @@ export function MktFunnelPlatforms() {
           const active = tab === t.id;
           const pColor = t.id !== "overview" ? FP_PLATFORM_COLOR[t.id as PlatformKey] : undefined;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", color: active ? TEXT : MUTED, background: active ? ELEVATED : "transparent", border: `1px solid ${active ? BORDER_STRONG : "transparent"}` }}>
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", color: active ? TEXT : MUTED, background: active ? "#17171c" : "transparent", border: `1px solid ${active ? "#3a3a45" : "transparent"}` }}>
               {t.id === "overview" ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg> : <span style={{ width: 8, height: 8, borderRadius: 4, background: pColor }} />}
               {t.label}
               {t.stage && <span style={{ fontSize: 10, color: MUTED }}>{t.stage}</span>}
@@ -362,6 +378,7 @@ export function MktFunnelPlatforms() {
       </div>
 
       {tab === "overview" ? <OverviewView onSelect={setTab} /> : <PlatformView detail={FP_PLATFORMS[tab]} />}
+      </div>
     </div>
   );
 }

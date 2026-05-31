@@ -749,7 +749,8 @@ function MarketingContent() {
       <MktSidebar current={section} onNavigate={setSection} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Header */}
+        {/* Header — suppressed for Funnel por Plataforma so Julian's own header isn't duplicated. */}
+        {section !== "funnel" && section !== "funnel-platforms" && (
         <header style={{
           height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "0 24px", borderBottom: "1px solid var(--mkt-border)",
@@ -779,9 +780,10 @@ function MarketingContent() {
             <NotificationsHub />
           </div>
         </header>
+        )}
 
-        {/* Empty state */}
-        {!loading && contacts.length === 0 && (
+        {/* Empty state — also suppressed on the funnel views. */}
+        {section !== "funnel" && section !== "funnel-platforms" && !loading && contacts.length === 0 && (
           <div style={{
             padding: "16px 24px", background: "rgba(209,156,21,0.05)",
             borderBottom: "1px solid rgba(209,156,21,0.15)",
