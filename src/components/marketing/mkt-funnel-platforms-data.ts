@@ -63,9 +63,9 @@ export const FP_OVERVIEW = {
     { key: "conversion" as StageKey, label: "Conversion · BOFU", objective: "Cerrar y atribuir revenue. KPI: conversiones, CAC, ROAS." },
   ],
   pucks: [
-    { platform: "linkedin", col: 0, topPx: 96, label: "LinkedIn", pill: "Brand", pillStage: "awareness", context: "Campaña activa", value: "142K", unit: "impresiones", footer: "Meta: 100K · ", delta: "+42%", deltaUp: true },
-    { platform: "meta", col: 0, topPx: 206, label: "Meta", pill: "Followers", pillStage: "awareness", context: "Crecimiento de audiencia", value: "+318", unit: "seguidores", footer: "CPM $4.20 · ", delta: "-12%", deltaUp: true },
-    { platform: "google", col: 2, topPx: 150, label: "Google Ads", pill: "Search", pillStage: "conversion", context: "Conversiones (30d)", value: "23", unit: "leads", footer: "CPL $185K COP · ", delta: "-8%", deltaUp: true },
+    { platform: "linkedin", col: 0, topPx: 110, label: "LinkedIn", pill: "Brand", pillStage: "awareness", context: "Campaña activa", value: "142K", unit: "impresiones", footer: "Meta: 100K · ", delta: "+42%", deltaUp: true },
+    { platform: "meta", col: 0, topPx: 220, label: "Meta", pill: "Followers", pillStage: "awareness", context: "Crecimiento de audiencia", value: "+318", unit: "seguidores", footer: "CPM $4.20 · ", delta: "-12%", deltaUp: true },
+    { platform: "google", col: 2, topPx: 165, label: "Google Ads", pill: "Search", pillStage: "conversion", context: "Conversiones (30d)", value: "23", unit: "leads", footer: "CPL $185K COP · ", delta: "-8%", deltaUp: true },
   ] as Puck[],
   emptyStage: {
     title: "Etapa vacía",

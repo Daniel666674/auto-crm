@@ -56,7 +56,7 @@ function FunnelTrack({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
         </div>
       </div>
 
-      <div style={{ position: "relative", height: 330, borderRadius: 12, overflow: "hidden", background: `linear-gradient(90deg, ${FP_STAGE_COLOR.awareness}14 0%, ${FP_STAGE_COLOR.awareness}14 33.33%, ${FP_STAGE_COLOR.consideration}14 33.33%, ${FP_STAGE_COLOR.consideration}14 66.66%, ${FP_STAGE_COLOR.conversion}14 66.66%, ${FP_STAGE_COLOR.conversion}14 100%)` }}>
+      <div style={{ position: "relative", height: 320, borderRadius: 12, overflow: "hidden", background: `linear-gradient(90deg, ${FP_STAGE_COLOR.awareness}14 0%, ${FP_STAGE_COLOR.awareness}14 33.33%, ${FP_STAGE_COLOR.consideration}14 33.33%, ${FP_STAGE_COLOR.consideration}14 66.66%, ${FP_STAGE_COLOR.conversion}14 66.66%, ${FP_STAGE_COLOR.conversion}14 100%)` }}>
         {o.stages.map((st, i) => (
           <React.Fragment key={st.key}>
             <div style={{ position: "absolute", top: 14, left: `${2 + i * 33.33}%`, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: FP_STAGE_COLOR[st.key] }}>{st.label}</div>
@@ -79,7 +79,7 @@ function FunnelTrack({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
         ))}
 
         {/* Empty consideration stage */}
-        <div style={{ position: "absolute", left: COL_LEFT[1], top: 150, minWidth: 180, padding: "12px 14px", borderRadius: 12, background: `${FP_STAGE_COLOR.consideration}0a`, border: `1px dashed ${FP_STAGE_COLOR.consideration}66` }}>
+        <div style={{ position: "absolute", left: COL_LEFT[1], top: 165, minWidth: 180, padding: "12px 14px", borderRadius: 12, background: `${FP_STAGE_COLOR.consideration}0a`, border: `1px dashed ${FP_STAGE_COLOR.consideration}66` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={`${FP_STAGE_COLOR.consideration}99`} strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             <span style={{ fontSize: 13, fontWeight: 600, color: `${FP_STAGE_COLOR.consideration}e6` }}>{o.emptyStage.title}</span>
@@ -337,9 +337,9 @@ export function MktFunnelPlatforms() {
           <p style={{ fontSize: 12, color: MUTED, margin: "4px 0 0" }}>{o.header.subtitle}</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Btn>📅 Últimos 30 días</Btn>
-          <Btn>↓ Exportar</Btn>
-          <Btn primary>+ Nueva campaña</Btn>
+          <Btn><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>Últimos 30 días</Btn>
+          <Btn><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>Exportar</Btn>
+          <Btn primary><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>Nueva campaña</Btn>
         </div>
       </div>
 
@@ -350,7 +350,7 @@ export function MktFunnelPlatforms() {
           const pColor = t.id !== "overview" ? FP_PLATFORM_COLOR[t.id as PlatformKey] : undefined;
           return (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", color: active ? TEXT : MUTED, background: active ? ELEVATED : "transparent", border: `1px solid ${active ? BORDER_STRONG : "transparent"}` }}>
-              {t.id === "overview" ? "▦" : <span style={{ width: 8, height: 8, borderRadius: 4, background: pColor }} />}
+              {t.id === "overview" ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg> : <span style={{ width: 8, height: 8, borderRadius: 4, background: pColor }} />}
               {t.label}
               {t.stage && <span style={{ fontSize: 10, color: MUTED }}>{t.stage}</span>}
             </button>
