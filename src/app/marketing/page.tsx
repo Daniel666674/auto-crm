@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { MktProvider, useMkt } from "@/components/marketing/mkt-provider";
 import { MktSidebar } from "@/components/marketing/mkt-sidebar";
+import { MktFunnel } from "@/components/marketing/mkt-funnel";
 import { MktEngagementBoard } from "@/components/marketing/mkt-engagement-board";
 import { MktIcpScorer } from "@/components/marketing/mkt-icp-scorer";
 import { MktCampaignWall } from "@/components/marketing/mkt-campaign-wall";
@@ -15,6 +16,7 @@ import { MARKETING_DEFAULT_PRESET, getBrandPreset } from "@/lib/brand-presets";
 import type { MktSection } from "@/components/marketing/mkt-types";
 
 const SECTION_LABELS: Record<MktSection, string> = {
+  funnel: "Embudo de Marketing",
   engagement: "Engagement Board",
   icp: "ICP Scorer",
   "icp-insights": "ICP Insights",
@@ -100,7 +102,7 @@ function MktBrevoAnalytics() {
 
   const safeN = (v: unknown) => { const n = Number(v); return isNaN(n) ? 0 : n; };
 
-  const totals = campaigns.reduce((acc, c) => {
+  const totals = campaigns.reduce<{ sent: number; opens: number; clicks: number }>((acc, c) => {
     const gs = (c.statistics as Record<string, unknown>)?.globalStats as Record<string, unknown> | undefined;
     return {
       sent: acc.sent + safeN(gs?.sent ?? c.statistics),
@@ -232,7 +234,7 @@ function MktAppearance({ value, onChange, saving }: { value: string; onChange: (
 
 // ── Main content ─────────────────────────────────────────────────────────────
 function MarketingContent() {
-  const [section, setSection] = useState<MktSection>("engagement");
+  const [section, setSection] = useState<MktSection>("funnel");
   const [themeVars, setThemeVars] = useState<Record<string, string>>(MKT_THEME_VARS);
   const [themeId, setThemeId] = useState<string>(MARKETING_DEFAULT_PRESET);
   const [savingTheme, setSavingTheme] = useState(false);
@@ -279,6 +281,7 @@ function MarketingContent() {
       );
     }
     switch (section) {
+      case "funnel": return <MktFunnel />;
       case "engagement": return <MktEngagementBoard />;
       case "icp":
       case "icp-insights": return <MktIcpScorer />;

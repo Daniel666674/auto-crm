@@ -46,6 +46,7 @@ export interface MktCampaign {
 }
 
 export type MktSection =
+  | "funnel"
   | "engagement" | "campaigns" | "attribution" | "handoff"
   | "segment-health" | "icp-insights" | "lists"
   | "pipeline-view" | "lead-velocity"
