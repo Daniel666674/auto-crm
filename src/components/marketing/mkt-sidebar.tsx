@@ -10,6 +10,7 @@ interface NavItem {
   label: string;
   path: string;
   badge?: number;
+  tag?: string;
 }
 
 interface NavGroup {
@@ -63,6 +64,7 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
         { id: "segment-health", label: "Segment Health", path: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" },
         { id: "segments-builder" as MktSection, label: "Smart Segments", path: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H7a2 2 0 00-2 2v2m6 4v3" },
         { id: "funnel" as MktSection, label: "Funnel", path: "M3 4h18l-7 8v6l-4-2v-4L3 4z" },
+        { id: "funnel-platforms" as MktSection, label: "Funnel por Plataforma", path: "M4 4h6v6H4zM14 4h6v6h-6zM14 14h6v6h-6zM4 14h6v6H4z", tag: "NUEVO" },
       ],
     },
     {
@@ -171,6 +173,13 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
                       fontWeight: 700, display: "flex", alignItems: "center",
                       justifyContent: "center", padding: "0 3px",
                     }}>{item.badge}</span>
+                  )}
+                  {item.tag && (
+                    <span style={{
+                      position: "absolute", right: 10, padding: "1px 6px", borderRadius: 6,
+                      background: "var(--mkt-accent)", color: "#0a0a0a", fontSize: 8.5,
+                      fontWeight: 800, letterSpacing: "0.04em",
+                    }}>{item.tag}</span>
                   )}
                 </button>
               );
