@@ -63,8 +63,7 @@ export function MktSidebar({ current, onNavigate }: MktSidebarProps) {
       items: [
         { id: "segment-health", label: "Segment Health", path: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" },
         { id: "segments-builder" as MktSection, label: "Smart Segments", path: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2H7a2 2 0 00-2 2v2m6 4v3" },
-        { id: "funnel" as MktSection, label: "Funnel", path: "M3 4h18l-7 8v6l-4-2v-4L3 4z" },
-        { id: "funnel-platforms" as MktSection, label: "Funnel por Plataforma", path: "M4 4h6v6H4zM14 4h6v6h-6zM14 14h6v6h-6zM4 14h6v6H4z", tag: "NUEVO" },
+        { id: "funnel" as MktSection, label: "Funnel por Plataforma", path: "M4 4h6v6H4zM14 4h6v6h-6zM14 14h6v6h-6zM4 14h6v6H4z", tag: "NUEVO" },
       ],
     },
     {

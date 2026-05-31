@@ -20,7 +20,6 @@ import { MktCampaignRevenue } from "@/components/marketing/mkt-campaign-revenue"
 import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
 import { MktContactsView } from "@/components/marketing/mkt-contacts-view";
 import { MktReengagement } from "@/components/marketing/mkt-reengagement";
-import { MktFunnel } from "@/components/marketing/mkt-funnel";
 import { MktFunnelPlatforms } from "@/components/marketing/mkt-funnel-platforms";
 import { MktSegmentsBuilder } from "@/components/marketing/mkt-segments-builder";
 import { MKT_THEME_VARS, MKT_PRESETS, getMktThemeVars } from "@/components/marketing/mkt-utils";
@@ -46,7 +45,7 @@ const SECTION_LABELS: Record<MktSection, string> = {
   campaigns: "Campañas",
   contacts: "Contactos",
   reengagement: "Re-engagement Queue",
-  funnel: "Funnel Dashboard",
+  funnel: "Funnel por Plataforma",
   "funnel-platforms": "Funnel por Plataforma",
   "segments-builder": "Smart Segments",
   segments: "Segment Health",
@@ -712,8 +711,8 @@ function MarketingContent() {
       case "campaigns": return <MktCampaignWall />;
       case "contacts": return <MktContactsView />;
       case "reengagement": return <MktReengagement />;
-      case "funnel": return <MktFunnel />;
-      case "funnel-platforms": return <MktFunnelPlatforms onNavigate={setSection} />;
+      case "funnel":
+      case "funnel-platforms": return <MktFunnelPlatforms />;
       case "segments-builder": return <MktSegmentsBuilder />;
       case "segments":
       case "segment-health": return <MktSegmentHealth />;
