@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useContext, createContext } from "react";
+import React, { useState, useEffect, useCallback, useContext, createContext } from "react";
+import { MktAdMetricsPanel } from "./mkt-ad-metrics";
 import {
   FP_OVERVIEW, FP_PLATFORMS, FP_PILL, FP_STAGE_COLOR, FP_PLATFORM_COLOR, FP_DELTA_UP,
   type StageKey, type PlatformKey, type Seg, type PlatformDetail, type GateRow, type Puck, type HealthCard,
@@ -313,6 +314,11 @@ function PlatformView({ detail }: { detail: PlatformDetail }) {
                   <td style={{ padding: "12px 0", textAlign: "right" }}><button style={{ background: "none", border: "none", color: GOLD, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>{r.action}</button></td>
                 </tr>
               ))}
+              {d.campaigns.rows.length === 0 && (
+                <tr><td colSpan={d.campaigns.columns.length} style={{ padding: "18px 0", textAlign: "center", color: MUTED, fontSize: 12 }}>
+                  Conecta {d.name} para ver campañas activas, o registra inversión en Datos de Pauta.
+                </td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -341,12 +347,14 @@ function PlatformView({ detail }: { detail: PlatformDetail }) {
 export function MktFunnel() {
   const [tab, setTab] = useState<"overview" | PlatformKey>("overview");
   const [fp, setFp] = useState<{ overview: typeof FP_OVERVIEW; platforms: typeof FP_PLATFORMS }>({ overview: FP_OVERVIEW, platforms: FP_PLATFORMS });
-  useEffect(() => {
+  const [showPauta, setShowPauta] = useState(false);
+  const loadFunnel = useCallback(() => {
     fetch("/api/marketing/funnel-platforms")
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d && d.overview && d.platforms) setFp({ overview: d.overview, platforms: d.platforms }); })
       .catch(() => {});
   }, []);
+  useEffect(() => { loadFunnel(); }, [loadFunnel]);
   const o = fp.overview;
   const tabs: { id: "overview" | PlatformKey; label: string; stage?: string }[] = [
     { id: "overview", label: "Vista General" },
@@ -386,6 +394,7 @@ export function MktFunnel() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Btn><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>Últimos 30 días</Btn>
           <Btn><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>Exportar</Btn>
+          <Btn onClick={() => setShowPauta(v => !v)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20V10M18 20V4M6 20v-4" /></svg>Datos de Pauta</Btn>
           <Btn primary><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>Nueva campaña</Btn>
         </div>
       </div>
@@ -408,6 +417,7 @@ export function MktFunnel() {
         </span>
       </div>
 
+      {showPauta && <div style={{ marginBottom: 20 }}><MktAdMetricsPanel onSaved={loadFunnel} /></div>}
       {tab === "overview" ? <OverviewView onSelect={setTab} /> : <PlatformView detail={fp.platforms[tab]} />}
       </div>
     </div>
