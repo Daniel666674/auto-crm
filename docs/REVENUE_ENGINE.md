@@ -67,4 +67,11 @@ They share one database, so signals cross automatically:
 ## Build status / roadmap
 - ✅ **M1** Marketing funnel on real CRM data · ✅ **M2** manual ad-spend → CPL/ROAS · ✅ **M3** ad-platform clients + sync (awaiting credentials)
 - ✅ **S1** Sales Funnel view · ✅ **S2** action triggers (aging, slippage, quota coverage, forecast, win/loss by source)
-- ⏳ Next: nightly cron to auto-sync ad platforms; one-click "create campaign task" from a marketing gap; deal-stage history for true days-in-stage (currently uses last-update as a proxy).
+- ✅ **Auto-sync** ad platforms every 12h (in-process scheduler via `src/instrumentation.ts`, production only) + manual/cron trigger `POST /api/marketing/funnel/sync-all` (optional `CRON_SECRET`).
+- ✅ **Gap → sales to-do**: the funnel's gap banner "Crear campaña" button calls `POST /api/marketing/funnel/create-task`, which notifies sales + superadmin (high-priority, with browser push) and links to /marketing.
+- ⏳ Next: deal-stage history for true days-in-stage (currently uses last-update as a proxy).
+
+### Auto-sync — how it runs
+- **Zero-ops:** on the VPS (`NODE_ENV=production`), the server boots a scheduler that calls `syncAll()` ~45s after start and every 12h. It only pulls platforms that have credentials, so it's a no-op until you add env vars.
+- **Optional system cron** (if you prefer external control):
+  `0 3 * * * curl -s -X POST http://localhost:3000/api/marketing/funnel/sync-all -H "Authorization: Bearer $CRON_SECRET"`

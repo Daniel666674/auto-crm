@@ -206,6 +206,19 @@ function Budget() {
 
 function OverviewView({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
   const o = useFunnel().overview;
+  const [taskMsg, setTaskMsg] = useState("");
+  const createTask = async () => {
+    setTaskMsg("Creando…");
+    try {
+      const bodyText = (o.banner.body as { t: string }[]).map(s => s.t).join("");
+      const res = await fetch("/api/marketing/funnel/create-task", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: o.banner.title, body: bodyText, stage: "consideration" }),
+      });
+      setTaskMsg(res.ok ? "✓ Tarea enviada a ventas" : "Error al crear tarea");
+    } catch { setTaskMsg("Error de red"); }
+    setTimeout(() => setTaskMsg(""), 4000);
+  };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Action banner */}
@@ -217,7 +230,10 @@ function OverviewView({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{o.banner.title}</span><Pill stage="consideration">{o.banner.pill}</Pill></div>
           <p style={{ fontSize: 12, color: MUTED, margin: 0, lineHeight: 1.6 }}><Rich segs={o.banner.body} /></p>
         </div>
-        <Btn primary>{o.banner.button}</Btn>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <Btn primary onClick={createTask}>{o.banner.button}</Btn>
+          {taskMsg && <span style={{ fontSize: 10, color: MUTED }}>{taskMsg}</span>}
+        </div>
       </div>
 
       <FunnelTrack onSelect={onSelect} />

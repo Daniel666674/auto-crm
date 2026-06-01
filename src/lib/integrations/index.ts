@@ -75,3 +75,13 @@ export async function syncPlatform(platform: AdPlatform, periodDays = 30): Promi
   if (result.ok && result.connected) saveCache(platform, result);
   return result;
 }
+
+/** Sync every configured platform — used by the nightly scheduler and the sync-all route. */
+export async function syncAll(periodDays = 30): Promise<SyncResult[]> {
+  const results: SyncResult[] = [];
+  for (const platform of Object.keys(AD_CLIENTS) as AdPlatform[]) {
+    if (!AD_CLIENTS[platform].isConfigured()) continue; // skip platforms without credentials
+    try { results.push(await syncPlatform(platform, periodDays)); } catch { /* one platform failing must not block the rest */ }
+  }
+  return results;
+}
