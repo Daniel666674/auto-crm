@@ -52,7 +52,6 @@ export type MktSection =
   | "integrations"
   | "reengagement"
   | "funnel"
-  | "funnel-platforms"
   | "segments-builder"
   | "forecast" | "attribution-model"
   | "calculator"

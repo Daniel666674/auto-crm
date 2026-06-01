@@ -20,7 +20,7 @@ import { MktCampaignRevenue } from "@/components/marketing/mkt-campaign-revenue"
 import { MktIntelligence } from "@/components/marketing/mkt-intelligence";
 import { MktContactsView } from "@/components/marketing/mkt-contacts-view";
 import { MktReengagement } from "@/components/marketing/mkt-reengagement";
-import { MktFunnelPlatforms } from "@/components/marketing/mkt-funnel-platforms";
+import { MktFunnel } from "@/components/marketing/mkt-funnel";
 import { MktSegmentsBuilder } from "@/components/marketing/mkt-segments-builder";
 import { MKT_THEME_VARS, MKT_PRESETS, getMktThemeVars } from "@/components/marketing/mkt-utils";
 import { MktForecast } from "@/components/marketing/mkt-forecast";
@@ -46,7 +46,6 @@ const SECTION_LABELS: Record<MktSection, string> = {
   contacts: "Contactos",
   reengagement: "Re-engagement Queue",
   funnel: "Funnel por Plataforma",
-  "funnel-platforms": "Funnel por Plataforma",
   "segments-builder": "Smart Segments",
   segments: "Segment Health",
   "segment-health": "Segment Health",
@@ -711,8 +710,7 @@ function MarketingContent() {
       case "campaigns": return <MktCampaignWall />;
       case "contacts": return <MktContactsView />;
       case "reengagement": return <MktReengagement />;
-      case "funnel":
-      case "funnel-platforms": return <MktFunnelPlatforms />;
+      case "funnel": return <MktFunnel />;
       case "segments-builder": return <MktSegmentsBuilder />;
       case "segments":
       case "segment-health": return <MktSegmentHealth />;
@@ -750,7 +748,7 @@ function MarketingContent() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Header — suppressed for Funnel por Plataforma so Julian's own header isn't duplicated. */}
-        {section !== "funnel" && section !== "funnel-platforms" && (
+        {section !== "funnel" && (
         <header style={{
           height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "0 24px", borderBottom: "1px solid var(--mkt-border)",
@@ -783,7 +781,7 @@ function MarketingContent() {
         )}
 
         {/* Empty state — also suppressed on the funnel views. */}
-        {section !== "funnel" && section !== "funnel-platforms" && !loading && contacts.length === 0 && (
+        {section !== "funnel" && !loading && contacts.length === 0 && (
           <div style={{
             padding: "16px 24px", background: "rgba(209,156,21,0.05)",
             borderBottom: "1px solid rgba(209,156,21,0.15)",
