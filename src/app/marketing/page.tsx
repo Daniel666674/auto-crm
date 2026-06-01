@@ -720,7 +720,7 @@ function MarketingContent() {
       case "forecast": return <MktForecast />;
       case "attribution-model": return <MktAttributionModel />;
       case "handoff": return <MktHandoffCenter />;
-      case "mkt-analytics": return <MktAnalytics onNavigate={setSection as any} />;
+      case "mkt-analytics": return <MktAnalytics onNavigate={(s) => setSection(s as MktSection)} />;
       case "email-performance": return <MktEmailPerformance />;
       case "intelligence": return <MktIntelligence />;
       case "pipeline-view": return <MktPipelineView />;
