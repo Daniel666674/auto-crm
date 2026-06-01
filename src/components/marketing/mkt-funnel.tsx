@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext, createContext } from "react";
 import {
   FP_OVERVIEW, FP_PLATFORMS, FP_PILL, FP_STAGE_COLOR, FP_PLATFORM_COLOR, FP_DELTA_UP,
   type StageKey, type PlatformKey, type Seg, type PlatformDetail, type GateRow, type Puck, type HealthCard,
 } from "./mkt-funnel-platforms-data";
+
+// Live funnel data (real CRM + ad metrics) flows through context; defaults to the
+// seed so the view renders identically before the API responds or if it fails.
+const FunnelCtx = createContext<{ overview: typeof FP_OVERVIEW; platforms: typeof FP_PLATFORMS }>({ overview: FP_OVERVIEW, platforms: FP_PLATFORMS });
+const useFunnel = () => useContext(FunnelCtx);
 
 // Chrome maps to NEXUS marketing theme tokens; stage/platform colors are Julian's exact hexes.
 const SURFACE = "var(--mkt-surface)";
@@ -41,7 +46,7 @@ const card = (elevated?: boolean): React.CSSProperties => ({ background: SURFACE
 
 // ── Funnel map (positioned track with pucks) ──────────────────────────────────
 function FunnelTrack({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
-  const o = FP_OVERVIEW;
+  const o = useFunnel().overview;
   return (
     <div style={{ ...card(true), padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
@@ -110,7 +115,7 @@ function HealthCards({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
         <span style={{ fontSize: 12, color: MUTED }}>Click en cualquier tarjeta para ver detalle</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-        {FP_OVERVIEW.health.map((h: HealthCard) => (
+        {useFunnel().overview.health.map((h: HealthCard) => (
           <div key={h.platform} onClick={() => onSelect(h.platform)} style={{ ...card(), padding: 20, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -151,7 +156,7 @@ function StageGates() {
             {["Plataforma", "Etapa actual → siguiente", "Criterio 1", "Criterio 2", "Criterio 3", "Acción"].map((h, i) => <th key={h} style={{ padding: "0 0 12px", fontWeight: 600, textAlign: i === 5 ? "right" : "left" }}>{h}</th>)}
           </tr></thead>
           <tbody>
-            {FP_OVERVIEW.stageGates.map((g: GateRow) => (
+            {useFunnel().overview.stageGates.map((g: GateRow) => (
               <tr key={g.platform} style={{ borderTop: `1px solid ${BORDER}`, fontSize: 12 }}>
                 <td style={{ padding: "12px 0" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: FP_PLATFORM_COLOR[g.platform] }} /><span style={{ fontWeight: 500, color: TEXT }}>{g.name}</span></span></td>
                 <td style={{ padding: "12px 0" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Pill stage={g.from.stage}>{g.from.label}</Pill><span style={{ color: MUTED }}>→</span><Pill stage={g.to.stage}>{g.to.label}</Pill></span></td>
@@ -167,7 +172,7 @@ function StageGates() {
 }
 
 function Budget() {
-  const b = FP_OVERVIEW.budget;
+  const b = useFunnel().overview.budget;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
       <div style={{ ...card(), padding: 20 }}>
@@ -200,7 +205,7 @@ function Budget() {
 }
 
 function OverviewView({ onSelect }: { onSelect: (p: PlatformKey) => void }) {
-  const o = FP_OVERVIEW;
+  const o = useFunnel().overview;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Action banner */}
@@ -319,7 +324,14 @@ function PlatformView({ detail }: { detail: PlatformDetail }) {
 // Replaced the prior lifecycle "Suscriptor → Evangelista" funnel in-place.
 export function MktFunnel() {
   const [tab, setTab] = useState<"overview" | PlatformKey>("overview");
-  const o = FP_OVERVIEW;
+  const [fp, setFp] = useState<{ overview: typeof FP_OVERVIEW; platforms: typeof FP_PLATFORMS }>({ overview: FP_OVERVIEW, platforms: FP_PLATFORMS });
+  useEffect(() => {
+    fetch("/api/marketing/funnel-platforms")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.overview && d.platforms) setFp({ overview: d.overview, platforms: d.platforms }); })
+      .catch(() => {});
+  }, []);
+  const o = fp.overview;
   const tabs: { id: "overview" | PlatformKey; label: string; stage?: string }[] = [
     { id: "overview", label: "Vista General" },
     { id: "meta", label: "Meta", stage: "Awareness" },
@@ -328,6 +340,7 @@ export function MktFunnel() {
   ];
 
   return (
+    <FunnelCtx.Provider value={fp}>
     <div style={{
       // Scoped exact palette + font from Julian's HTML — overrides NEXUS tokens only inside this view.
       "--mkt-bg": "#0a0a0b",
@@ -379,8 +392,9 @@ export function MktFunnel() {
         </span>
       </div>
 
-      {tab === "overview" ? <OverviewView onSelect={setTab} /> : <PlatformView detail={FP_PLATFORMS[tab]} />}
+      {tab === "overview" ? <OverviewView onSelect={setTab} /> : <PlatformView detail={fp.platforms[tab]} />}
       </div>
     </div>
+    </FunnelCtx.Provider>
   );
 }
